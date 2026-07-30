@@ -430,3 +430,19 @@ export interface ActiveFiltersState {
   customFilters?: VisitorSearchFilters;
   sort?: VisitorSearchSort;
 }
+
+/** Entrada del historial de navegación (PAGE_VIEW) */
+export interface VisitorPageHistoryItem {
+  url: string;
+  path?: string;
+  title?: string;
+  occurredAt: string;
+  index: number;
+}
+
+/** Respuesta de historial de páginas del visitante */
+export interface VisitorPageHistory {
+  visitorId: string;
+  total: number;
+  pages: VisitorPageHistoryItem[];
+}

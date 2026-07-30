@@ -250,34 +250,42 @@ export class ChatService {
     if (options?.cursor) params.append('cursor', options.cursor);
     if (options?.limit) params.append('limit', options.limit.toString());
     
-    // Filtros
-    if (options?.filters?.status) {
-      options.filters.status.forEach(status => 
-        params.append('filters[status][]', status)
-      );
+    // Filtros como JSON: Nest ValidationPipe rechaza filters[status][]
+    if (options?.filters) {
+      const filterPayload: Record<string, unknown> = {};
+      if (options.filters.status?.length) {
+        filterPayload['status'] = options.filters.status;
+      }
+      if (options.filters.priority?.length) {
+        filterPayload['priority'] = options.filters.priority;
+      }
+      if (options.filters.department) {
+        filterPayload['department'] = options.filters.department;
+      }
+      if (options.filters.dateFrom) {
+        filterPayload['dateFrom'] = options.filters.dateFrom;
+      }
+      if (options.filters.dateTo) {
+        filterPayload['dateTo'] = options.filters.dateTo;
+      }
+      if (Object.keys(filterPayload).length > 0) {
+        params.append('filters', JSON.stringify(filterPayload));
+      }
     }
-    if (options?.filters?.priority) {
-      options.filters.priority.forEach(priority => 
-        params.append('filters[priority][]', priority)
-      );
-    }
-    if (options?.filters?.department) {
-      params.append('filters[department]', options.filters.department);
-    }
-    if (options?.filters?.dateFrom) {
-      params.append('filters[dateFrom]', options.filters.dateFrom);
-    }
-    if (options?.filters?.dateTo) {
-      params.append('filters[dateTo]', options.filters.dateTo);
-    }
-    
-    // Ordenamiento
+
+    // Ordenamiento (JSON; el backend espera ASC/DESC)
     if (options?.sort?.field) {
-      const sortObj = {
-        field: options.sort.field,
-        direction: options.sort.direction || 'desc'
-      };
-      params.append('sort', JSON.stringify(sortObj));
+      const direction =
+        (options.sort.direction || 'desc').toUpperCase() === 'ASC'
+          ? 'ASC'
+          : 'DESC';
+      params.append(
+        'sort',
+        JSON.stringify({
+          field: options.sort.field,
+          direction,
+        })
+      );
     }
     
     if (params.toString()) {

@@ -22,13 +22,11 @@ describe('consoleTour', () => {
     });
   });
 
-  it('first step should navigate to /inbox', () => {
-    expect(consoleTour[0].route).toBe('/inbox');
+  it('first step should navigate to /atencion', () => {
+    expect(consoleTour[0].route).toBe('/atencion');
   });
 
-  it('should include a step for visitors nav (highlighted from /inbox)', () => {
-    // The new informational tour stays on /inbox the whole time and
-    // simply points at the Visitantes sidebar entry rather than navigating.
+  it('should include a step for visitors nav', () => {
     const hasVisitorsNavStep = consoleTour.some(
       (step) => step.element === '[data-tour="nav-visitors"]'
     );
@@ -122,11 +120,6 @@ describe('adminTour', () => {
   it('should include a step for users route /users', () => {
     const hasUsers = adminTour.some((step) => step.route === '/users');
     expect(hasUsers).toBe(true);
-  });
-
-  it('should include a step for AI config route /ai', () => {
-    const hasAi = adminTour.some((step) => step.route === '/ai');
-    expect(hasAi).toBe(true);
   });
 
   it('should include a step for integrations route /integrations', () => {

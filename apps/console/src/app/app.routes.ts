@@ -4,9 +4,10 @@ import { NotProvisionedComponent } from './not-provisioned/not-provisioned';
 
 export const appRoutes: Route[] = [
 	{
-		path: 'inbox',
-		loadChildren: () => import('@guiders-frontend/chat/features/inbox').then(m => m.inboxRoutes),
-		title: 'Bandeja de Entrada',
+		path: 'atencion',
+		loadChildren: () =>
+			import('@guiders-frontend/chat/features/atencion').then((m) => m.atencionRoutes),
+		title: 'Atención',
 		canActivate: [authGuard],
 	},
 	{
@@ -17,7 +18,8 @@ export const appRoutes: Route[] = [
 	},
 	{
 		path: 'visitors',
-		loadChildren: () => import('@guiders-frontend/visitors').then(m => m.visitorsRoutes),
+		loadChildren: () =>
+			import('@guiders-frontend/visitors').then((m) => m.visitorsRoutes),
 		title: 'Visitantes',
 		canActivate: [authGuard],
 	},
@@ -43,10 +45,10 @@ export const appRoutes: Route[] = [
 	{
 		path: '',
 		pathMatch: 'full',
-		redirectTo: 'inbox',
+		redirectTo: 'atencion',
 	},
 	{
 		path: '**',
-		redirectTo: 'inbox',
+		redirectTo: 'atencion',
 	}
 ];

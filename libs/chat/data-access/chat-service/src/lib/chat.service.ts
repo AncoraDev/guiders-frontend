@@ -421,34 +421,42 @@ export class ChatService {
     if (options?.cursor) params.append('cursor', options.cursor);
     if (options?.limit) params.append('limit', options.limit.toString());
     
-    // Filtros
-    if (options?.filters?.status) {
-      options.filters.status.forEach(status => 
-        params.append('filters[status][]', status)
-      );
+    // Filtros como JSON: Nest ValidationPipe rechaza filters[status][]
+    if (options?.filters) {
+      const filterPayload: Record<string, unknown> = {};
+      if (options.filters.status?.length) {
+        filterPayload['status'] = options.filters.status;
+      }
+      if (options.filters.priority?.length) {
+        filterPayload['priority'] = options.filters.priority;
+      }
+      if (options.filters.department) {
+        filterPayload['department'] = options.filters.department;
+      }
+      if (options.filters.dateFrom) {
+        filterPayload['dateFrom'] = options.filters.dateFrom;
+      }
+      if (options.filters.dateTo) {
+        filterPayload['dateTo'] = options.filters.dateTo;
+      }
+      if (Object.keys(filterPayload).length > 0) {
+        params.append('filters', JSON.stringify(filterPayload));
+      }
     }
-    if (options?.filters?.priority) {
-      options.filters.priority.forEach(priority => 
-        params.append('filters[priority][]', priority)
-      );
-    }
-    if (options?.filters?.department) {
-      params.append('filters[department]', options.filters.department);
-    }
-    if (options?.filters?.dateFrom) {
-      params.append('filters[dateFrom]', options.filters.dateFrom);
-    }
-    if (options?.filters?.dateTo) {
-      params.append('filters[dateTo]', options.filters.dateTo);
-    }
-    
-    // Ordenamiento
+
+    // Ordenamiento (JSON; el backend espera ASC/DESC)
     if (options?.sort?.field) {
-      const sortObj = {
-        field: options.sort.field,
-        direction: options.sort.direction || 'desc'
-      };
-      params.append('sort', JSON.stringify(sortObj));
+      const direction =
+        (options.sort.direction || 'desc').toUpperCase() === 'ASC'
+          ? 'ASC'
+          : 'DESC';
+      params.append(
+        'sort',
+        JSON.stringify({
+          field: options.sort.field,
+          direction,
+        })
+      );
     }
     
     if (params.toString()) {
@@ -1096,71 +1104,6 @@ export class ChatService {
    */
   get webSocketService(): WebSocketService {
     return this.webSocket;
-  }
-
-  // ===== MÉTODOS DE SUGERENCIAS IA =====
-
-  /**
-   * Obtener sugerencias de respuesta generadas por IA
-   * POST /api/v2/llm/suggestions
-   * @param chatId - ID del chat
-   * @param companyId - ID de la empresa (opcional)
-   * @param lastMessageContent - Contenido del último mensaje (opcional)
-   * @returns Observable con las sugerencias generadas
-   */
-  getSuggestions(chatId: string, companyId?: string, lastMessageContent?: string): Observable<{
-    suggestions: string[];
-    processingTimeMs: number;
-  }> {
-    const body: { chatId: string; companyId?: string; lastMessageContent?: string } = {
-      chatId
-    };
-    if (companyId) {
-      body.companyId = companyId;
-    }
-    if (lastMessageContent) {
-      body.lastMessageContent = lastMessageContent;
-    }
-
-    return this.http.post<{
-      suggestions: string[];
-      processingTimeMs: number;
-    }>(`${this.baseUrl}/llm/suggestions`, body, this.getHttpOptions())
-      .pipe(
-        catchError(error => {
-          console.error('[ChatService] Error al obtener sugerencias:', error);
-          return of({ suggestions: [], processingTimeMs: 0 });
-        })
-      );
-  }
-
-  /**
-   * Mejorar texto con IA
-   * POST /api/v2/llm/improve
-   * @param companyId - ID de la empresa (opcional)
-   * @param text - Texto a mejorar
-   * @returns Observable con el texto mejorado
-   */
-  improveText(companyId: string | undefined, text: string): Observable<{
-    improvedText: string;
-    processingTimeMs: number;
-  }> {
-    const body: { text: string; companyId?: string } = { text };
-    if (companyId) {
-      body.companyId = companyId;
-    }
-
-    return this.http.post<{
-      improvedText: string;
-      processingTimeMs: number;
-    }>(`${this.baseUrl}/llm/improve`, body, this.getHttpOptions())
-      .pipe(
-        catchError(error => {
-          console.error('[ChatService] Error al mejorar texto:', error);
-          // En caso de error, devolver el texto original sin cambios
-          return of({ improvedText: text, processingTimeMs: 0 });
-        })
-      );
   }
 
   /**

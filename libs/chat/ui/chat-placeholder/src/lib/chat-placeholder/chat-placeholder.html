@@ -18,6 +18,38 @@
           {{ getPresenceStatusLabel(presenceStatus) }}
         </span>
         }
+        @if (visitorProfile; as profile) {
+        <div class="guiders-chat-placeholder__profile" data-testid="visitor-chat-profile">
+          @if (profilePath(profile.currentUrl); as pagePath) {
+          <a
+            class="guiders-chat-placeholder__profile-url"
+            [href]="profile.currentUrl!"
+            target="_blank"
+            rel="noopener noreferrer"
+            [title]="profile.currentUrl!"
+          >
+            {{ pagePath }}
+          </a>
+          }
+          <div class="guiders-chat-placeholder__profile-stats">
+            @if (profile.browser) {
+            <span>{{ profile.browser }}</span>
+            }
+            @if (profile.totalSessions != null) {
+            <span>{{ profile.totalSessions }} ses.</span>
+            }
+            @if (profile.totalPagesVisited != null) {
+            <span>{{ profile.totalPagesVisited }} págs.</span>
+            }
+            @if (profile.totalTimeConnectedMs != null && profile.totalTimeConnectedMs > 0) {
+            <span>{{ formatDuration(profile.totalTimeConnectedMs) }}</span>
+            }
+            @if (profile.lifecycle) {
+            <span class="guiders-chat-placeholder__lifecycle">{{ profile.lifecycle }}</span>
+            }
+          </div>
+        </div>
+        }
       </div>
     </div>
 
@@ -149,5 +181,5 @@
     }
   </div>
 
-  <guiders-message-input [chatId]="selectedChat.chatId" [siteId]="siteId" [mode]="'inbox'" (messageSent)="onMessageSent($event)" />
+  <guiders-message-input [chatId]="selectedChat.chatId" [mode]="'inbox'" (messageSent)="onMessageSent($event)" />
 </div>

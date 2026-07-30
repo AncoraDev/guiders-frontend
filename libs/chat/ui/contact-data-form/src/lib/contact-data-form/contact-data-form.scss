@@ -18,7 +18,7 @@
     grid-template-columns: 1fr 1fr;
     gap: tokens.$spacing-xs tokens.$spacing-sm;
 
-    // Nombre y apellidos en columnas paralelas; email, tel, dni, población full-width
+    // Nombre y apellidos en columnas paralelas; resto full-width
     .contact-data-form__field:nth-child(3),
     .contact-data-form__field:nth-child(4),
     .contact-data-form__field:nth-child(5),

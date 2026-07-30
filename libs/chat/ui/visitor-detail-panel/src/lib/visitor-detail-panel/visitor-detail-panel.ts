@@ -12,13 +12,30 @@ import {
   signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Visitor, LeadContactData, SaveContactDataRequest } from '@guiders-frontend/shared/types';
-import { LeadScore } from '@guiders-frontend/visitors-data-service';
+import {
+  Visitor,
+  LeadContactData,
+  SaveContactDataRequest,
+  VisitorPageHistoryItem,
+} from '@guiders-frontend/shared/types';
 import { ContactDataForm } from '@guiders-frontend/contact-data-form';
 import { ActivityStatCard } from '@guiders-frontend/activity-stat-card';
 
+/** Score de lead mostrado en el panel (mismo shape que VisitorsDataService) */
+export interface VisitorPanelLeadScore {
+  score: number;
+  tier: 'cold' | 'warm' | 'hot';
+  signals?: {
+    isRecurrentVisitor?: boolean;
+    hasHighEngagement?: boolean;
+    hasInvestedTime?: boolean;
+    needsHelp?: boolean;
+  };
+}
+
 @Component({
   selector: 'guiders-visitor-detail-panel',
+  standalone: true,
   imports: [CommonModule, ContactDataForm, ActivityStatCard],
   templateUrl: './visitor-detail-panel.html',
   styleUrl: './visitor-detail-panel.scss',
@@ -28,7 +45,7 @@ export class VisitorDetailPanel {
   // === INPUTS ===
   readonly visitor = input.required<Visitor>();
   readonly isOpen = input<boolean>(true);
-  readonly leadScore = input<LeadScore | null>(null);
+  readonly leadScore = input<VisitorPanelLeadScore | null>(null);
 
   /** Datos de contacto del lead */
   readonly contactData = input<LeadContactData | null>(null);
@@ -38,6 +55,11 @@ export class VisitorDetailPanel {
 
   /** ID del chat actual (para extraer contexto) */
   readonly chatId = input<string | undefined>(undefined);
+
+  /** Historial de navegación (más reciente primero) */
+  readonly pageHistory = input<VisitorPageHistoryItem[]>([]);
+  readonly pageHistoryTotal = input<number>(0);
+  readonly pageHistoryLoading = input<boolean>(false);
 
   // === OUTPUTS ===
   readonly closePanel = output<void>();
@@ -185,6 +207,45 @@ export class VisitorDetailPanel {
       this.urlCopied.set(true);
       setTimeout(() => this.urlCopied.set(false), 2000);
     }
+  }
+
+  formatPageTime(iso: string): string {
+    return this.formatRelativeTime(new Date(iso));
+  }
+
+  formatPagePath(item: VisitorPageHistoryItem): string {
+    const raw = item.path || item.url || '/';
+    try {
+      if (raw.startsWith('http')) {
+        return new URL(raw).pathname + new URL(raw).search;
+      }
+    } catch {
+      /* ignore */
+    }
+    return raw.length > 48 ? `${raw.slice(0, 48)}…` : raw;
+  }
+
+  openHistoryUrl(item: VisitorPageHistoryItem): void {
+    let href = item.url;
+    if (!href) return;
+
+    if (!href.startsWith('http')) {
+      const current = this.visitor().currentUrl;
+      try {
+        if (current) {
+          const origin = new URL(current).origin;
+          href = `${origin}${href.startsWith('/') ? href : `/${href}`}`;
+        } else if (this.visitor().domain) {
+          href = `https://${this.visitor().domain}${href.startsWith('/') ? href : `/${href}`}`;
+        } else {
+          return;
+        }
+      } catch {
+        return;
+      }
+    }
+
+    window.open(href, '_blank', 'noopener,noreferrer');
   }
 
   onToggleEditContact(): void {

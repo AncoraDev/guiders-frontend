@@ -121,9 +121,6 @@ export class Inbox implements OnInit, OnDestroy {
   // Actividad del visitante seleccionado
   readonly visitorActivity = signal<VisitorActivity | null>(null);
 
-  // ID del sitio actual (necesario para sugerencias IA)
-  readonly siteId = signal<string | null>(null);
-
   // Estado de guardado de datos de contacto
   readonly savingContactData = signal<boolean>(false);
 
@@ -321,28 +318,6 @@ export class Inbox implements OnInit, OnDestroy {
     }
 
     this.loadChats();
-    // El siteId ahora se carga cuando se selecciona un chat específico
-    // usando el visitorId del participante (ver onUserSelected)
-  }
-
-  /**
-   * Cargar el siteId del visitante específico
-   * Usa el endpoint /api/visitors/:visitorId/site que es más preciso
-   */
-  private loadVisitorSiteId(visitorId: string): void {
-    this.visitorsDataService
-      .getVisitorSite(visitorId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (response) => {
-          console.log('[Inbox] SiteId del visitante cargado:', response.siteId);
-          this.siteId.set(response.siteId);
-        },
-        error: (err) => {
-          console.error('[Inbox] Error al cargar siteId del visitante:', err);
-          this.siteId.set(null);
-        },
-      });
   }
 
   /**
@@ -446,11 +421,10 @@ export class Inbox implements OnInit, OnDestroy {
     console.log('[Inbox] 📥 Cargando mensajes del chat...');
     this.loadMessages(conversation.chatId);
 
-    // Cargar datos del visitante (URL actual, siteId y contactData)
+    // Cargar datos del visitante (URL actual y contactData)
     const visitorId = conversation.participants?.[0]?.id;
     if (visitorId) {
       this.loadVisitorCurrentPage(visitorId);
-      this.loadVisitorSiteId(visitorId);
       this.loadVisitorContactData(visitorId);
     }
   }

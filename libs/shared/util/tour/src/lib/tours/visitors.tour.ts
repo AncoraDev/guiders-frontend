@@ -26,7 +26,7 @@ export const visitorsTour: TourStepConfig[] = [
   // 1. Welcome
   {
     element: '[data-tour="visitors-panel"]',
-    route: '/visitors',
+    route: '/atencion',
     popover: {
       title: 'Visitantes en tiempo real',
       description:
@@ -38,7 +38,7 @@ export const visitorsTour: TourStepConfig[] = [
   // 2. Auto-refresh + manual refresh
   {
     element: '[data-tour="visitors-refresh-controls"]',
-    route: '/visitors',
+    route: '/atencion',
     popover: {
       title: 'Recarga y frecuencia de actualización',
       description:
@@ -50,7 +50,7 @@ export const visitorsTour: TourStepConfig[] = [
   // 3. Quick filters (status chips)
   {
     element: '[data-tour="visitors-quick-filters"]',
-    route: '/visitors',
+    route: '/atencion',
     popover: {
       title: 'Filtros rápidos',
       description:
@@ -62,7 +62,7 @@ export const visitorsTour: TourStepConfig[] = [
   // 4. Active filters — cancel via chip close button
   {
     element: '[data-tour="visitors-active-filters"]',
-    route: '/visitors',
+    route: '/atencion',
     popover: {
       title: 'Cancela filtros con un clic',
       description:
@@ -74,7 +74,7 @@ export const visitorsTour: TourStepConfig[] = [
   // 5. Advanced filters — create a custom filter
   {
     element: '[data-tour="visitors-advanced-btn"]',
-    route: '/visitors',
+    route: '/atencion',
     popover: {
       title: 'Crea tu filtro personalizado',
       description:
@@ -86,7 +86,7 @@ export const visitorsTour: TourStepConfig[] = [
   // 6. Open chat by clicking a visitor row
   {
     element: '[data-tour="visitor-item-first"]',
-    route: '/visitors',
+    route: '/atencion',
     popover: {
       title: 'Abre un chat al instante',
       description:
@@ -98,7 +98,7 @@ export const visitorsTour: TourStepConfig[] = [
   // 7. Contextual menu — six-dot handle (covers "Tomar pendiente")
   {
     element: '[data-tour="visitor-row-menu-trigger"]',
-    route: '/visitors',
+    route: '/atencion',
     popover: {
       title: 'Menú contextual del visitante',
       description:

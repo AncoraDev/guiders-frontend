@@ -3,267 +3,61 @@
 :host {
   display: block;
   width: 100%;
+  background: var(--color-surface-primary);
 }
 
 .message-input {
   display: flex;
   flex-direction: column;
   padding: tokens.$spacing-sm tokens.$spacing-md;
+  background: var(--color-surface-primary);
 
-  // Estilos para sugerencias de IA
-  &__suggestions {
-    background: var(--color-purple-bg);
-    border: 1px solid var(--color-purple);
+  &__emoji-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    max-height: 148px;
+    overflow-y: auto;
+    margin-bottom: tokens.$spacing-xs;
+    padding: 6px;
+    background: var(--color-surface-secondary, #f4f4f5);
+    border: 1px solid var(--color-border-default);
     border-radius: 12px;
-    margin-bottom: tokens.$spacing-sm;
-    overflow: hidden;
-  }
 
-  &__suggestions-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: tokens.$spacing-xs tokens.$spacing-sm;
-    background: rgba(139, 92, 246, 0.08);
-    border-bottom: 1px solid var(--color-purple);
-  }
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
 
-  &__suggestions-title {
-    display: flex;
-    align-items: center;
-    gap: tokens.$spacing-xs;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--color-purple-text);
-  }
-
-  &__suggestions-close {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    background: transparent;
-    border: none;
-    color: var(--color-purple);
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.15s ease;
-
-    &:hover {
-      background: rgba(139, 92, 246, 0.15);
-      color: var(--color-purple-text);
+    &::-webkit-scrollbar-thumb {
+      background: var(--color-scrollbar-thumb);
+      border-radius: 2px;
     }
   }
 
-  &__suggestions-loading {
-    display: flex;
+  &__emoji-option {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: tokens.$spacing-sm;
-    padding: tokens.$spacing-md;
-    font-size: 13px;
-    color: var(--color-purple-text);
-  }
-
-  &__suggestions-spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--color-purple-bg);
-    border-top-color: var(--color-purple);
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-  }
-
-  &__suggestions-empty {
-    padding: tokens.$spacing-md;
-    font-size: 13px;
-    color: var(--color-purple);
-    text-align: center;
-  }
-
-  &__suggestions-list {
-    display: flex;
-    flex-direction: column;
-    gap: tokens.$spacing-xs;
-    padding: tokens.$spacing-sm;
-  }
-
-  &__suggestion-chip {
-    display: block;
-    width: 100%;
-    padding: tokens.$spacing-sm tokens.$spacing-md;
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--color-text-primary);
-    text-align: left;
-    background: var(--color-surface-primary);
-    border: 1px solid var(--color-purple);
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    padding: 0;
+    font-size: 20px;
+    line-height: 1;
+    background: transparent;
+    border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.15s ease;
-    // Mostrar texto completo sin truncar
-    white-space: normal;
-    word-wrap: break-word;
+    transition: background 0.12s ease;
 
     &:hover {
-      background: var(--color-purple-bg);
-      border-color: var(--color-purple);
-      transform: translateX(2px);
+      background: var(--color-surface-hover, rgba(0, 0, 0, 0.06));
     }
 
     &:active {
-      transform: translateX(0);
-      background: var(--color-purple-bg);
+      background: var(--color-surface-pressed, rgba(0, 0, 0, 0.1));
+      transform: scale(1.08);
     }
-  }
-
-  // Chips de herramientas flotantes (arriba del input)
-  &__tools-chips {
-    display: flex;
-    gap: tokens.$spacing-xs;
-    margin-bottom: tokens.$spacing-sm;
-    padding: tokens.$spacing-xs 0;
-    animation: slideDown 0.2s ease-out;
-  }
-
-  &__tool-chip {
-    display: flex;
-    align-items: center;
-    gap: tokens.$spacing-xs;
-    padding: tokens.$spacing-xs tokens.$spacing-sm;
-    font-size: 12px;
-    font-weight: 500;
-    border: 1.5px solid;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background: var(--color-surface-primary);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-
-    &:hover:not(:disabled) {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    }
-
-    &:active:not(:disabled) {
-      // No transform needed
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    svg {
-      flex-shrink: 0;
-    }
-
-    // Variantes de color
-    &--suggestion {
-      border-color: var(--color-purple);
-      color: var(--color-purple-text);
-      background: var(--color-purple-bg);
-
-      &:hover:not(:disabled) {
-        border-color: var(--color-purple);
-        background: var(--color-purple-bg);
-      }
-    }
-
-    &--lead {
-      border-color: var(--color-error);
-      color: var(--color-error-text);
-      background: var(--color-error-bg);
-
-      &:hover:not(:disabled) {
-        border-color: var(--color-error-hover);
-        background: var(--color-error-bg);
-      }
-    }
-
-    &--sentiment {
-      border-color: var(--color-success);
-      color: var(--color-success-text);
-      background: var(--color-success-bg);
-
-      &:hover:not(:disabled) {
-        border-color: var(--color-success-hover);
-        background: var(--color-success-bg);
-      }
-    }
-  }
-
-  // Botón toggle de herramientas (reemplaza botón de IA)
-  &__tools-toggle {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    color: var(--color-purple);
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-
-    &:hover:not(:disabled) {
-      background: var(--color-purple-bg);
-      color: var(--color-purple-text);
-    }
-
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    &--active {
-      background: var(--color-purple-bg);
-      color: var(--color-purple-text);
-    }
-  }
-
-  // Resumen del Lead
-  &__lead-summary {
-    background: var(--color-error-bg);
-    border: 1px solid var(--color-error);
-    border-radius: 12px;
-    margin-bottom: tokens.$spacing-sm;
-    overflow: hidden;
-  }
-
-  &__lead-content {
-    padding: tokens.$spacing-md;
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--color-error-text);
-  }
-
-  // Análisis de Sentimiento
-  &__sentiment {
-    background: var(--color-success-bg);
-    border: 1px solid var(--color-success);
-    border-radius: 12px;
-    margin-bottom: tokens.$spacing-sm;
-    overflow: hidden;
-  }
-
-  &__sentiment-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: tokens.$spacing-md;
-  }
-
-  &__sentiment-confidence {
-    font-size: 12px;
-    color: var(--color-success-text);
-    font-weight: 500;
   }
 
   &__input-wrapper {
@@ -274,12 +68,10 @@
     border: 1px solid var(--color-border-default);
 
     &:focus-within {
-      background: var(--color-surface-primary);
       border-color: var(--color-border-strong);
       box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04);
     }
 
-    // Modo widget: layout inline (textarea + botón en la misma línea)
     &--widget {
       display: flex;
       align-items: flex-end;
@@ -288,12 +80,10 @@
       min-height: 48px;
     }
 
-    // Modo inbox: layout vertical (textarea arriba, botones abajo)
     &--inbox {
       display: flex;
       flex-direction: column;
       padding: 12px 16px;
-      min-height: auto;
     }
   }
 
@@ -311,37 +101,19 @@
     overflow-y: auto;
     overflow-x: hidden;
 
-    // Widget mode: padding inline, flex para ocupar espacio
     .message-input__input-wrapper--widget & {
       flex: 1;
       padding: 7px 0;
     }
 
-    // Inbox mode: padding vertical, full width, sin flex
     .message-input__input-wrapper--inbox & {
       padding: 0;
       margin-bottom: tokens.$spacing-xs;
       width: 100%;
-      flex: 0 0 auto;
-    }
-
-    // Scrollbar styling
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--color-scrollbar-thumb);
-      border-radius: 2px;
     }
 
     &::placeholder {
       color: var(--color-text-placeholder);
-      font-weight: 400;
     }
 
     &:focus {
@@ -354,24 +126,14 @@
     }
   }
 
-  // Contenedor de acciones para modo inbox
   &__actions {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: tokens.$spacing-xs;
-    padding-top: tokens.$spacing-xs;
   }
 
-  &__actions-left {
-    display: flex;
-    align-items: center;
-    gap: tokens.$spacing-2xs;
-  }
-
-  // Botones de acción (adjuntar, emoji, etc.)
   &__action-button {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 32px;
@@ -379,28 +141,26 @@
     padding: 0;
     background: transparent;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     color: var(--color-text-tertiary);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease;
 
-    &:hover {
+    &:hover,
+    &--active {
       background: var(--color-surface-hover);
       color: var(--color-text-primary);
     }
 
-    &:active {
-      background: var(--color-surface-pressed);
-    }
-
-    svg {
-      flex-shrink: 0;
+    &:focus-visible {
+      outline: 2px solid var(--color-border-strong);
+      outline-offset: 1px;
     }
   }
 
   &__send-button {
     flex-shrink: 0;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0;
@@ -408,40 +168,27 @@
     background: var(--color-accent);
     border: none;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, transform 0.15s ease;
 
-    // Widget mode: botón circular
     .message-input__input-wrapper--widget & {
       width: 36px;
       height: 36px;
       border-radius: 50%;
     }
 
-    // Inbox mode: botón más pequeño y cuadrado con bordes redondeados
     .message-input__actions & {
       width: 32px;
       height: 32px;
-      border-radius: 6px;
+      border-radius: 8px;
     }
 
     &:hover:not(.message-input__send-button--disabled) {
       background: var(--color-accent-hover);
-      transform: scale(1.05);
-    }
-
-    &:active:not(.message-input__send-button--disabled) {
-      transform: scale(0.95);
-    }
-
-    &:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.2);
     }
 
     &--disabled {
       opacity: 0.3;
       cursor: not-allowed;
-      transform: none;
       background: var(--color-surface-disabled);
       color: var(--color-text-disabled);
     }
@@ -450,108 +197,6 @@
       display: block;
       width: 16px;
       height: 16px;
-    }
-  }
-}
-
-// Animaciones
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-// Responsive adjustments
-@media (max-width: 480px) {
-  .message-input {
-    padding: tokens.$spacing-xs tokens.$spacing-sm;
-
-    &__tools-chips {
-      flex-wrap: wrap;
-      gap: tokens.$spacing-2xs;
-      margin-bottom: tokens.$spacing-xs;
-    }
-
-    &__tool-chip {
-      font-size: 11px;
-      padding: 6px tokens.$spacing-xs;
-
-      svg {
-        width: 12px;
-        height: 12px;
-      }
-    }
-
-    &__input-wrapper {
-      border-radius: 20px;
-
-      &--widget {
-        padding: 6px 6px 6px 16px;
-        min-height: 44px;
-      }
-
-      &--inbox {
-        padding: 10px 12px;
-      }
-    }
-
-    &__send-button {
-      .message-input__input-wrapper--widget & {
-        width: 32px;
-        height: 32px;
-      }
-
-      .message-input__actions & {
-        width: 28px;
-        height: 28px;
-      }
-
-      svg {
-        width: 14px;
-        height: 14px;
-      }
-    }
-
-    &__action-button {
-      width: 28px;
-      height: 28px;
-
-      svg {
-        width: 16px;
-        height: 16px;
-      }
-    }
-
-    &__suggestions {
-      margin-bottom: tokens.$spacing-xs;
-    }
-
-    &__suggestion-chip {
-      padding: tokens.$spacing-xs tokens.$spacing-sm;
-      font-size: 12px;
-      line-height: 1.4;
-    }
-
-    &__lead-summary,
-    &__sentiment {
-      margin-bottom: tokens.$spacing-xs;
-    }
-
-    &__lead-content,
-    &__sentiment-content {
-      padding: tokens.$spacing-sm;
-      font-size: 12px;
     }
   }
 }

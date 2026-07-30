@@ -24,17 +24,6 @@ export const adminTour: TourStepConfig[] = [
     },
   },
   {
-    element: '[data-tour="ai-config-content"]',
-    route: '/ai',
-    popover: {
-      title: 'Configuración de IA',
-      description:
-        'Personaliza el comportamiento del asistente: respuestas automáticas, sugerencias y más.',
-      side: 'bottom',
-      align: 'start',
-    },
-  },
-  {
     element: '[data-tour="integrations-content"]',
     route: '/integrations',
     popover: {

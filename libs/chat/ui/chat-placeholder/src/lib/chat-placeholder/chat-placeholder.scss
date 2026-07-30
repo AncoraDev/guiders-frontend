@@ -31,12 +31,13 @@
     bottom: 0;
     left: 0;
     right: 0;
+    z-index: 5;
   }
 
   // Header - Modern design with avatar
   &__header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     padding: tokens.$spacing-md tokens.$spacing-lg;
     border-bottom: 1px solid var(--color-border-default);
@@ -106,6 +107,49 @@
       border-radius: 50%;
       background-color: currentColor;
     }
+  }
+
+  &__profile {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 2px;
+    min-width: 0;
+  }
+
+  &__profile-url {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary, #64748b);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+
+    &:hover {
+      color: var(--color-text-primary, #111);
+      text-decoration: underline;
+    }
+  }
+
+  &__profile-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    font-size: 11px;
+    color: var(--color-text-secondary, #64748b);
+
+    span {
+      white-space: nowrap;
+    }
+  }
+
+  &__lifecycle {
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-weight: 600;
+    opacity: 0.85;
   }
 
   // Botones de acción
@@ -366,8 +410,9 @@
   }
 
   &__message-body--own {
-    background: var(--color-info-bg);
+    background: var(--color-accent-muted);
     color: var(--color-text-primary);
+    box-shadow: 0 0 0 1px var(--color-border-subtle), 0 1px 3px 0 rgba(0, 0, 0, 0.08);
 
     // Own messages - sharp corner on bottom-right
     border-bottom-left-radius: 8px;
@@ -375,10 +420,6 @@
 
     .guiders-chat-placeholder__message-meta {
       color: var(--color-text-secondary);
-    }
-
-    :host-context(.theme-dark) & {
-      background: rgba(59, 130, 246, 0.2);
     }
   }
 

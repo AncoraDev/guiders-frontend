@@ -30,12 +30,6 @@ export const appRoutes: Route[] = [
     canActivate: [adminGuard],
   },
   {
-    path: 'ai',
-    loadChildren: () =>
-      import('@guiders-frontend/ai-config').then((m) => m.aiConfigRoutes),
-    canActivate: [adminGuard],
-  },
-  {
     path: 'settings',
     loadChildren: () =>
       import('@guiders-frontend/auth/features/settings').then(

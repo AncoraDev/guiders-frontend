@@ -322,7 +322,7 @@ export const appConfig: ApplicationConfig = {
     // Proporcionar el environment a las librerías
     { provide: ENVIRONMENT_TOKEN, useValue: environment },
     // Ruta de cierre de Settings para la console
-    { provide: SETTINGS_CLOSE_ROUTE, useValue: '/inbox' },
+    { provide: SETTINGS_CLOSE_ROUTE, useValue: '/atencion' },
     // Inicializar la aplicación (usuario + presencia comercial)
     {
       provide: APP_INITIALIZER,

@@ -16,10 +16,52 @@
     </button>
   </div>
 
-  <!-- Current URL Section -->
-  @if (visitor().currentUrl) {
-    <div class="visitor-detail-panel__section">
-      <h5 class="visitor-detail-panel__section-title">Página actual</h5>
+  <!-- Navegación / historial de páginas -->
+  <div class="visitor-detail-panel__section">
+    <h5 class="visitor-detail-panel__section-title">
+      Navegación
+      @if (pageHistoryTotal() > 0) {
+        <span class="visitor-detail-panel__section-count">{{ pageHistoryTotal() }}</span>
+      }
+    </h5>
+
+    @if (pageHistoryLoading()) {
+      <p class="visitor-detail-panel__history-empty">Cargando historial…</p>
+    } @else if (pageHistory().length > 0) {
+      <ol class="visitor-detail-panel__history" reversed>
+        @for (page of pageHistory(); track page.occurredAt + page.url + page.index; let i = $index) {
+          <li
+            class="visitor-detail-panel__history-item"
+            [class.visitor-detail-panel__history-item--current]="i === 0"
+          >
+            <span class="visitor-detail-panel__history-index" [title]="'Visita #' + page.index">
+              {{ page.index }}
+            </span>
+            <div class="visitor-detail-panel__history-body">
+              <button
+                type="button"
+                class="visitor-detail-panel__history-path"
+                [title]="page.url"
+                (click)="openHistoryUrl(page)"
+              >
+                {{ formatPagePath(page) }}
+              </button>
+              <span class="visitor-detail-panel__history-time">
+                {{ formatPageTime(page.occurredAt) }}
+                @if (i === 0) {
+                  · actual
+                }
+              </span>
+            </div>
+          </li>
+        }
+      </ol>
+      @if (pageHistoryTotal() > pageHistory().length) {
+        <p class="visitor-detail-panel__history-more">
+          Mostrando {{ pageHistory().length }} de {{ pageHistoryTotal() }}
+        </p>
+      }
+    } @else if (visitor().currentUrl) {
       <div class="visitor-detail-panel__url-card">
         <div class="visitor-detail-panel__url-content">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -61,8 +103,10 @@
           </button>
         </div>
       </div>
-    </div>
-  }
+    } @else {
+      <p class="visitor-detail-panel__history-empty">Sin páginas registradas</p>
+    }
+  </div>
 
   <!-- Contact Info -->
   <div class="visitor-detail-panel__section">
@@ -128,19 +172,6 @@
               </svg>
             </span>
             <span class="visitor-detail-panel__info-value">{{ contactData()?.telefono || visitor().phone }}</span>
-          </div>
-        }
-        @if (contactData()?.dni) {
-          <div class="visitor-detail-panel__info-item">
-            <span class="visitor-detail-panel__info-icon">
-              <svg width="14" height="14" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="currentColor">
-                <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M12 9H18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                <path d="M12 13H18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                <circle cx="7" cy="11" r="2" stroke="currentColor" stroke-width="1.5"/>
-              </svg>
-            </span>
-            <span class="visitor-detail-panel__info-value">{{ contactData()?.dni }}</span>
           </div>
         }
         @if (contactData()?.poblacion) {

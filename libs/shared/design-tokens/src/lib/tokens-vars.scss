@@ -822,14 +822,14 @@ $_heat-7: #e82020;
 
 // ── grey-dark — "Hormigón y Sombra" (default) ──────────────────────────────
 [data-theme='grey-dark'] {
-  // Backgrounds
-  --color-bg-primary: #{$neutral-950};      // #262626 — main app bg
-  --color-bg-secondary: #{$neutral-900};    // panel/sidebar bg
-  --color-bg-tertiary: #{$neutral-800};     // elevated surfaces
-  --color-bg-elevated: #{$neutral-800};     // cards, modals
+  // Backgrounds — clearer 3-step ladder so columns separate
+  --color-bg-primary: #141414; // canvas / main
+  --color-bg-secondary: #1e1e1e; // rails / side panels
+  --color-bg-tertiary: #2a2a2a; // chips, nested, elevated
+  --color-bg-elevated: #2a2a2a;
   --color-bg-hover: #{rgba($neutral-50, 0.06)};
-  --color-bg-selected: #{rgba($neutral-50, 0.1)};
-  --color-bg-overlay: #{rgba($color-carbon, 0.7)};
+  --color-bg-selected: #{rgba($neutral-50, 0.12)};
+  --color-bg-overlay: #{rgba($color-carbon, 0.72)};
 
   // Surface aliases (compat layer for components using --color-surface-*)
   --color-surface-primary: var(--color-bg-primary);
@@ -850,8 +850,8 @@ $_heat-7: #e82020;
   --color-background-disabled: #{rgba($neutral-50, 0.04)};
 
   // Text additional
-  --color-text-inverse: #{$neutral-950};
-  --color-text-on-primary: #{$neutral-950};
+  --color-text-inverse: #141414;
+  --color-text-on-primary: #141414;
 
   // Semantic: success, warning, error, info
   --color-success: #{$success-500};
@@ -892,26 +892,26 @@ $_heat-7: #e82020;
   --color-text-disabled: #{$neutral-600};
   --color-text-placeholder: #{$neutral-500};
 
-  // Borders
-  --color-border-subtle: #{$neutral-800};
-  --color-border-default: #{$neutral-700};
+  // Borders — visible on charcoal panels
+  --color-border-subtle: #2a2a2a;
+  --color-border-default: #3f3f3f;
   --color-border-strong: #{$neutral-500};
   --color-border-focus: #{$neutral-300};
 
   // Accent
   --color-accent: #{$neutral-50};
   --color-accent-hover: #{$neutral-200};
-  --color-accent-muted: #{rgba($neutral-50, 0.15)};
-  --color-on-accent: #{$neutral-950};
+  --color-accent-muted: #{rgba($neutral-50, 0.14)};
+  --color-on-accent: #141414;
 
   // Sidebar (used by sidebar component)
-  --color-sidebar-bg: #{$neutral-950};
+  --color-sidebar-bg: #101010;
   --color-sidebar-bg-hover: #{rgba($neutral-50, 0.08)};
   --color-sidebar-bg-active: #{rgba($neutral-50, 0.12)};
   --color-sidebar-text: #{$neutral-400};
   --color-sidebar-text-active: #{$neutral-50};
   --color-sidebar-text-muted: #{$neutral-500};
-  --color-sidebar-border: #{$neutral-800};
+  --color-sidebar-border: #2a2a2a;
 
   // Scrollbar
   --color-scrollbar-thumb: #{rgba($neutral-50, 0.2)};
@@ -1006,7 +1006,7 @@ $_heat-7: #e82020;
   --color-text-placeholder: #666666;
 
   // Borders
-  --color-border-subtle: #1a1a1a;
+  --color-border-subtle: #222222;
   --color-border-default: #333333;
   --color-border-strong: #555555;
   --color-border-focus: #ededed;
@@ -1271,16 +1271,18 @@ $_heat-7: #e82020;
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
 }
 
-// ── clean-light — Pure grey/white, zero chroma ───────────────────────────────
+// ── clean-light — Neutral zinc light (zero chroma, clear hierarchy) ──────────
+// Surface ladder: white content → zinc-100 rails → zinc-200 nested/selected
+// Borders use zinc-200/300 so columns and cards actually separate.
 [data-theme='clean-light'] {
   // Backgrounds
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f9fafb;
-  --color-bg-tertiary: #f3f4f6;
+  --color-bg-primary: #ffffff; // main content (chat, panels)
+  --color-bg-secondary: #f4f4f5; // side rails / list chrome (zinc-100)
+  --color-bg-tertiary: #e4e4e7; // chips, nested, selected solid (zinc-200)
   --color-bg-elevated: #ffffff;
-  --color-bg-hover: rgba(0, 0, 0, 0.04);
-  --color-bg-selected: rgba(55, 65, 81, 0.08);
-  --color-bg-overlay: rgba(255, 255, 255, 0.90);
+  --color-bg-hover: rgba(24, 24, 27, 0.04);
+  --color-bg-selected: #e4e4e7;
+  --color-bg-overlay: rgba(244, 244, 245, 0.92);
 
   // Surface aliases
   --color-surface-primary: var(--color-bg-primary);
@@ -1289,40 +1291,59 @@ $_heat-7: #e82020;
   --color-surface-elevated: var(--color-bg-elevated);
   --color-surface-hover: var(--color-bg-hover);
   --color-surface-selected: var(--color-bg-selected);
-  --color-surface-pressed: var(--color-bg-selected);
-  --color-surface-disabled: rgba(0, 0, 0, 0.04);
-  --color-surface-inverse: #111827;
+  --color-surface-pressed: #d4d4d8;
+  --color-surface-disabled: #f4f4f5;
+  --color-surface-inverse: #18181b;
   --color-surface-overlay: var(--color-bg-overlay);
 
   // Background aliases
   --color-background-primary: var(--color-bg-primary);
   --color-background-secondary: var(--color-bg-secondary);
   --color-background-neutral: var(--color-bg-tertiary);
-  --color-background-disabled: rgba(0, 0, 0, 0.04);
+  --color-background-disabled: #f4f4f5;
 
-  // Text
-  --color-text-primary: #111827;
-  --color-text-secondary: #374151;
-  --color-text-tertiary: #6b7280;
-  --color-text-muted: #6b7280;
-  --color-text-disabled: #d1d5db;
-  --color-text-placeholder: #9ca3af;
+  // Text — distinct steps (zinc-950 / 700 / 500 / 400)
+  --color-text-primary: #18181b;
+  --color-text-secondary: #3f3f46;
+  --color-text-tertiary: #71717a;
+  --color-text-muted: #71717a;
+  --color-text-disabled: #a1a1aa;
+  --color-text-placeholder: #a1a1aa;
   --color-text-inverse: #ffffff;
   --color-text-on-primary: #ffffff;
 
-  // Borders
-  --color-border-subtle: #f3f4f6;
-  --color-border-default: #e5e7eb;
-  --color-border-strong: #d1d5db;
-  --color-border-focus: #374151;
+  // Borders — visible on white (was nearly invisible before)
+  --color-border-subtle: #e4e4e7;
+  --color-border-default: #d4d4d8;
+  --color-border-strong: #a1a1aa;
+  --color-border-hover: #a1a1aa;
+  --color-border-focus: #18181b;
 
-  // Accent — dark grey, no chroma
-  --color-accent: #374151;
-  --color-accent-hover: #1f2937;
-  --color-accent-muted: rgba(55, 65, 81, 0.08);
+  // Accent — near-black (distinct from secondary text)
+  --color-accent: #18181b;
+  --color-accent-hover: #27272a;
+  --color-accent-muted: rgba(24, 24, 27, 0.06);
   --color-on-accent: #ffffff;
-  --color-primary-default: #374151;
-  --color-primary-bg: rgba(55, 65, 81, 0.07);
+  --color-primary-default: #18181b;
+  --color-primary-bg: rgba(24, 24, 27, 0.06);
+
+  // Messages — readable on white, no chroma bleed
+  --color-message-visitor: #f4f4f5;
+  --color-message-visitor-text: #18181b;
+  --color-message-own: #e4e4e7;
+  --color-message-own-text: #18181b;
+  --color-message-system: #f4f4f5;
+  --color-message-system-text: #71717a;
+  --wl-message-visitor-bg: #f4f4f5;
+  --wl-message-visitor-bg-start: #f4f4f5;
+  --wl-message-visitor-bg-end: #eeeeef;
+  --wl-message-visitor-border: #e4e4e7;
+  --wl-message-visitor-text: #18181b;
+  --wl-message-own-bg: #e4e4e7;
+  --wl-message-own-bg-start: #e4e4e7;
+  --wl-message-own-bg-end: #dcdce0;
+  --wl-message-own-border: #d4d4d8;
+  --wl-message-own-text: #18181b;
 
   // Semantic
   --color-success: #{$success-600};
@@ -1352,20 +1373,20 @@ $_heat-7: #e82020;
   --color-status-online: #{$success-600};
   --color-status-away: #{$warning-600};
   --color-status-busy: #{$error-600};
-  --color-status-offline: #9ca3af;
+  --color-status-offline: #a1a1aa;
 
-  // Sidebar — dark grey, monochrome
-  --color-sidebar-bg: #1f2937;
-  --color-sidebar-bg-hover: rgba(255, 255, 255, 0.06);
-  --color-sidebar-bg-active: rgba(255, 255, 255, 0.12);
-  --color-sidebar-text: #9ca3af;
-  --color-sidebar-text-active: #ffffff;
-  --color-sidebar-text-muted: #6b7280;
-  --color-sidebar-border: #374151;
+  // Sidebar — light monochrome (matches content; no dark rail)
+  --color-sidebar-bg: #ffffff;
+  --color-sidebar-bg-hover: rgba(24, 24, 27, 0.04);
+  --color-sidebar-bg-active: #f4f4f5;
+  --color-sidebar-text: #71717a;
+  --color-sidebar-text-active: #18181b;
+  --color-sidebar-text-muted: #a1a1aa;
+  --color-sidebar-border: #e4e4e7;
 
   // Scrollbar
-  --color-scrollbar-thumb: rgba(55, 65, 81, 0.25);
-  --color-scrollbar-thumb-hover: rgba(55, 65, 81, 0.40);
+  --color-scrollbar-thumb: rgba(24, 24, 27, 0.22);
+  --color-scrollbar-thumb-hover: rgba(24, 24, 27, 0.38);
 
   // Heat index
   --heat-1: #{$_heat-1};
@@ -1376,10 +1397,10 @@ $_heat-7: #e82020;
   --heat-6: #{$_heat-6};
   --heat-7: #{$_heat-7};
 
-  // Shadow
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.10), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.12), 0 2px 4px -2px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.14), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
+  // Shadow — slightly softer for light UI
+  --shadow-sm: 0 1px 2px 0 rgba(24, 24, 27, 0.06), 0 1px 1px -1px rgba(24, 24, 27, 0.04);
+  --shadow-md: 0 4px 8px -2px rgba(24, 24, 27, 0.08), 0 2px 4px -2px rgba(24, 24, 27, 0.05);
+  --shadow-lg: 0 12px 20px -4px rgba(24, 24, 27, 0.10), 0 4px 8px -4px rgba(24, 24, 27, 0.05);
 }
 
 // ── daylight — Corporate blue light identity ─────────────────────────────────
@@ -1713,6 +1734,138 @@ $_heat-7: #e82020;
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.10), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.12), 0 2px 4px -2px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.14), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
+}
+
+// ── leadcars — Company theme for LeadCars SaaS embed ─────────────────────────
+// Brand cues from LeadCars app / leadcars.es: navy chrome, lime actions,
+// powder-blue surfaces, white content — so iframe feels native inside their SaaS.
+[data-theme='leadcars'] {
+  // Backgrounds
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #e8f4fb; // powder rails
+  --color-bg-tertiary: #d1e9f6;
+  --color-bg-elevated: #ffffff;
+  --color-bg-hover: rgba(27, 49, 73, 0.05);
+  --color-bg-selected: #fef4d9; // LeadCars highlight beige
+  --color-bg-overlay: rgba(27, 49, 73, 0.55);
+
+  // Surface aliases
+  --color-surface-primary: var(--color-bg-primary);
+  --color-surface-secondary: var(--color-bg-secondary);
+  --color-surface-tertiary: var(--color-bg-tertiary);
+  --color-surface-elevated: var(--color-bg-elevated);
+  --color-surface-hover: var(--color-bg-hover);
+  --color-surface-selected: var(--color-bg-selected);
+  --color-surface-pressed: #d1e9f6;
+  --color-surface-disabled: #eef6fb;
+  --color-surface-inverse: #1b3149;
+  --color-surface-overlay: var(--color-bg-overlay);
+
+  // Background aliases
+  --color-background-primary: var(--color-bg-primary);
+  --color-background-secondary: var(--color-bg-secondary);
+  --color-background-neutral: var(--color-bg-tertiary);
+  --color-background-disabled: #eef6fb;
+
+  // Text — navy hierarchy
+  --color-text-primary: #1a4269;
+  --color-text-secondary: #3d5a73;
+  --color-text-tertiary: #6a8499;
+  --color-text-muted: #6a8499;
+  --color-text-disabled: #a8bcc9;
+  --color-text-placeholder: #8aa0b0;
+  --color-text-inverse: #ffffff;
+  --color-text-on-primary: #ffffff;
+
+  // Borders
+  --color-border-subtle: #d5e6f0;
+  --color-border-default: #b8cfde;
+  --color-border-strong: #8aa8bc;
+  --color-border-hover: #8aa8bc;
+  --color-border-focus: #a9cb57;
+
+  // Accent — lime green (primary CTAs in LeadCars)
+  --color-accent: #a9cb57;
+  --color-accent-hover: #96b84a;
+  --color-accent-muted: rgba(169, 203, 87, 0.18);
+  --color-on-accent: #ffffff;
+  --color-primary-default: #a9cb57;
+  --color-primary-bg: rgba(169, 203, 87, 0.14);
+
+  // Messages
+  --color-message-visitor: #e8f4fb;
+  --color-message-visitor-text: #1a4269;
+  --color-message-own: #a9cb57;
+  --color-message-own-text: #ffffff;
+  --color-message-system: #e8f4fb;
+  --color-message-system-text: #6a8499;
+  --wl-message-visitor-bg: #e8f4fb;
+  --wl-message-visitor-bg-start: #e8f4fb;
+  --wl-message-visitor-bg-end: #dceef8;
+  --wl-message-visitor-border: #d5e6f0;
+  --wl-message-visitor-text: #1a4269;
+  --wl-message-own-bg: #a9cb57;
+  --wl-message-own-bg-start: #a9cb57;
+  --wl-message-own-bg-end: #9bc04c;
+  --wl-message-own-border: #96b84a;
+  --wl-message-own-text: #ffffff;
+
+  // Semantic
+  --color-success: #{$success-600};
+  --color-success-bg: #{rgba($success-600, 0.10)};
+  --color-success-text: #{$success-700};
+  --color-success-hover: #{rgba($success-600, 0.18)};
+  --color-success-default: #{$success-600};
+  --color-warning: #{$warning-600};
+  --color-warning-bg: #{rgba($warning-600, 0.10)};
+  --color-warning-text: #{$warning-700};
+  --color-warning-hover: #{rgba($warning-600, 0.18)};
+  --color-warning-default: #{$warning-600};
+  --color-error: #a92d1d; // LeadCars badge red
+  --color-error-bg: rgba(169, 45, 29, 0.10);
+  --color-error-text: #8a2418;
+  --color-error-hover: rgba(169, 45, 29, 0.18);
+  --color-danger-default: #a92d1d;
+  --color-info: #2f6f9f;
+  --color-info-bg: rgba(47, 111, 159, 0.10);
+  --color-info-text: #1a4269;
+  --color-info-hover: rgba(47, 111, 159, 0.18);
+  --color-purple: #6c4fc2;
+  --color-purple-bg: rgba(108, 79, 194, 0.10);
+  --color-purple-text: #5440a0;
+
+  // Status
+  --color-status-online: #{$success-600};
+  --color-status-away: #{$warning-600};
+  --color-status-busy: #a92d1d;
+  --color-status-offline: #8aa0b0;
+
+  // Sidebar — navy header/menu from LeadCars
+  --color-sidebar-bg: #1b3149;
+  --color-sidebar-bg-hover: rgba(255, 255, 255, 0.08);
+  --color-sidebar-bg-active: rgba(169, 203, 87, 0.22);
+  --color-sidebar-text: #b8cfde;
+  --color-sidebar-text-active: #ffffff;
+  --color-sidebar-text-muted: #8aa8bc;
+  --color-sidebar-border: #243a52;
+
+  // Scrollbar
+  --color-scrollbar-thumb: rgba(27, 49, 73, 0.28);
+  --color-scrollbar-thumb-hover: rgba(27, 49, 73, 0.42);
+
+  // Heat index
+  --heat-1: #{$_heat-1};
+  --heat-2: #{$_heat-2};
+  --heat-3: #{$_heat-3};
+  --heat-4: #{$_heat-4};
+  --heat-5: #{$_heat-5};
+  --heat-6: #{$_heat-6};
+  --heat-7: #{$_heat-7};
+
+  // Shadow — soft, flat SaaS feel
+  --shadow-sm: 0 1px 2px 0 rgba(27, 49, 73, 0.06), 0 1px 1px -1px rgba(27, 49, 73, 0.04);
+  --shadow-md: 0 4px 8px -2px rgba(27, 49, 73, 0.08), 0 2px 4px -2px rgba(27, 49, 73, 0.05);
+  --shadow-lg: 0 12px 20px -4px rgba(27, 49, 73, 0.10), 0 4px 8px -4px rgba(27, 49, 73, 0.05);
 }
 
 // ============================================================================

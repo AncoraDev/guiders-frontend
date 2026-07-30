@@ -1,0 +1,201 @@
+<div
+  class="atencion"
+  data-testid="atencion-workspace"
+  [class.atencion--panel-open]="showVisitorPanel()"
+>
+  <!-- Colas -->
+  <aside class="atencion__queues" aria-label="Colas de atención" data-tour="atencion-queues">
+    <header class="atencion__queues-header">
+      <h1>Atención</h1>
+      <button
+        type="button"
+        class="atencion__refresh"
+        (click)="refreshAll()"
+        [disabled]="isLoading()"
+        title="Actualizar"
+      >
+        Actualizar
+      </button>
+    </header>
+
+    <nav class="atencion__queue-nav">
+      <button
+        type="button"
+        class="atencion__queue-btn"
+        [class.atencion__queue-btn--active]="activeCola() === 'pendientes'"
+        (click)="selectCola('pendientes')"
+      >
+        <span>Pendientes</span>
+        <span class="atencion__badge" [class.atencion__badge--urgent]="pendingCount() > 0">
+          {{ pendingCount() }}
+        </span>
+      </button>
+      <button
+        type="button"
+        class="atencion__queue-btn"
+        [class.atencion__queue-btn--active]="activeCola() === 'mios'"
+        (click)="selectCola('mios')"
+      >
+        <span>Míos</span>
+        <span
+          class="atencion__badge"
+          [class.atencion__badge--urgent]="mineUnreadCount() > 0"
+        >
+          {{ mineUnreadCount() > 0 ? mineUnreadCount() : mineCount() }}
+        </span>
+      </button>
+      <button
+        type="button"
+        class="atencion__queue-btn"
+        [class.atencion__queue-btn--active]="activeCola() === 'en-web'"
+        (click)="selectCola('en-web')"
+      >
+        <span>En la web</span>
+        <span class="atencion__badge">{{ webCount() }}</span>
+      </button>
+    </nav>
+
+    @if (error()) {
+      <p class="atencion__error" role="alert">{{ error() }}</p>
+    }
+  </aside>
+
+  <!-- Lista -->
+  <section class="atencion__list" aria-label="Lista de personas">
+    <header class="atencion__list-header">
+      @switch (activeCola()) {
+        @case ('pendientes') {
+          <h2>Sin atender</h2>
+          <p>Han hablado y nadie los tiene todavía. Al abrir, quedan tuyos.</p>
+        }
+        @case ('mios') {
+          <h2>Mis conversaciones</h2>
+          <p>
+            En línea / desconectado en vivo. Si te escriben en otro chat, verás la notificación en rojo.
+          </p>
+        }
+        @default {
+          <h2>En la web ahora</h2>
+          <p>Solo visitantes online sin chat. Si vacías caché, es un visitante nuevo.</p>
+        }
+      }
+    </header>
+
+    @if (isLoading()) {
+      <div class="atencion__empty">Cargando…</div>
+    } @else if (listItems().length === 0 && !(activeCola() === 'mios' && inactiveMineCount() > 0)) {
+      <div class="atencion__empty">
+        @switch (activeCola()) {
+          @case ('en-web') {
+            Nadie en la web ahora. Abre el demo en Chrome o Safari y aparecerá aquí en unos segundos.
+          }
+          @case ('mios') {
+            Aún no tienes conversaciones. Reclama un pendiente o inicia contacto desde En la web.
+          }
+          @default {
+            No hay chats sin atender.
+          }
+        }
+      </div>
+    } @else {
+      <ul class="atencion__items">
+        @for (item of listItems(); track item.id) {
+          <li>
+            <button
+              type="button"
+              class="atencion__item"
+              [class.atencion__item--selected]="selectedItemId() === item.id"
+              [class.atencion__item--unread]="item.unreadCount > 0"
+              [class.atencion__item--offline]="item.presence === 'offline'"
+              [disabled]="isClaiming()"
+              (click)="onSelectItem(item)"
+            >
+              <div class="atencion__item-main">
+                <span class="atencion__item-title">
+                  <span
+                    class="atencion__presence-dot"
+                    [attr.data-status]="item.presence || 'unknown'"
+                    aria-hidden="true"
+                  ></span>
+                  {{ item.title }}
+                </span>
+                <span class="atencion__item-sub">{{ item.subtitle }}</span>
+              </div>
+              <div class="atencion__item-meta">
+                <span
+                  class="atencion__item-status"
+                  [attr.data-status]="item.presence || 'unknown'"
+                >
+                  {{ item.statusLabel }}
+                </span>
+                @if (item.unreadCount > 0) {
+                  <span class="atencion__unread">{{ item.unreadCount }}</span>
+                }
+              </div>
+            </button>
+          </li>
+        }
+      </ul>
+
+      @if (activeCola() === 'mios' && inactiveMineCount() > 0) {
+        <button
+          type="button"
+          class="atencion__inactive-toggle"
+          (click)="toggleInactiveMios()"
+        >
+          {{
+            showInactiveMios()
+              ? 'Ocultar inactivos'
+              : 'Mostrar ' + inactiveMineCount() + ' inactivos (desconectados)'
+          }}
+        </button>
+      }
+    }
+  </section>
+
+  <!-- Panel chat -->
+  <main class="atencion__chat" data-tour="atencion-main">
+    @if (selectedChat(); as chat) {
+      <guiders-chat-placeholder
+        [selectedChat]="chat"
+        [showActions]="true"
+        [isPanelOpen]="showVisitorPanel()"
+        [placeholderMessage]="'Escribe un mensaje…'"
+        [messages]="messages()"
+        [currentUserId]="currentUserId()"
+        [isLoading]="messagesLoading()"
+        [isLoadingMore]="false"
+        [hasMoreMessages]="false"
+        [visitorProfile]="visitorProfile()"
+        (messageSent)="onSendMessage($event)"
+        (loadMoreMessages)="onLoadMoreMessages()"
+        (closeChat)="onCloseChat()"
+        (settingsClicked)="toggleVisitorPanel()"
+      />
+    } @else {
+      <guiders-chat-welcome-state
+        [title]="'Elige a quién atender'"
+        [description]="'Pendientes primero. Al abrir uno, pasa a Míos automáticamente.'"
+        [showNewChatButton]="false"
+      />
+    }
+  </main>
+
+  @if (showVisitorPanel() && selectedVisitor(); as visitor) {
+    <aside class="atencion__detail-panel" data-testid="visitor-detail-panel">
+      <guiders-visitor-detail-panel
+        [visitor]="visitor"
+        [isOpen]="showVisitorPanel()"
+        [leadScore]="visitorActivity()?.leadScore ?? null"
+        [contactData]="visitorContactData()"
+        [savingContactData]="savingContactData()"
+        [chatId]="selectedChat()?.chatId"
+        [pageHistory]="pageHistory()"
+        [pageHistoryTotal]="pageHistoryTotal()"
+        [pageHistoryLoading]="pageHistoryLoading()"
+        (closePanel)="onCloseVisitorPanel()"
+        (saveContactData)="onSaveContactData($event)"
+      />
+    </aside>
+  }
+</div>

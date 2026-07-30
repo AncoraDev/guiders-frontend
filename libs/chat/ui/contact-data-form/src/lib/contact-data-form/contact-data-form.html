@@ -80,26 +80,6 @@
       }
     </div>
 
-    <!-- DNI -->
-    <div class="contact-data-form__field">
-      <label class="contact-data-form__label" for="dni">DNI/NIF</label>
-      <input
-        class="contact-data-form__input"
-        [class.contact-data-form__input--error]="getError('dni')"
-        id="dni"
-        type="text"
-        formControlName="dni"
-        placeholder="12345678A"
-        [attr.aria-invalid]="!!getError('dni')"
-        [attr.aria-describedby]="getError('dni') ? 'dni-error' : null"
-      />
-      @if (getError('dni')) {
-      <span class="contact-data-form__error" id="dni-error" role="alert">
-        {{ getError('dni') }}
-      </span>
-      }
-    </div>
-
     <!-- Población -->
     <div class="contact-data-form__field">
       <label class="contact-data-form__label" for="poblacion">Población</label>

@@ -51,7 +51,7 @@ export class App {
 
   // Configuración del sidebar para console
   readonly sidebarConfig = signal<SidebarConfig>({
-    collapsed: false,
+    collapsed: true,
     showToggle: true,
     theme: 'dark',
     width: '280px',
@@ -65,16 +65,26 @@ export class App {
 
     return [
       {
-        id: 'inbox',
-        label: 'Bandeja de Entrada',
-        icon: 'inbox',
-        route: '/inbox',
+        id: 'atencion',
+        label: 'Atención',
+        icon: 'message-circle',
+        route: '/atencion',
         ...(totalUnread > 0 && {
           badge: {
             text: totalUnread > 99 ? '99+' : totalUnread.toString(),
             variant: 'danger' as const
           }
         })
+      },
+      {
+        id: 'visitors',
+        label: 'Visitantes',
+        icon: 'users',
+        route: '/visitors',
+        badge: {
+          text: 'Borrador',
+          variant: 'warning' as const,
+        },
       },
       {
         id: 'escalations',
@@ -87,12 +97,6 @@ export class App {
             variant: 'danger' as const
           }
         })
-      },
-      {
-        id: 'visitors',
-        label: 'Visitantes',
-        icon: 'users',
-        route: '/visitors'
       },
     ];
   });

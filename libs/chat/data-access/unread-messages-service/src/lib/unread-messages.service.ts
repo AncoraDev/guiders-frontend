@@ -1225,16 +1225,16 @@ export class UnreadMessagesService {
       notification.onclick = () => {
         window.focus();
 
-        // Navegar a inbox con el chat seleccionado
+        // Navegar a Atención con el chat seleccionado
         const router = this.getRouter();
         if (router) {
           console.log(
-            '[UnreadMessagesService] 🚀 Navegando a inbox con chat:',
+            '[UnreadMessagesService] 🚀 Navegando a atención con chat:',
             message.chatId
           );
           router
-            .navigate(['/inbox'], {
-              queryParams: { chat: message.chatId },
+            .navigate(['/atencion'], {
+              queryParams: { cola: 'mios', chat: message.chatId },
             })
             .then(() => {
               console.log('[UnreadMessagesService] ✅ Navegación completada');
@@ -1249,8 +1249,7 @@ export class UnreadMessagesService {
           console.warn(
             '[UnreadMessagesService] ⚠️ No se pudo navegar: Router no disponible'
           );
-          // Fallback: usar location.href
-          window.location.href = `/inbox?chat=${message.chatId}`;
+          window.location.href = `/atencion?cola=mios&chat=${message.chatId}`;
         }
 
         notification.close();

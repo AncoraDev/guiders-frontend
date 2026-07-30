@@ -1,8 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { tap, catchError, switchMap } from 'rxjs/operators';
-import { SessionService } from '@guiders-frontend/auth/data-access/session';
+import { tap, catchError, switchMap, map } from 'rxjs/operators';
 import { ENVIRONMENT_TOKEN } from '@guiders-frontend/auth/data-access/session';
 import {
   Visitor,
@@ -25,7 +24,11 @@ import {
   SaveFilterResponse,
   SaveContactDataRequest,
   LeadContactData,
+  VisitorPageHistory,
+  VisitorPageHistoryItem,
 } from '@guiders-frontend/shared/types';
+
+export type { VisitorPageHistory, VisitorPageHistoryItem };
 
 export interface LeadScoreSignals {
   isRecurrentVisitor: boolean;
@@ -58,7 +61,6 @@ export interface VisitorActivity {
 })
 export class VisitorsDataService {
   private readonly http = inject(HttpClient);
-  private readonly sessionService = inject(SessionService);
   private readonly environment = inject(ENVIRONMENT_TOKEN);
   private readonly baseUrl = `${this.environment.api.baseUrl}`;
 
@@ -121,6 +123,30 @@ export class VisitorsDataService {
       );
   }
 
+  /** Historial de páginas (PAGE_VIEW), más reciente primero */
+  getVisitorPageHistory(
+    visitorId: string,
+    limit = 50
+  ): Observable<VisitorPageHistory> {
+    return this.http
+      .get<VisitorPageHistory>(
+        `${this.baseUrl}/visitors/${visitorId}/page-history`,
+        {
+          params: { limit: String(limit) },
+          withCredentials: true,
+        }
+      )
+      .pipe(
+        catchError((error) => {
+          console.error(
+            '[VisitorsDataService] Error getting page history:',
+            error
+          );
+          return throwError(() => error);
+        })
+      );
+  }
+
   // Obtener sesiones de un visitante
   getVisitorSessions(
     visitorId: string,
@@ -169,13 +195,19 @@ export class VisitorsDataService {
   createChatWithVisitor(
     request: CreateChatWithVisitorRequest
   ): Observable<CreateChatWithVisitorResponse> {
+    const visitorInfo = {
+      ...(request.visitorInfo ?? {}),
+      // Comerciales deben enviar visitorId dentro de visitorInfo (API v2)
+      visitorId: request.visitorId,
+    };
+
     if (request.firstMessage) {
       // Usar endpoint que crea chat con mensaje inicial
       return this.http.post<CreateChatWithVisitorResponse>(
         `${this.baseUrl}/v2/chats/with-message`,
         {
           firstMessage: request.firstMessage,
-          visitorInfo: request.visitorInfo,
+          visitorInfo,
           metadata: request.metadata,
         },
         { withCredentials: true }
@@ -185,7 +217,7 @@ export class VisitorsDataService {
       return this.http.post<CreateChatWithVisitorResponse>(
         `${this.baseUrl}/v2/chats`,
         {
-          visitorInfo: request.visitorInfo,
+          visitorInfo,
           metadata: request.metadata,
         },
         { withCredentials: true }
@@ -208,14 +240,31 @@ export class VisitorsDataService {
       params = params.set('department', department);
     }
 
-    return this.http.get<{
-      queue: Chat[];
-      total: number;
-      waitTime: { average: number; median: number };
-    }>(`${this.baseUrl}/v2/chats/queue/pending`, {
-      params,
-      withCredentials: true,
-    });
+    // El backend puede devolver un array plano o un envelope { queue, total, waitTime }
+    return this.http
+      .get<
+        | Chat[]
+        | {
+            queue: Chat[];
+            total: number;
+            waitTime: { average: number; median: number };
+          }
+      >(`${this.baseUrl}/v2/chats/queue/pending`, {
+        params,
+        withCredentials: true,
+      })
+      .pipe(
+        map((response) => {
+          if (Array.isArray(response)) {
+            return {
+              queue: response,
+              total: response.length,
+              waitTime: { average: 0, median: 0 },
+            };
+          }
+          return response;
+        })
+      );
   }
 
   // Asignar chat a comercial
@@ -312,53 +361,6 @@ export class VisitorsDataService {
     );
   }
 
-  /**
-   * Obtener el siteId del visitante
-   * Este endpoint es más preciso que getCompanySites() porque devuelve
-   * el siteId específico del visitante con el que se está chateando.
-   *
-   * @param visitorId - ID del visitante
-   * @returns Observable con visitorId, siteId y tenantId
-   */
-  getVisitorSite(visitorId: string): Observable<{
-    visitorId: string;
-    siteId: string;
-    tenantId: string;
-  }> {
-    console.log(
-      '[VisitorsDataService] Obteniendo siteId del visitante:',
-      visitorId
-    );
-    return this.http
-      .get<{
-        visitorId: string;
-        siteId: string;
-        tenantId: string;
-      }>(`${this.baseUrl}/visitors/${visitorId}/site`, {
-        withCredentials: true,
-      })
-      .pipe(
-        tap((response) => {
-          console.log(
-            '[VisitorsDataService] SiteId del visitante obtenido:',
-            response
-          );
-        }),
-        catchError((error) => {
-          console.error(
-            '[VisitorsDataService] Error al obtener siteId del visitante:',
-            {
-              visitorId,
-              status: error.status,
-              statusText: error.statusText,
-              message: error.message,
-            }
-          );
-          return throwError(() => error);
-        })
-      );
-  }
-
   // Obtener información de la empresa del usuario autenticado
   getCompanySites(): Observable<{
     sites: Array<{
@@ -441,182 +443,9 @@ export class VisitorsDataService {
               url: error.url,
             }
           );
-          console.error(
-            '[VisitorsDataService] Esto puede causar que las sugerencias de IA no funcionen'
-          );
           return throwError(() => error);
         })
       );
-  }
-
-  /**
-   * @deprecated Usar getCompanySites() directamente en su lugar
-   * Método simple para obtener sitios - mantenido para compatibilidad
-   */
-  getUserSites(): Observable<
-    Array<{
-      siteId: string;
-      companyId: string;
-      siteName: string;
-      domain: string;
-      isActive: boolean;
-    }>
-  > {
-    console.warn(
-      '[VisitorsDataService] getUserSites() está deprecado, usar getCompanySites() directamente'
-    );
-
-    // Usar el método completo y extraer solo los sitios
-    return this.getCompanySites().pipe(
-      switchMap((response) => {
-        return new Observable<
-          Array<{
-            siteId: string;
-            companyId: string;
-            siteName: string;
-            domain: string;
-            isActive: boolean;
-          }>
-        >((subscriber) => {
-          subscriber.next(response.sites);
-          subscriber.complete();
-        });
-      })
-    );
-  }
-
-  /**
-   * Método fallback para obtener sitios cuando el endpoint principal no está disponible
-   */
-  private getCompanySitesFallback(): Observable<{
-    sites: Array<{
-      siteId: string;
-      companyId: string;
-      siteName: string;
-      domain: string;
-      isActive: boolean;
-    }>;
-    companyId: string;
-    companyName: string;
-    totalSites: number;
-  }> {
-    return this.sessionService.ensureSession$().pipe(
-      switchMap((user) => {
-        console.log(
-          '[VisitorsDataService] Usuario obtenido para fallback:',
-          user
-        );
-
-        // Usar directamente el endpoint /api/me/company que requiere autenticación
-        console.log(
-          '[VisitorsDataService] Fallback: Usando endpoint /api/me/company'
-        );
-        return this.getCompanySites();
-      }),
-      catchError((error) => {
-        console.error('[VisitorsDataService] Error en fallback:', error);
-
-        // Como último recurso, intentar obtener todos los sitios del usuario
-        console.log(
-          '[VisitorsDataService] Último recurso: obteniendo sitios del usuario'
-        );
-        return this.http.get<{
-          sites: Array<{
-            siteId: string;
-            companyId: string;
-            siteName: string;
-            domain: string;
-            isActive: boolean;
-          }>;
-          companyId: string;
-          companyName: string;
-          totalSites: number;
-        }>(`${this.baseUrl}/sites/user`, {
-          withCredentials: true,
-        });
-      })
-    );
-  }
-
-  // Obtener sitio específico por ID (para compatibilidad)
-  getSiteById(siteId: string): Observable<{
-    siteId: string;
-    companyId: string;
-    siteName: string;
-    companyName: string;
-    domain: string;
-    isActive: boolean;
-  }> {
-    console.log(`[VisitorsDataService] Obteniendo sitio por ID: ${siteId}`);
-
-    return this.http
-      .get<{
-        siteId: string;
-        companyId: string;
-        siteName: string;
-        companyName: string;
-        domain: string;
-        isActive: boolean;
-      }>(`${this.baseUrl}/sites/${siteId}`, {
-        withCredentials: true,
-      })
-      .pipe(
-        tap((response) =>
-          console.log('[VisitorsDataService] Sitio obtenido:', response)
-        ),
-        catchError((error) => {
-          console.error('[VisitorsDataService] Error al obtener sitio:', error);
-          return throwError(() => error);
-        })
-      );
-  }
-
-  /**
-   * @deprecated Usar getCompanySites() o getSiteById() en su lugar
-   * Método legacy mantenido para compatibilidad temporal
-   */
-  resolveSite(host: string): Observable<{
-    siteId: string;
-    companyId: string;
-    siteName: string;
-    companyName: string;
-  }> {
-    console.warn(
-      '[VisitorsDataService] resolveSite() está deprecado, usar getCompanySites() en su lugar'
-    );
-
-    // Buscar en los sitios de la empresa el que coincida con el host
-    return this.getCompanySites().pipe(
-      switchMap((response) => {
-        const hostname = (host || '').split(':')[0].trim().toLowerCase();
-        const matchingSite = response.sites.find(
-          (site) =>
-            site.domain.toLowerCase() === hostname ||
-            site.domain.toLowerCase().includes(hostname)
-        );
-
-        if (matchingSite) {
-          return new Observable<{
-            siteId: string;
-            companyId: string;
-            siteName: string;
-            companyName: string;
-          }>((subscriber) => {
-            subscriber.next({
-              siteId: matchingSite.siteId,
-              companyId: matchingSite.companyId,
-              siteName: matchingSite.siteName,
-              companyName: response.companyName,
-            });
-            subscriber.complete();
-          });
-        } else {
-          return throwError(
-            () => new Error(`No se encontró sitio para el host: ${hostname}`)
-          );
-        }
-      })
-    );
   }
 
   // ============================================

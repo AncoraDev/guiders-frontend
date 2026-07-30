@@ -51,8 +51,8 @@ export class EscalationsPage {
    */
   onAttend(escalation: EscalationEvent): void {
     // Navigate to inbox with chat selected
-    this.router.navigate(['/inbox'], {
-      queryParams: { chat: escalation.chatId }
+    this.router.navigate(['/atencion'], {
+      queryParams: { cola: 'mios', chat: escalation.chatId }
     });
 
     // Remove from escalations list

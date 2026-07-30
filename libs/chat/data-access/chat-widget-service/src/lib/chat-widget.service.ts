@@ -49,8 +49,11 @@ export class ChatWidgetService {
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe((event) => {
         const url = (event as NavigationEnd).url;
-        // Ocultar el widget si estamos en /inbox o /bandeja-de-entrada
-        const shouldShow = !url.includes('/inbox') && !url.includes('/bandeja-de-entrada');
+        // Ocultar el widget en espacios con chat embebido (Atención / legacy inbox)
+        const shouldShow =
+          !url.includes('/atencion') &&
+          !url.includes('/inbox') &&
+          !url.includes('/bandeja-de-entrada');
         this.shouldShowSubject.next(shouldShow);
         
         // Si navegamos a inbox, cerrar el widget

@@ -24,9 +24,6 @@
       "@guiders-frontend/admin/ui/leadcars-status-panel": [
         "libs/admin/ui/leadcars-status-panel/src/index.ts"
       ],
-      "@guiders-frontend/ai-config": [
-        "libs/admin/features/ai-config/src/index.ts"
-      ],
       "@guiders-frontend/analytics/features/admin-dashboard": [
         "libs/analytics/features/admin-dashboard/src/index.ts"
       ],
@@ -82,6 +79,9 @@
       ],
       "@guiders-frontend/chat/data-access/websocket-service": [
         "libs/chat/data-access/websocket-service/src/index.ts"
+      ],
+      "@guiders-frontend/chat/features/atencion": [
+        "libs/chat/features/atencion/src/index.ts"
       ],
       "@guiders-frontend/chat/features/inbox": [
         "libs/chat/features/inbox/src/index.ts"
@@ -160,9 +160,6 @@
       "@guiders-frontend/leads": ["libs/admin/features/leads/src/index.ts"],
       "@guiders-frontend/leads-service": [
         "libs/admin/data-access/leads-service/src/index.ts"
-      ],
-      "@guiders-frontend/llm-config-service": [
-        "libs/admin/data-access/llm-config-service/src/index.ts"
       ],
       "@guiders-frontend/pagination": [
         "libs/shared/ui/pagination/src/index.ts"

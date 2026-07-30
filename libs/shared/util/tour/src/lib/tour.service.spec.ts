@@ -174,13 +174,13 @@ describe('TourService', () => {
       expect(service.isCompleted(consoleTourId, mockUserId)).toBe(true);
     });
 
-    it('should navigate to /inbox for console tour first step', async () => {
+    it('should navigate to /atencion for console tour first step', async () => {
       mockRouterNavigation(router);
       const navigateSpy = router.navigate as ReturnType<typeof vi.fn>;
 
       await service.startTour(consoleTourId, mockUserId);
 
-      expect(navigateSpy).toHaveBeenCalledWith(['/inbox']);
+      expect(navigateSpy).toHaveBeenCalledWith(['/atencion']);
     });
 
     it('should navigate to /dashboard for admin tour first step', async () => {

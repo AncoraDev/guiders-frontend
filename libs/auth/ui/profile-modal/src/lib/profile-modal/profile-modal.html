@@ -252,6 +252,34 @@
                   </button>
                 }
               </div>
+
+              @if (companyThemes.length > 0) {
+                <p class="theme-section-label">Company</p>
+                <div class="theme-grid">
+                  @for (theme of companyThemes; track theme.id) {
+                    <button
+                      type="button"
+                      class="theme-card"
+                      [class.active]="themeService.theme() === theme.id"
+                      (click)="themeService.setTheme(theme.id)"
+                      [attr.aria-pressed]="themeService.theme() === theme.id"
+                      [attr.aria-label]="'Tema ' + theme.label">
+                      <div
+                        class="theme-swatch"
+                        [style.background-color]="theme.bg">
+                        <div
+                          class="theme-swatch-accent"
+                          [style.background-color]="theme.accent">
+                        </div>
+                      </div>
+                      <span class="theme-card-label">{{ theme.label }}</span>
+                      @if (themeService.theme() === theme.id) {
+                        <span class="theme-card-active-icon" aria-hidden="true">✓</span>
+                      }
+                    </button>
+                  }
+                </div>
+              }
             </div>
           </div>
         }

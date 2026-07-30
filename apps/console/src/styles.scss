@@ -245,120 +245,62 @@ body {
 }
 
 /* ============================================================================
-   DARK MODE - THEME OVERRIDES
-   Las siguientes variables se redefinen cuando body tiene clase .theme-dark
+   DARK MODE — compat aliases only
+   Surfaces, text, borders and accents come from [data-theme] in tokens-vars.scss.
+   Do NOT hardcode them here: it flattens Carbon / Midnight / Warm into Grey.
    ============================================================================ */
 
 .theme-dark {
-  // --- Superficies (Dark Mode) ---
-  --color-surface-primary: #{tokens.$color-content-dark-bg};
-  --color-surface-secondary: #{tokens.$color-content-dark-bg-secondary};
-  --color-surface-tertiary: #{tokens.$color-content-dark-bg-tertiary};
-  --color-surface-hover: #{tokens.$color-content-dark-bg-hover};
-  --color-surface-selected: #{tokens.$color-content-dark-bg-selected};
-  --color-surface-pressed: #{tokens.$color-content-dark-bg-selected};
-  --color-surface-disabled: #{tokens.$color-content-dark-bg-secondary};
-  --color-surface-elevated: #{tokens.$color-content-dark-bg-elevated};
-  --color-surface-inverse: #{tokens.$color-surface-primary};
+  // --- White-label / legacy aliases → theme tokens ---
+  --color-brand: var(--color-accent);
+  --color-brand-hover: var(--color-accent-hover);
+  --color-on-brand: var(--color-on-accent);
 
-  // --- Texto (Dark Mode) ---
-  --color-text-primary: #{tokens.$color-content-dark-text-primary};
-  --color-text-secondary: #{tokens.$color-content-dark-text-secondary};
-  --color-text-tertiary: #{tokens.$color-content-dark-text-tertiary};
-  --color-text-disabled: #{tokens.$color-content-dark-text-disabled};
-  --color-text-placeholder: #{tokens.$color-content-dark-text-placeholder};
-  --color-text-inverse: #{tokens.$color-text-primary};
-
-  // --- Bordes (Dark Mode) ---
-  --color-border-subtle: #{tokens.$color-content-dark-border-subtle};
-  --color-border-default: #{tokens.$color-content-dark-border-default};
-  --color-border-strong: #{tokens.$color-content-dark-border-strong};
-  --color-border-hover: #{tokens.$color-content-dark-border-strong};
-  --color-border-focus: #{tokens.$color-content-dark-text-primary};
-
-  // --- Acento (Dark Mode) ---
-  // NOTE: --color-accent* are intentionally NOT set here.
-  // Each [data-theme] block in tokens-vars.scss defines its own accent values.
-  // Setting them here would override per-theme accents since styles.scss loads after component SCSS.
-  // --color-on-accent is set to a safe fallback only if not covered by [data-theme]:
-  --color-on-accent: #{tokens.$neutral-50};
-
-  // --- Scrollbar (Dark Mode) ---
-  --color-scrollbar-thumb: #{tokens.$color-content-dark-scrollbar-thumb};
-  --color-scrollbar-thumb-hover: #{tokens.$color-content-dark-scrollbar-thumb-hover};
-
-  // --- Semánticos - Backgrounds y Textos (Dark Mode) ---
-  --color-success-bg: rgba(16, 185, 129, 0.2);
-  --color-success-text: #6ee7b7;
-  --color-success-hover: #34d399;
-  --color-warning-bg: rgba(245, 158, 11, 0.2);
-  --color-warning-text: #fcd34d;
-  --color-warning-hover: #fbbf24;
-  --color-error-bg: rgba(239, 68, 68, 0.2);
-  --color-error-text: #fca5a5;
-  --color-error-hover: #f87171;
-  --color-info-bg: rgba(59, 130, 246, 0.2);
-  --color-info-text: #93c5fd;
-  --color-info-hover: #60a5fa;
-  --color-purple-bg: rgba(139, 92, 246, 0.2);
-  --color-purple-text: #c4b5fd;
-  --color-purple: #a78bfa;
-
-  // --- Aliases para compatibilidad (Dark Mode) ---
-  --color-brand: #{tokens.$color-content-dark-accent};
-  --color-brand-hover: #{tokens.$color-content-dark-accent-hover};
-  --color-on-brand: #{tokens.$color-content-dark-on-accent};
-
-  // Primario wl redefine al acento invertido en dark mode
   --wl-color-primary: var(--color-accent);
-  --wl-color-primary-rgb: 112, 114, 118; // fallback rgb (actual value comes from --color-accent)
+  --wl-color-primary-rgb: 112, 114, 118;
 
-  --wl-color-surface: #{tokens.$color-content-dark-bg-secondary};
-  --wl-color-surface-hover: #{tokens.$color-content-dark-bg-hover};
-  --wl-color-surface-selected: #{tokens.$color-content-dark-bg-selected};
-  --wl-color-surface-text: #{tokens.$color-content-dark-text-primary};
-  --wl-color-surface-text-muted: #{tokens.$color-content-dark-text-secondary};
+  --wl-color-surface: var(--color-surface-secondary);
+  --wl-color-surface-hover: var(--color-surface-hover);
+  --wl-color-surface-selected: var(--color-surface-selected);
+  --wl-color-surface-text: var(--color-text-primary);
+  --wl-color-surface-text-muted: var(--color-text-secondary);
 
-  --wl-color-text-primary: #{tokens.$color-content-dark-text-primary};
-  --wl-color-text-secondary: #{tokens.$color-content-dark-text-secondary};
-  --wl-color-text-tertiary: #{tokens.$color-content-dark-text-tertiary};
+  --wl-color-text-primary: var(--color-text-primary);
+  --wl-color-text-secondary: var(--color-text-secondary);
+  --wl-color-text-tertiary: var(--color-text-tertiary);
 
-  --wl-scrollbar-thumb: #{tokens.$color-content-dark-scrollbar-thumb};
-  --wl-scrollbar-thumb-hover: #{tokens.$color-content-dark-scrollbar-thumb-hover};
+  --wl-scrollbar-thumb: var(--color-scrollbar-thumb);
+  --wl-scrollbar-thumb-hover: var(--color-scrollbar-thumb-hover);
 
-  // --- Mensajes (Dark Mode) ---
-  // Visitante: tonos grises neutros
-  --wl-message-visitor-bg: #{tokens.$neutral-700};
-  --wl-message-visitor-bg-start: rgba(74, 74, 69, 0.95);
-  --wl-message-visitor-bg-end: rgba(74, 74, 69, 0.75);
-  --wl-message-visitor-border: rgba(107, 107, 99, 0.4);
-  --wl-message-visitor-text: #{tokens.$neutral-100};
+  // --- Mensajes (Dark Mode) — tied to theme surfaces ---
+  --wl-message-visitor-bg: var(--color-surface-tertiary);
+  --wl-message-visitor-bg-start: var(--color-surface-tertiary);
+  --wl-message-visitor-bg-end: var(--color-surface-secondary);
+  --wl-message-visitor-border: var(--color-border-subtle);
+  --wl-message-visitor-text: var(--color-text-primary);
 
-  // Propios: tonos más claros/cálidos
-  --wl-message-own-bg: #{tokens.$neutral-600};
-  --wl-message-own-bg-start: rgba(107, 107, 99, 0.95);
-  --wl-message-own-bg-end: rgba(107, 107, 99, 0.75);
-  --wl-message-own-border: rgba(138, 138, 128, 0.4);
-  --wl-message-own-text: #{tokens.$neutral-100};
+  --wl-message-own-bg: var(--color-accent-muted);
+  --wl-message-own-bg-start: var(--color-accent-muted);
+  --wl-message-own-bg-end: var(--color-accent-muted);
+  --wl-message-own-border: var(--color-border-default);
+  --wl-message-own-text: var(--color-text-primary);
 
-  --wl-message-meta: #{tokens.$neutral-400};
+  --wl-message-meta: var(--color-text-tertiary);
 
-  // IA: tonos índigo/púrpura
-  --wl-message-ai-bg-start: rgba(99, 102, 241, 0.15);
-  --wl-message-ai-bg-end: rgba(99, 102, 241, 0.08);
-  --wl-message-ai-border: rgba(99, 102, 241, 0.3);
-  --wl-message-ai-accent: #818cf8;
+  --wl-message-ai-bg-start: var(--color-purple-bg);
+  --wl-message-ai-bg-end: var(--color-purple-bg);
+  --wl-message-ai-border: rgba(167, 139, 250, 0.3);
+  --wl-message-ai-accent: var(--color-purple-text);
 
-  // --- Badges (Dark Mode) ---
-  --wl-badge-danger: rgba(239, 68, 68, 0.25);
-  --wl-badge-danger-text: #fca5a5;
+  --wl-badge-danger: var(--color-error-bg);
+  --wl-badge-danger-text: var(--color-error-text);
 
-  --color-message-visitor: #{tokens.$neutral-700};
-  --color-message-visitor-text: #{tokens.$neutral-100};
-  --color-message-own: #{tokens.$neutral-600};
-  --color-message-own-text: #{tokens.$neutral-100};
-  --color-message-system: #{tokens.$neutral-700};
-  --color-message-system-text: #{tokens.$neutral-300};
+  --color-message-visitor: var(--color-surface-tertiary);
+  --color-message-visitor-text: var(--color-text-primary);
+  --color-message-own: var(--color-accent-muted);
+  --color-message-own-text: var(--color-text-primary);
+  --color-message-system: var(--color-surface-secondary);
+  --color-message-system-text: var(--color-text-tertiary);
 }
 
 /* ============================================================================

@@ -85,8 +85,11 @@ export class Sidebar {
   readonly currentThemeOption = this.themeService.currentThemeOption;
   /** Exposed to the template for rendering theme swatches */
   readonly themeOptions = THEME_OPTIONS;
-  readonly darkThemeOptions = THEME_OPTIONS.filter((t) => !t.light);
-  readonly lightThemeOptions = THEME_OPTIONS.filter((t) => t.light);
+  readonly darkThemeOptions = THEME_OPTIONS.filter((t) => t.group === 'dark');
+  readonly lightThemeOptions = THEME_OPTIONS.filter((t) => t.group === 'light');
+  readonly companyThemeOptions = THEME_OPTIONS.filter(
+    (t) => t.group === 'company'
+  );
   private readonly expandedItems = signal<Set<string>>(new Set());
   private readonly popoverItem = signal<SidebarItem | null>(null);
   private elementPositions = new Map<string, DOMRect>();
@@ -108,6 +111,16 @@ export class Sidebar {
   readonly isDarkTheme = computed(() => true); // All named themes are dark
 
   constructor() {
+    // Respetar el collapsed inicial del config (p. ej. cerrado por defecto en console)
+    let collapsedSynced = false;
+    effect(() => {
+      const collapsed = this.config().collapsed;
+      if (!collapsedSynced) {
+        this.isCollapsed.set(collapsed);
+        collapsedSynced = true;
+      }
+    });
+
     // Effect para expandir automáticamente elementos padre cuando sus hijos están activos
     // SOLO se ejecuta en la inicialización, no interfiere con expansiones manuales
     let isInitialized = false;

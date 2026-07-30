@@ -16,14 +16,17 @@ import { isPlatformBrowser, DOCUMENT } from '@angular/common';
  * - warm-dark:    Linear-inspired — warm charcoals, purple accent
  *
  * Light themes (independent identities, not mirrors of dark):
- * - clean-light:  Pure grey/white — #374151 accent, bg #ffffff, zero chroma
+ * - clean-light:  Zinc light — white content, zinc-100 rails, near-black accent
  * - daylight:     Corporate blue — #1a6bcc accent, bg #f0f4f8
  * - fresh-light:  Mint green — #0f9d74 accent, bg #f5f7f5
  * - rose-quartz:  Mauve-pink — #c2185b accent, bg #fdf6f7
  *
+ * Company themes (white-label / embed partners):
+ * - leadcars:     LeadCars SaaS — navy + lime, powder-blue chrome
+ *
  * Legacy values 'light' and 'dark' are kept for backwards compatibility:
  * - 'dark'  maps to 'grey-dark'
- * - 'light' maps to 'daylight'
+ * - 'light' maps to 'clean-light'
  */
 export type SidebarTheme =
   | 'grey-dark'
@@ -34,6 +37,7 @@ export type SidebarTheme =
   | 'daylight'
   | 'fresh-light'
   | 'rose-quartz'
+  | 'leadcars'
   | 'light'
   | 'dark';
 
@@ -46,7 +50,11 @@ export type NamedTheme =
   | 'clean-light'
   | 'daylight'
   | 'fresh-light'
-  | 'rose-quartz';
+  | 'rose-quartz'
+  | 'leadcars';
+
+/** Groups shown in the theme picker. */
+export type ThemeGroup = 'dark' | 'light' | 'company';
 
 export interface ThemeOption {
   id: NamedTheme;
@@ -56,8 +64,10 @@ export interface ThemeOption {
   accent: string;
   /** Representative background color for the theme switcher swatch. */
   bg: string;
-  /** Whether this is a light theme. */
+  /** Whether this is a light content theme (theme-light class). */
   light: boolean;
+  /** Picker section: Dark / Light / Company. */
+  group: ThemeGroup;
 }
 
 export const THEME_OPTIONS: ThemeOption[] = [
@@ -68,6 +78,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     accent: '#a8a39d',
     bg: '#1c1917',
     light: false,
+    group: 'dark',
   },
   {
     id: 'carbon',
@@ -76,6 +87,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     accent: '#ededed',
     bg: '#0a0a0a',
     light: false,
+    group: 'dark',
   },
   {
     id: 'midnight',
@@ -84,6 +96,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     accent: '#58a6ff',
     bg: '#0d1117',
     light: false,
+    group: 'dark',
   },
   {
     id: 'warm-dark',
@@ -92,14 +105,16 @@ export const THEME_OPTIONS: ThemeOption[] = [
     accent: '#9e8cfc',
     bg: '#16141d',
     light: false,
+    group: 'dark',
   },
   {
     id: 'clean-light',
     label: 'Clean',
-    description: 'Pure white & greys — zero chroma',
-    accent: '#374151',
-    bg: '#ffffff',
+    description: 'Zinc light — clear surfaces & borders',
+    accent: '#18181b',
+    bg: '#f4f4f5',
     light: true,
+    group: 'light',
   },
   {
     id: 'daylight',
@@ -108,6 +123,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     accent: '#1a6bcc',
     bg: '#f0f4f8',
     light: true,
+    group: 'light',
   },
   {
     id: 'fresh-light',
@@ -116,6 +132,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     accent: '#0f9d74',
     bg: '#f5f7f5',
     light: true,
+    group: 'light',
   },
   {
     id: 'rose-quartz',
@@ -124,11 +141,36 @@ export const THEME_OPTIONS: ThemeOption[] = [
     accent: '#c2185b',
     bg: '#fdf6f7',
     light: true,
+    group: 'light',
+  },
+  {
+    id: 'leadcars',
+    label: 'LeadCars',
+    description: 'Navy + lima — embed LeadCars SaaS',
+    accent: '#a9cb57',
+    bg: '#1b3149',
+    light: true,
+    group: 'company',
   },
 ];
 
 const THEME_STORAGE_KEY = 'guiders-sidebar-theme';
 const DEFAULT_THEME: NamedTheme = 'grey-dark';
+
+const LIGHT_THEMES: NamedTheme[] = [
+  'clean-light',
+  'daylight',
+  'fresh-light',
+  'rose-quartz',
+  'leadcars',
+];
+
+const DARK_THEMES: NamedTheme[] = [
+  'grey-dark',
+  'carbon',
+  'midnight',
+  'warm-dark',
+];
 
 /** Normalise legacy 'dark'/'light' values to a canonical NamedTheme. */
 function normaliseTheme(value: string | null): NamedTheme {
@@ -143,7 +185,8 @@ function normaliseTheme(value: string | null): NamedTheme {
     value === 'clean-light' ||
     value === 'daylight' ||
     value === 'fresh-light' ||
-    value === 'rose-quartz'
+    value === 'rose-quartz' ||
+    value === 'leadcars'
   ) {
     return value as NamedTheme;
   }
@@ -169,12 +212,8 @@ export class ThemeService {
   readonly theme = this._theme.asReadonly();
 
   // Convenience computed helpers
-  readonly isDarkTheme = computed(() =>
-    ['grey-dark', 'carbon', 'midnight', 'warm-dark'].includes(this._theme())
-  );
-  readonly isLightTheme = computed(() =>
-    ['clean-light', 'daylight', 'fresh-light', 'rose-quartz'].includes(this._theme())
-  );
+  readonly isDarkTheme = computed(() => DARK_THEMES.includes(this._theme()));
+  readonly isLightTheme = computed(() => LIGHT_THEMES.includes(this._theme()));
   readonly currentThemeOption = computed(
     () => THEME_OPTIONS.find((t) => t.id === this._theme()) ?? THEME_OPTIONS[0]
   );
@@ -258,7 +297,7 @@ export class ThemeService {
     body.setAttribute('data-theme', theme);
 
     // Keep legacy theme classes for backwards compatibility
-    const isLight = ['clean-light', 'daylight', 'fresh-light', 'rose-quartz'].includes(theme);
+    const isLight = LIGHT_THEMES.includes(theme);
     body.classList.remove('theme-dark', 'theme-light');
     body.classList.add(isLight ? 'theme-light' : 'theme-dark');
   }

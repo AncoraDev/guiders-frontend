@@ -18,8 +18,9 @@ export class AppearanceSettingsComponent {
   readonly themeService = inject(ThemeService);
   private readonly toast = inject(ToastService);
 
-  readonly darkThemes = THEME_OPTIONS.filter(t => !t.light);
-  readonly lightThemes = THEME_OPTIONS.filter(t => t.light);
+  readonly darkThemes = THEME_OPTIONS.filter((t) => t.group === 'dark');
+  readonly lightThemes = THEME_OPTIONS.filter((t) => t.group === 'light');
+  readonly companyThemes = THEME_OPTIONS.filter((t) => t.group === 'company');
 
   onSelectTheme(themeId: string): void {
     this.themeService.setTheme(themeId as SidebarTheme);

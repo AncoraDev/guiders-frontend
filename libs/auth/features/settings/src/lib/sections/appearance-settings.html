@@ -53,6 +53,31 @@
         }
       </div>
     </div>
+
+    @if (companyThemes.length > 0) {
+      <div class="theme-group">
+        <p class="theme-group__label">Company</p>
+        <div class="theme-grid">
+          @for (theme of companyThemes; track theme.id) {
+            <button
+              type="button"
+              class="theme-card"
+              [class.active]="themeService.theme() === theme.id"
+              (click)="onSelectTheme(theme.id)"
+              [attr.aria-pressed]="themeService.theme() === theme.id"
+              [attr.aria-label]="'Tema ' + theme.label">
+              <div class="theme-swatch" [style.background-color]="theme.bg">
+                <div class="theme-swatch__accent" [style.background-color]="theme.accent"></div>
+              </div>
+              <span class="theme-card__label">{{ theme.label }}</span>
+              @if (themeService.theme() === theme.id) {
+                <span class="theme-card__check" aria-hidden="true">✓</span>
+              }
+            </button>
+          }
+        </div>
+      </div>
+    }
   </div>
 </lib-settings-row>
 

@@ -74,8 +74,6 @@ export class ChatWidgetComponent
   readonly shouldShow = signal<boolean>(true);
   /** Indica si el chat actual es pendiente (sin asignar a comercial) */
   readonly isPendingChat = signal<boolean>(false);
-  /** ID del sitio actual (necesario para sugerencias IA) */
-  readonly siteId = signal<string | null>(null);
 
   // Estado de pestañas
   readonly tabs = signal<ChatTab[]>([]);
@@ -168,8 +166,6 @@ export class ChatWidgetComponent
   });
 
   ngOnInit(): void {
-    // El siteId se carga cuando hay un visitante seleccionado (ver suscripción a widgetData$)
-
     // Suscribirse al estado del widget
     this.widgetService.widgetData$
       .pipe(takeUntil(this.destroy$))
@@ -206,11 +202,6 @@ export class ChatWidgetComponent
         this.currentChatId.set(data.chatId);
         this.tabs.set(data.tabs || []);
         this.isPendingChat.set(data.isPending || false);
-
-        // Cargar siteId cuando hay un nuevo visitante
-        if (isNewVisitor && data.visitor) {
-          this.loadVisitorSiteId(data.visitor.id);
-        }
 
         if (data.isPending) {
           console.log(
@@ -1157,31 +1148,5 @@ export class ChatWidgetComponent
       scrollDiff,
       newScrollTop: element.scrollTop,
     });
-  }
-
-  /**
-   * Cargar el siteId del visitante específico
-   * Usa el endpoint /api/visitors/:visitorId/site que es más preciso
-   */
-  private loadVisitorSiteId(visitorId: string): void {
-    this.visitorsService
-      .getVisitorSite(visitorId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          console.log(
-            '[ChatWidget] SiteId del visitante cargado:',
-            response.siteId
-          );
-          this.siteId.set(response.siteId);
-        },
-        error: (err) => {
-          console.error(
-            '[ChatWidget] Error al cargar siteId del visitante:',
-            err
-          );
-          this.siteId.set(null);
-        },
-      });
   }
 }

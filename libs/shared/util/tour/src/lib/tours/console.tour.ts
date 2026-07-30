@@ -23,7 +23,7 @@ export const consoleTour: TourStepConfig[] = [
   // 1. Welcome
   {
     element: '[data-tour="sidebar-header"]',
-    route: '/inbox',
+    route: '/atencion',
     popover: {
       title: 'Bienvenido a Guiders',
       description:
@@ -35,7 +35,7 @@ export const consoleTour: TourStepConfig[] = [
   // 2. Agent status — first thing operators set every shift
   {
     element: '[data-tour="status-trigger"]',
-    route: '/inbox',
+    route: '/atencion',
     popover: {
       title: 'Tu estado de agente',
       description:
@@ -44,22 +44,22 @@ export const consoleTour: TourStepConfig[] = [
       align: 'end',
     },
   },
-  // 3. Inbox sidebar — the heart of reactive work
+  // 3. Colas de Atención
   {
-    element: '[data-tour="inbox-sidebar"]',
-    route: '/inbox',
+    element: '[data-tour="atencion-queues"]',
+    route: '/atencion',
     popover: {
-      title: 'Tu bandeja de conversaciones',
+      title: 'Tus colas de atención',
       description:
-        'Aquí entra cada chat en vivo. Las conversaciones con mensajes sin leer muestran un contador en azul para que ninguna se te escape.',
+        'Pendientes, Míos y En la web. El contador te avisa de chats nuevos o sin leer para que ninguna se te escape.',
       side: 'right',
       align: 'start',
     },
   },
-  // 4. Open conversation — the working area
+  // 4. Área de conversación
   {
-    element: '[data-tour="inbox-main"]',
-    route: '/inbox',
+    element: '[data-tour="atencion-main"]',
+    route: '/atencion',
     popover: {
       title: 'Área de conversación',
       description:
@@ -71,7 +71,7 @@ export const consoleTour: TourStepConfig[] = [
   // 5. Message input — how operators reply
   {
     element: '[data-tour="message-input"]',
-    route: '/inbox',
+    route: '/atencion',
     popover: {
       title: 'Responde con un atajo',
       description:
@@ -83,7 +83,7 @@ export const consoleTour: TourStepConfig[] = [
   // 6. Visitor detail panel — context without leaving the chat
   {
     element: '[data-tour="visitor-detail-panel"]',
-    route: '/inbox',
+    route: '/atencion',
     popover: {
       title: 'Ficha del visitante',
       description:
@@ -95,7 +95,7 @@ export const consoleTour: TourStepConfig[] = [
   // 7. Escalations — urgency / SLA awareness
   {
     element: '[data-tour="nav-escalations"]',
-    route: '/inbox',
+    route: '/atencion',
     popover: {
       title: 'Escalaciones',
       description:
@@ -107,7 +107,7 @@ export const consoleTour: TourStepConfig[] = [
   // 8. Live visitors — proactive engagement
   {
     element: '[data-tour="nav-visitors"]',
-    route: '/inbox',
+    route: '/atencion',
     popover: {
       title: 'Visitantes en vivo',
       description:
@@ -119,7 +119,7 @@ export const consoleTour: TourStepConfig[] = [
   // 9. Wrap-up — where to relaunch
   {
     element: '[data-tour="sidebar-header"]',
-    route: '/inbox',
+    route: '/atencion',
     popover: {
       title: 'Listo para atender',
       description:

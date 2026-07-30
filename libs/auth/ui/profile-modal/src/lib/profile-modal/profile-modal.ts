@@ -48,8 +48,9 @@ export class ProfileModalComponent {
   /** Expose theme options to the template */
   readonly themeOptions: ThemeOption[] = THEME_OPTIONS;
 
-  readonly darkThemes = THEME_OPTIONS.filter(t => !t.light);
-  readonly lightThemes = THEME_OPTIONS.filter(t => t.light);
+  readonly darkThemes = THEME_OPTIONS.filter((t) => t.group === 'dark');
+  readonly lightThemes = THEME_OPTIONS.filter((t) => t.group === 'light');
+  readonly companyThemes = THEME_OPTIONS.filter((t) => t.group === 'company');
 
   // Inputs
   readonly currentUser = input.required<UserProfile>();

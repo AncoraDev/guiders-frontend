@@ -1842,12 +1842,21 @@ export class VisitorsComponent implements OnInit, OnDestroy {
         if (chatsToRegister.length) {
           this.unreadMessagesService.registerChatsVisitors(chatsToRegister);
         }
-        if (response.totalVisitorChats === 0 && response.chats.length === 0) {
-          this.chatWidgetService.openWidget(visitor);
-        } else if (response.chats.length > 1) {
+        if (response.chats.length > 1) {
           this.chatWidgetService.openWithTabs(response.chats, visitor, 0);
         } else if (response.chats.length === 1) {
           this.chatWidgetService.openWithChat(response.chats[0].chatId, visitor);
+        } else if (visitor.pendingChatIds?.length) {
+          // Hay chats PENDING del visitante aún no asignados a este comercial
+          this.chatWidgetService.openPendingChat(
+            visitor.pendingChatIds[0],
+            visitor,
+          );
+        } else if (response.totalVisitorChats === 0) {
+          this.chatWidgetService.openWidget(visitor);
+        } else {
+          // Hay chats del visitante pero no asignados a mí y sin pendingChatIds en el DTO
+          this.chatWidgetService.openWidget(visitor);
         }
       },
       error: (error: unknown) => console.error('[Visitors] Error al verificar chats del visitante:', error),

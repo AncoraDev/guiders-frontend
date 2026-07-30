@@ -123,12 +123,6 @@ export class App {
       ],
     },
     {
-      id: 'ai',
-      label: 'Configuracion IA',
-      icon: 'activity',
-      route: '/ai',
-    },
-    {
       id: 'branding',
       label: 'Marca Blanca',
       icon: 'layers',

@@ -24,6 +24,18 @@ import { PresenceService } from '@guiders-frontend/presence-service';
 import { Avatar } from '@guiders-frontend/avatar';
 import { getVisitorDisplayName } from '@guiders-frontend/visitor-display-name';
 
+/** Datos de contexto del visitante para la cabecera del chat. */
+export interface VisitorChatProfile {
+  currentUrl?: string | null;
+  totalSessions?: number;
+  totalPagesVisited?: number;
+  totalTimeConnectedMs?: number;
+  totalChats?: number;
+  lifecycle?: string | null;
+  browser?: string | null;
+  lastActivityAt?: string | null;
+}
+
 @Component({
   selector: 'guiders-chat-placeholder',
   standalone: true,
@@ -45,7 +57,8 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
   @Input() isLoading = false;
   @Input() isLoadingMore = false; // Loading para scroll infinito
   @Input() hasMoreMessages = false; // Indica si hay más mensajes antiguos
-  @Input() siteId: string | null = null; // ID del sitio para sugerencias de IA
+  /** Perfil/navegación del visitante (página actual, sesiones, etc.). */
+  @Input() visitorProfile: VisitorChatProfile | null = null;
 
   @Output() settingsClicked = new EventEmitter<void>();
   @Output() closeChat = new EventEmitter<void>();
@@ -155,6 +168,28 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
     return labels[status];
   }
 
+  /** Path legible de la URL actual (o host+path si hace falta). */
+  profilePath(url?: string | null): string | null {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      const path = `${parsed.pathname}${parsed.search}` || '/';
+      return path.length > 64 ? `${path.slice(0, 61)}…` : path;
+    } catch {
+      return url.length > 64 ? `${url.slice(0, 61)}…` : url;
+    }
+  }
+
+  formatDuration(ms: number): string {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  }
+
   /**
    * Manejar click en configuración
    */
@@ -185,6 +220,10 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['visitorProfile']) {
+      this.cdr.markForCheck();
+    }
+
     // Si cambia el chat seleccionado, hacer scroll al final
     if (changes['selectedChat']) {
       this.shouldScrollToBottom = true;
