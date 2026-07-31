@@ -69,13 +69,6 @@ describe('consoleTour', () => {
     expect(hasPanel).toBe(true);
   });
 
-  it('should highlight the escalations nav entry', () => {
-    const hasEscalations = consoleTour.some(
-      (step) => step.element === '[data-tour="nav-escalations"]'
-    );
-    expect(hasEscalations).toBe(true);
-  });
-
   it('should highlight the visitors nav entry', () => {
     const hasVisitorsNav = consoleTour.some(
       (step) => step.element === '[data-tour="nav-visitors"]'

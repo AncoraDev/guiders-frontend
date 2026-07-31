@@ -228,7 +228,6 @@ applyComplexFilter(criteria: VisitorFilterCriteria): void {
 
 - **Inbox** (`libs/chat/features/inbox`) - Start conversations
 - **Contacts** (`libs/chat/features/contacts`) - Manage visitor contacts
-- **Escalations** (`libs/chat/features/escalations`) - Route escalations
 - **Chat Data Access** (`libs/chat/data-access`) - API communication
 
 ## Common Workflows

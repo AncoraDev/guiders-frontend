@@ -6,7 +6,6 @@ import { UserService, ENVIRONMENT_TOKEN } from '@guiders-frontend/auth/data-acce
 import { CommercialPresenceService } from '@guiders-frontend/commercial-presence';
 import { ChatWidgetComponent } from '@guiders-frontend/chat/ui/chat-widget';
 import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service';
-import { EscalationService } from '@guiders-frontend/escalation-service';
 import { TourService } from '@guiders-frontend/shared/util/tour';
 import { TourId } from '@guiders-frontend/shared/util/tour';
 
@@ -22,7 +21,6 @@ export class App {
   private readonly router = inject(Router);
   private readonly unreadMessagesService = inject(UnreadMessagesService);
   private readonly environment = inject(ENVIRONMENT_TOKEN);
-  private readonly escalationService = inject(EscalationService);
   private readonly tourService = inject(TourService);
 
   protected title = 'console';
@@ -64,7 +62,6 @@ export class App {
   // Items de navegación específicos para console (usuario final)
   readonly sidebarItems = computed<SidebarItem[]>(() => {
     const totalUnread = this.unreadMessagesService.totalUnreadCount();
-    const escalationCount = this.escalationService.escalationCount();
 
     return [
       {
@@ -95,18 +92,16 @@ export class App {
         icon: 'wifi',
         route: '/conexiones',
       },
-      {
-        id: 'escalations',
-        label: 'Escalaciones',
-        icon: 'alert-triangle',
-        route: '/escalations',
-        ...(escalationCount > 0 && {
-          badge: {
-            text: escalationCount.toString(),
-            variant: 'danger' as const
-          }
-        })
-      },
+      ...(this.isAdmin()
+        ? [
+            {
+              id: 'usuarios',
+              label: 'Usuarios',
+              icon: 'user' as const,
+              route: '/usuarios',
+            },
+          ]
+        : []),
     ];
   });
 

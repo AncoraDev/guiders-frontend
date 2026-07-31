@@ -1,16 +1,16 @@
 {
-  "name": "escalation-service",
+  "name": "usuarios",
   "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/chat/data-access/escalation-service/src",
+  "sourceRoot": "libs/chat/features/usuarios/src",
   "prefix": "lib",
   "projectType": "library",
-  "tags": ["scope:chat", "type:data-access"],
+  "tags": ["type:feature", "scope:chat"],
   "targets": {
     "test": {
       "executor": "@nx/vite:test",
       "outputs": ["{options.reportsDirectory}"],
       "options": {
-        "reportsDirectory": "../../../../coverage/libs/chat/data-access/escalation-service"
+        "reportsDirectory": "../../../../coverage/libs/chat/features/usuarios"
       }
     },
     "lint": {

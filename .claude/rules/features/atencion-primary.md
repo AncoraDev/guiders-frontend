@@ -6,7 +6,7 @@ Para cambios de UX / producto del comercial en **Console**, implementar y verifi
 
 `libs/chat/features/atencion`
 
-**No** usar `inbox` (Bandeja), `visitors` ni `escalations` como destino por defecto: son legacy o secundarios. Solo tocarlos si el usuario lo pide explícitamente o hay un bug compartido inevitable.
+**No** usar `inbox` (Bandeja) ni `visitors` como destino por defecto: son legacy o secundarios. Solo tocarlos si el usuario lo pide explícitamente o hay un bug compartido inevitable.
 
 ## Dependencias compartidas que Atención consume
 

@@ -66,10 +66,10 @@ export class ChatTourSandboxLifecycleHook implements TourLifecycleHook {
    * are pure orientation and require no setup.
    *
    * Step layout (see `console.tour.ts`):
-   *   3 inbox-main             → select self chat
+   *   3 atencion-main          → select self chat
    *   4 message-input          → keep self chat selected
    *   5 visitor-detail-panel   → re-assert selection + open visitor panel
-   *   6 nav-escalations        → close visitor panel
+   *   6 nav-visitors           → close visitor panel
    */
   async onBeforeStep(
     stepIndex: number,

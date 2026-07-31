@@ -172,7 +172,6 @@ it('should load conversation details when selected', fakeAsync(() => {
 ## Related Features
 
 - **Visitors** (`libs/chat/features/visitors`) - Visitor management
-- **Escalations** (`libs/chat/features/escalations`) - Escalation handling
 - **Contacts** (`libs/chat/features/contacts`) - Contact information
 - **Chat Data Access** (`libs/chat/data-access`) - API communication
 

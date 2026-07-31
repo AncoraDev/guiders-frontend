@@ -11,12 +11,6 @@ export const appRoutes: Route[] = [
 		canActivate: [authGuard],
 	},
 	{
-		path: 'escalations',
-		loadChildren: () => import('@guiders-frontend/escalations').then(m => m.routes),
-		title: 'Escalaciones',
-		canActivate: [authGuard],
-	},
-	{
 		path: 'visitors',
 		loadChildren: () =>
 			import('@guiders-frontend/visitors').then((m) => m.visitorsRoutes),
@@ -28,6 +22,13 @@ export const appRoutes: Route[] = [
 		loadChildren: () =>
 			import('@guiders-frontend/conexiones').then((m) => m.conexionesRoutes),
 		title: 'Conexiones',
+		canActivate: [authGuard],
+	},
+	{
+		path: 'usuarios',
+		loadChildren: () =>
+			import('@guiders-frontend/usuarios').then((m) => m.usuariosRoutes),
+		title: 'Usuarios',
 		canActivate: [authGuard],
 	},
 	{

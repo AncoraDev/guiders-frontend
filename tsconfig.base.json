@@ -126,6 +126,12 @@
       "@guiders-frontend/conexiones": [
         "libs/chat/features/conexiones/src/index.ts"
       ],
+      "@guiders-frontend/company-users-service": [
+        "libs/chat/data-access/company-users-service/src/index.ts"
+      ],
+      "@guiders-frontend/usuarios": [
+        "libs/chat/features/usuarios/src/index.ts"
+      ],
       "@guiders-frontend/commercial-status": [
         "libs/auth/data-access/commercial-status/src/index.ts"
       ],
@@ -149,12 +155,6 @@
       ],
       "@guiders-frontend/donut-chart": [
         "libs/shared/ui/donut-chart/src/index.ts"
-      ],
-      "@guiders-frontend/escalation-service": [
-        "libs/chat/data-access/escalation-service/src/index.ts"
-      ],
-      "@guiders-frontend/escalations": [
-        "libs/chat/features/escalations/src/index.ts"
       ],
       "@guiders-frontend/icon": ["libs/shared/ui/icon/src/index.ts"],
       "@guiders-frontend/integrations": [

@@ -236,8 +236,6 @@ Each feature has its own `AGENTS.md` with specific guidelines. Use these as your
 - **[Inbox Feature](libs/chat/features/inbox/AGENTS.md)** - Main messaging interface, conversation management, message handling
 - **[Visitors Feature](libs/chat/features/visitors/AGENTS.md)** - Active visitor list, filtering, visitor selection
 - **[Contacts Feature](libs/chat/features/contacts/AGENTS.md)** - Contact management, CRM, contact groups
-- **[Escalations Feature](libs/chat/features/escalations/AGENTS.md)** - Escalation workflow, SLA tracking, assignment
-
 ### Admin Domain
 
 - **[Dashboard Feature](libs/admin/features/dashboard/AGENTS.md)** - System overview, metrics widgets, team monitoring
@@ -262,7 +260,7 @@ Each feature has its own `AGENTS.md` with specific guidelines. Use these as your
 
 ```
 Need to work on...                        → Go to...
-Messaging & conversations                 → Inbox or Escalations
+Messaging & conversations                 → Inbox / Atención
 Visitor management & filtering            → Visitors
 Customer contact information              → Contacts
 User accounts & permissions               → Users

@@ -125,11 +125,11 @@ describe('ChatTourSandboxLifecycleHook', () => {
   describe('onBeforeStep — auto-prepare UI for each step', () => {
     // Step indices that need auto-setup so the user actually SEES what the
     // tooltip is talking about:
-    //   - step 3 (inbox-main): auto-select the SELF chat so the
+    //   - step 3 (atencion-main): auto-select the SELF chat so the
     //     conversation thread is rendered behind the tooltip.
     //   - step 4 (message-input): SELF chat must remain selected.
     //   - step 5 (visitor-detail-panel): re-assert selection + open panel.
-    //   - step 6 (nav-escalations): close visitor panel.
+    //   - step 6 (nav-visitors): close visitor panel.
     // Other steps are pure orientation and need no setup.
 
     it('selects the SELF chat before step 3 (inbox-main)', async () => {
@@ -168,7 +168,7 @@ describe('ChatTourSandboxLifecycleHook', () => {
       expect(chatService.selectChat).toHaveBeenCalledWith(SELF_CHAT_ID);
     });
 
-    it('closes the visitor panel before step 6 (nav-escalations)', async () => {
+    it('closes the visitor panel before step 6 (nav-visitors)', async () => {
       const bridge = TestBed.inject(TourUiBridgeService);
       bridge.requestOpenVisitorPanel(true);
       await hook.onTourStart('console', 'user-1');

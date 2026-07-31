@@ -15,9 +15,8 @@ import { TourStepConfig } from '../tour-step.interface';
  * Order chosen to mirror the operator's daily flow:
  *   1. Orient (sidebar + agent status)
  *   2. Reactive work (inbox → conversation → ficha del visitante)
- *   3. Escalations (urgent items)
- *   4. Proactive work (live visitors)
- *   5. Wrap-up (where to relaunch the tour)
+ *   3. Proactive work (live visitors)
+ *   4. Wrap-up (where to relaunch the tour)
  */
 export const consoleTour: TourStepConfig[] = [
   // 1. Welcome
@@ -92,19 +91,7 @@ export const consoleTour: TourStepConfig[] = [
       align: 'start',
     },
   },
-  // 7. Escalations — urgency / SLA awareness
-  {
-    element: '[data-tour="nav-escalations"]',
-    route: '/atencion',
-    popover: {
-      title: 'Escalaciones',
-      description:
-        'Casos que requieren atención prioritaria o intervención de un superior. El badge rojo te avisa cuando hay alguno pendiente.',
-      side: 'right',
-      align: 'center',
-    },
-  },
-  // 8. Live visitors — proactive engagement
+  // 7. Live visitors — proactive engagement
   {
     element: '[data-tour="nav-visitors"]',
     route: '/atencion',
@@ -116,7 +103,7 @@ export const consoleTour: TourStepConfig[] = [
       align: 'center',
     },
   },
-  // 9. Wrap-up — where to relaunch
+  // 8. Wrap-up — where to relaunch
   {
     element: '[data-tour="sidebar-header"]',
     route: '/atencion',

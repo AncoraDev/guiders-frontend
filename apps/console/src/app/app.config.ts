@@ -22,7 +22,6 @@ import { CommercialPresenceService } from '@guiders-frontend/commercial-presence
 import { WebSocketService } from '@guiders-frontend/chat/data-access/websocket-service';
 import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service';
 import { ChatService } from '@guiders-frontend/chat-service';
-import { EscalationService } from '@guiders-frontend/escalation-service';
 import { CHAT_TOUR_SANDBOX_HOOK_PROVIDER } from '@guiders-frontend/tour-sandbox';
 import { firstValueFrom } from 'rxjs';
 
@@ -36,7 +35,6 @@ function initializeApp() {
   const webSocketService = inject(WebSocketService);
   const unreadMessagesService = inject(UnreadMessagesService);
   const chatService = inject(ChatService);
-  const escalationService = inject(EscalationService);
 
   return async () => {
     // 1. Cargar el usuario — usa ensureSession$() para que el authGuard comparta
@@ -111,12 +109,6 @@ function initializeApp() {
 
           if (webSocketService.connected) {
             console.log('[AppInitializer] ✅ WebSocket conectado');
-            console.log(
-              '[AppInitializer] 🚨 Servicio de Escalaciones inicializado y escuchando eventos',
-              {
-                escalationCount: escalationService.escalationCount(),
-              }
-            );
             console.log('[AppInitializer] 📋 Usuario completo:', user);
 
             // Suscribirse al evento welcome
