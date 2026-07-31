@@ -129,6 +129,12 @@
       "@guiders-frontend/company-users-service": [
         "libs/chat/data-access/company-users-service/src/index.ts"
       ],
+      "@guiders-frontend/platform-companies-service": [
+        "libs/admin/data-access/platform-companies-service/src/index.ts"
+      ],
+      "@guiders-frontend/clients": [
+        "libs/admin/features/clients/src/index.ts"
+      ],
       "@guiders-frontend/usuarios": [
         "libs/chat/features/usuarios/src/index.ts"
       ],

@@ -28,10 +28,12 @@
   width: 100%;
 }
 
-// Responsive design for mobile
-@media (max-width: 768px) {
-  .console-app {
-    flex-direction: column;
+// Responsive: el sidebar es overlay (position:fixed). Mantener fila para que
+// .console-main ocupe todo el ancho/alto y no colapse a altura 0.
+@media (max-width: 1280px) {
+  .console-main {
+    width: 100%;
+    min-width: 0;
   }
 
   .console-content {

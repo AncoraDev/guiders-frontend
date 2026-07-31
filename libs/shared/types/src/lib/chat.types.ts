@@ -8,6 +8,13 @@ export interface User {
   role: 'admin' | 'commercial' | 'visitor';
 }
 
+export interface MessageSystemData {
+  action?: string;
+  fromUserId?: string;
+  toUserId?: string;
+  reason?: string;
+}
+
 export interface Message {
   messageId: string; // API usa messageId
   chatId: string;
@@ -28,6 +35,8 @@ export interface Message {
   unreadMessagesCount?: number;
   isInternal?: boolean; // Mensaje interno (solo entre comerciales)
   isFirstResponse?: boolean; // Primer mensaje de respuesta del comercial
+  /** Metadatos de mensajes SYSTEM (assigned / transferred / …). */
+  systemData?: MessageSystemData;
   // Campos para mensajes generados por IA
   isAI?: boolean; // Indica si el mensaje fue generado por IA
   aiMetadata?: {

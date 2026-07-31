@@ -16,7 +16,10 @@ import {
   UserService,
   SessionGuardianService,
   globalErrorInterceptor,
+  guidersAppInterceptor,
+  redirectToBffLogin,
 } from '@guiders-frontend/auth/data-access/session';
+import { HttpErrorResponse } from '@angular/common/http';
 import { SETTINGS_CLOSE_ROUTE } from '@guiders-frontend/auth/data-access/session';
 import { EmbedBootstrapService, EmbedModeService, BrandingService } from '@guiders-frontend/embed';
 import { firstValueFrom } from 'rxjs';
@@ -27,6 +30,7 @@ import { firstValueFrom } from 'rxjs';
  */
 function initializeApp() {
   const userService = inject(UserService);
+  const environmentToken = inject(ENVIRONMENT_TOKEN);
 
   return async () => {
     // Cargar usuario
@@ -41,6 +45,14 @@ function initializeApp() {
         '[Admin AppInitializer] No se pudo cargar el usuario:',
         errorMessage
       );
+      // Sin cookie de Admin → login (no reutilizar sesión de Console)
+      const isNotProvisioned =
+        error instanceof HttpErrorResponse &&
+        error.status === 403 &&
+        (error.error as { reason?: string })?.reason === 'user_not_provisioned';
+      if (!isNotProvisioned) {
+        redirectToBffLogin(environmentToken);
+      }
     }
   };
 }
@@ -105,7 +117,12 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes),
     provideHttpClient(
-      withInterceptors([authRefreshInterceptor, authInterceptor(), globalErrorInterceptor])
+      withInterceptors([
+        guidersAppInterceptor,
+        authRefreshInterceptor,
+        authInterceptor(),
+        globalErrorInterceptor,
+      ])
     ),
     provideAuth({
       config: {

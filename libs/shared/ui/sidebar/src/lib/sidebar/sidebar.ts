@@ -61,6 +61,7 @@ export class Sidebar {
   // Nuevos inputs para el user menu
   readonly userEmail = input<string | null>(null);
   readonly userName = input<string | null>(null);
+  readonly avatarUrl = input<string | null>(null);
 
   // App version display
   readonly appVersion = input<string | null>(null);

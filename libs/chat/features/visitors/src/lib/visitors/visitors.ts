@@ -28,14 +28,10 @@ import { ChatWidgetService } from '@guiders-frontend/chat/data-access/chat-widge
 import { PresenceService } from '@guiders-frontend/presence-service';
 import { ChatService } from '@guiders-frontend/chat-service';
 import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service';
-import { TourSandboxService, DEMO_VISITOR_ID } from '@guiders-frontend/tour-sandbox';
-import { TourService } from '@guiders-frontend/shared/util/tour';
-
 // Importar componentes UI y servicios
 import { VisitorsListComponent } from '@guiders-frontend/visitors-list';
 import { VisitorsDataService } from '@guiders-frontend/visitors-data-service';
 import { SessionService } from '@guiders-frontend/auth/data-access/session';
-import { UserService } from '@guiders-frontend/auth/data-access/session';
 import { VisitorsQuickFilters } from '@guiders-frontend/visitors-quick-filters';
 import { VisitorsActiveFilters } from '@guiders-frontend/visitors-active-filters';
 import { VisitorsAdvancedFilters } from '@guiders-frontend/visitors-advanced-filters';
@@ -110,9 +106,6 @@ export class VisitorsComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly chatService = inject(ChatService);
   private readonly unreadMessagesService = inject(UnreadMessagesService);
-  private readonly tourSandbox = inject(TourSandboxService, { optional: true });
-  private readonly tourService = inject(TourService);
-  private readonly userService = inject(UserService);
   private readonly leadContactService = inject(LeadContactService);
   private readonly destroy$ = new Subject<void>();
 
@@ -383,18 +376,6 @@ export class VisitorsComponent implements OnInit, OnDestroy {
           return changed ? updated : presets;
         });
       });
-    });
-
-    // Auto-start the visitors tour the first time an operator lands on this view.
-    // Mirrors the console-tour auto-start in App but scoped per user via storage key.
-    effect(() => {
-      const user = this.userService.currentUser();
-      if (!user?.sub) return;
-      if (this.tourService.isRunning) return;
-      if (this.tourService.hasStartedFor('visitors', user.sub)) return;
-      if (this.tourService.isCompleted('visitors', user.sub)) return;
-
-      this.tourService.startTour('visitors', user.sub);
     });
   }
 
@@ -730,8 +711,8 @@ export class VisitorsComponent implements OnInit, OnDestroy {
           })
         )
         .subscribe((response) => {
-          const mappedVisitors: Visitor[] = this.applyDemoVisitorIfActive(
-            this.mapSearchResultsToVisitors(response.visitors)
+          const mappedVisitors: Visitor[] = this.mapSearchResultsToVisitors(
+            response.visitors
           );
 
           this.hasMore.set(response.pagination.hasNextPage);
@@ -1239,8 +1220,8 @@ export class VisitorsComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe((response) => {
-        const mappedVisitors: Visitor[] = this.applyDemoVisitorIfActive(
-          this.mapSearchResultsToVisitors(response.visitors)
+        const mappedVisitors: Visitor[] = this.mapSearchResultsToVisitors(
+          response.visitors
         );
 
         this.hasMore.set(response.pagination.hasNextPage);
@@ -1313,24 +1294,6 @@ export class VisitorsComponent implements OnInit, OnDestroy {
     return results.map((result) => this.mapSearchResultToVisitor(result));
   }
 
-  /**
-   * If the tour sandbox is active, prepend the demo visitor to the search
-   * result list so the user can interact with a fake conversation during
-   * the guided tour. The demo visitor is filtered out first to avoid
-   * duplicates if the backend (or another upstream merge) already injected
-   * it. No-op when the sandbox provider is absent or inactive.
-   */
-  private applyDemoVisitorIfActive(list: Visitor[]): Visitor[] {
-    if (!this.tourSandbox?.isActive()) {
-      return list;
-    }
-    const [demo] = this.tourSandbox.visitorsSnapshot;
-    if (!demo) {
-      return list;
-    }
-    const withoutDemo = list.filter((v) => v.id !== DEMO_VISITOR_ID);
-    return [demo, ...withoutDemo];
-  }
 
   /** Mapear resultado de búsqueda a Visitor */
   private mapSearchResultToVisitor(result: VisitorSearchResult): Visitor {
@@ -1392,6 +1355,8 @@ export class VisitorsComponent implements OnInit, OnDestroy {
       pendingChatIds: result.pendingChatIds || [],
       isMe: result.isMe,
       isInternal: result.isInternal,
+      assignedCommercialId: result.assignedCommercialId,
+      assignedCommercial: result.assignedCommercial,
     };
   }
 
@@ -1508,7 +1473,7 @@ export class VisitorsComponent implements OnInit, OnDestroy {
         if (this.isResetting) return; // Discard if reset happened during mock delay
         const mockResponse = getMockVisitorsResponse(this.batchSize, this.infiniteOffset);
         const newVisitors = this.mapSearchResultsToVisitors(mockResponse.visitors as unknown as VisitorSearchResult[]);
-        const merged = this.applyDemoVisitorIfActive([...currentVisitors, ...newVisitors]);
+        const merged = [...currentVisitors, ...newVisitors];
         this.lastBatchStartIndex.set(batchStart);
         this.hasMore.set(merged.length < mockResponse.total);
         this.updateState({ visitors: merged });
@@ -1539,7 +1504,7 @@ export class VisitorsComponent implements OnInit, OnDestroy {
       .subscribe((response) => {
         if (this.isResetting) return; // Discard stale results
         const newVisitors = this.mapSearchResultsToVisitors(response.visitors);
-        const merged = this.applyDemoVisitorIfActive([...currentVisitors, ...newVisitors]);
+        const merged = [...currentVisitors, ...newVisitors];
         this.lastBatchStartIndex.set(batchStart);
         this.hasMore.set(response.pagination.hasNextPage);
         this.updateState({

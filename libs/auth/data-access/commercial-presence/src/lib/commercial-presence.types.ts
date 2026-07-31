@@ -59,6 +59,7 @@ export interface CommercialInfo {
   connectionStatus: ConnectionStatus;
   lastActivity: string;
   isActive: boolean;
+  avatarUrl?: string | null;
 }
 
 /**
@@ -69,6 +70,15 @@ export interface ApiResponse<T = unknown> {
   message?: string;
   commercial?: T;
   data?: T;
+}
+
+/**
+ * Response de GET /v2/commercials/active|available
+ */
+export interface OnlineCommercialsResponse {
+  commercials: CommercialInfo[];
+  count: number;
+  timestamp: string;
 }
 
 /**

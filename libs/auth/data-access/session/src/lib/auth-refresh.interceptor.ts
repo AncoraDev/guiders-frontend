@@ -20,13 +20,14 @@ export const authRefreshInterceptor: HttpInterceptorFn = (req, next) => {
   
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Solo manejar errores 401/403 de autenticación
-      if (error.status === 401 || error.status === 403) {
+      // Solo 401 = sesión inválida/expirada.
+      // 403 suele ser autorización (roles) y no se arregla con refresh.
+      if (error.status === 401) {
         return handleAuthError(req, next, authRefreshService, error);
       }
-      
+
       return throwError(() => error);
-    })
+    }),
   );
 };
 
@@ -112,7 +113,7 @@ export class AuthRefreshInterceptorClass implements HttpInterceptor {
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     return next.handle(req).pipe(
       catchError((error: HttpErrorResponse) => {
-        if (error.status === 401 || error.status === 403) {
+        if (error.status === 401) {
           return this.handleAuthErrorClass(req, next, error);
         }
         return throwError(() => error);

@@ -1,0 +1,419 @@
+@use '../../../../../../shared/design-tokens/src/lib/tokens-vars' as tokens;
+
+:host {
+  display: block;
+  height: 100%;
+  overflow: auto;
+}
+
+.platform-users {
+  padding: tokens.$spacing-xl;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-md;
+}
+
+.platform-users__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: tokens.$spacing-md;
+
+  h1 {
+    margin: 0;
+    font-size: tokens.$font-size-2xl;
+    font-weight: tokens.$font-weight-semibold;
+  }
+}
+
+.platform-users__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$spacing-sm;
+}
+
+.platform-users__subtitle {
+  margin: tokens.$spacing-xs 0 0;
+  color: tokens.$color-text-secondary;
+  font-size: tokens.$font-size-sm;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$spacing-sm;
+}
+
+.stat {
+  min-width: 88px;
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat__value {
+  font-size: tokens.$font-size-lg;
+  font-weight: tokens.$font-weight-semibold;
+}
+
+.stat__label {
+  font-size: tokens.$font-size-xs;
+  color: tokens.$color-text-secondary;
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-sm;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$spacing-xs;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: tokens.$spacing-xs;
+  padding: 6px tokens.$spacing-sm;
+  border-radius: tokens.$border-radius-md;
+  border: 1px solid tokens.$color-border-subtle;
+  background: transparent;
+  font-size: tokens.$font-size-sm;
+  cursor: pointer;
+  color: tokens.$color-text-secondary;
+
+  &--active {
+    background: tokens.$color-text-primary;
+    color: tokens.$color-surface-primary;
+    border-color: tokens.$color-text-primary;
+  }
+}
+
+.chip__count {
+  font-size: tokens.$font-size-xs;
+  opacity: 0.85;
+}
+
+.filters__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$spacing-sm;
+}
+
+.filters__search,
+.filters__select {
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  font-size: tokens.$font-size-base;
+  background: tokens.$color-surface-primary;
+  color: tokens.$color-text-primary;
+}
+
+.filters__search {
+  flex: 1;
+  min-width: 220px;
+}
+
+.filters__select {
+  min-width: 200px;
+}
+
+.table-wrap {
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: tokens.$font-size-sm;
+
+  th,
+  td {
+    text-align: left;
+    padding: tokens.$spacing-md;
+    border-bottom: 1px solid tokens.$color-border-subtle;
+  }
+
+  th {
+    background: tokens.$color-surface-secondary;
+    color: tokens.$color-text-secondary;
+    font-weight: tokens.$font-weight-medium;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.name {
+  font-weight: tokens.$font-weight-medium;
+}
+
+.mono {
+  font-family: ui-monospace, monospace;
+  font-size: tokens.$font-size-xs;
+}
+
+.company-link {
+  color: tokens.$color-text-primary;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.role-badge {
+  font-size: tokens.$font-size-xs;
+  padding: 2px 6px;
+  border-radius: tokens.$border-radius-sm;
+  background: tokens.$color-surface-secondary;
+  color: tokens.$color-text-secondary;
+}
+
+.status {
+  font-size: tokens.$font-size-xs;
+  font-weight: tokens.$font-weight-medium;
+
+  &--active {
+    color: #15803d;
+  }
+
+  &--inactive {
+    color: tokens.$color-text-tertiary;
+  }
+}
+
+.muted {
+  color: tokens.$color-text-secondary;
+  font-size: tokens.$font-size-sm;
+}
+
+.results {
+  margin: 0;
+}
+
+.error {
+  padding: tokens.$spacing-md;
+  border-radius: tokens.$border-radius-md;
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+  font-size: tokens.$font-size-sm;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border-radius: tokens.$border-radius-md;
+  font-size: tokens.$font-size-sm;
+  font-weight: tokens.$font-weight-medium;
+  border: 1px solid tokens.$color-border-subtle;
+  background: transparent;
+  cursor: pointer;
+  color: tokens.$color-text-primary;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--ghost {
+    border-color: tokens.$color-border-subtle;
+  }
+
+  &--primary {
+    background: tokens.$color-text-primary;
+    border-color: tokens.$color-text-primary;
+    color: tokens.$color-surface-primary;
+  }
+}
+
+.you {
+  margin-left: tokens.$spacing-xs;
+  font-size: tokens.$font-size-xs;
+  padding: 1px 6px;
+  border-radius: tokens.$border-radius-sm;
+  background: tokens.$color-surface-secondary;
+  color: tokens.$color-text-secondary;
+  font-weight: tokens.$font-weight-medium;
+}
+
+.col-actions {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$spacing-xs;
+}
+
+.link-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: tokens.$font-size-xs;
+  color: tokens.$color-text-primary;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &--danger {
+    color: #b91c1c;
+  }
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.panel__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 40;
+}
+
+.panel {
+  width: min(420px, 100%);
+  height: 100%;
+  background: tokens.$color-surface-primary;
+  border-left: 1px solid tokens.$color-border-subtle;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
+}
+
+.panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: tokens.$spacing-lg;
+  border-bottom: 1px solid tokens.$color-border-subtle;
+
+  h2 {
+    margin: 0;
+    font-size: tokens.$font-size-lg;
+    font-weight: tokens.$font-weight-semibold;
+  }
+}
+
+.panel__close {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: tokens.$color-text-secondary;
+  padding: tokens.$spacing-xs;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.panel__body {
+  flex: 1;
+  overflow: auto;
+  padding: tokens.$spacing-lg;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-md;
+}
+
+.panel__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: tokens.$spacing-sm;
+  padding: tokens.$spacing-lg;
+  border-top: 1px solid tokens.$color-border-subtle;
+}
+
+.panel__error {
+  margin: 0;
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border-radius: tokens.$border-radius-md;
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+  font-size: tokens.$font-size-sm;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-xs;
+}
+
+.field__label {
+  font-size: tokens.$font-size-sm;
+  font-weight: tokens.$font-weight-medium;
+  color: tokens.$color-text-secondary;
+}
+
+.field__input {
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  font-size: tokens.$font-size-base;
+  background: tokens.$color-surface-primary;
+  color: tokens.$color-text-primary;
+
+  &:disabled {
+    opacity: 0.7;
+    background: tokens.$color-surface-secondary;
+  }
+}
+
+.field__hint {
+  font-size: tokens.$font-size-xs;
+  color: tokens.$color-text-tertiary;
+}
+
+.role-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$spacing-xs;
+}
+
+.role-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: tokens.$spacing-xs;
+  padding: 6px tokens.$spacing-sm;
+  border-radius: tokens.$border-radius-md;
+  border: 1px solid tokens.$color-border-subtle;
+  font-size: tokens.$font-size-sm;
+  cursor: pointer;
+  color: tokens.$color-text-secondary;
+
+  input {
+    margin: 0;
+  }
+
+  &--active {
+    background: tokens.$color-text-primary;
+    color: tokens.$color-surface-primary;
+    border-color: tokens.$color-text-primary;
+  }
+}

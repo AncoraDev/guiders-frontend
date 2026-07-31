@@ -1,20 +1,15 @@
 <div class="console-app">
   <guiders-sidebar
-    data-tour="sidebar"
     [items]="sidebarItems()"
     [config]="sidebarConfig()"
     [userEmail]="currentUser()?.email ?? null"
-    [userName]="null"
-    [showAppSwitcher]="isAdmin()"
-    [appSwitcherLabel]="'Ir a Admin'"
-    [appSwitcherUrl]="adminUrl"
+    [userName]="userName()"
+    [avatarUrl]="avatarUrl()"
     [appVersion]="appVersion"
-    [showTourButton]="true"
     (itemClick)="onSidebarItemClick($event)"
     (toggleSidebar)="onSidebarToggle($event)"
     (userLogout)="onLogout()"
-    (userConfigureAccount)="onConfigureAccount()"
-    (userStartTour)="onStartTour($event)">
+    (userConfigureAccount)="onConfigureAccount()">
   </guiders-sidebar>
 
   <div class="console-main">
@@ -22,6 +17,9 @@
       <router-outlet></router-outlet>
     </main>
   </div>
+
+  <!-- Toast global (transferencias, etc.) — visible en cualquier ruta -->
+  <guiders-toast-host />
 
   <!-- Chat Widget - Fixed en esquina inferior derecha -->
   <guiders-chat-widget></guiders-chat-widget>

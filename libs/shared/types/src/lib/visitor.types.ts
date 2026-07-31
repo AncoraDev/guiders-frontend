@@ -59,6 +59,14 @@ export interface Visitor {
   lastChatId?: string;
   totalChats: number;
   pendingChatIds?: string[]; // IDs de chats pendientes
+
+  /** Comercial asignado al chat abierto más reciente (si existe) */
+  assignedCommercialId?: string;
+  assignedCommercial?: {
+    id: string;
+    name: string;
+    avatarUrl?: string | null;
+  };
   
   // Para UI
   isSelected?: boolean;
@@ -354,6 +362,12 @@ export interface VisitorSearchResult {
   lastUserAgent?: string; // Último user agent del visitante
   isMe?: boolean; // Indica si este visitante es el propio usuario
   isInternal?: boolean; // Indica si este visitante es un usuario interno (empleado, admin, etc.)
+  assignedCommercialId?: string;
+  assignedCommercial?: {
+    id: string;
+    name: string;
+    avatarUrl?: string | null;
+  };
   // Contact enrichment fields — only present when the backend enriches from contact profile.
   // Not guaranteed by the search endpoint; treat as optional.
   name?: string;

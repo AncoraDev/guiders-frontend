@@ -1,0 +1,131 @@
+<div class="client-form-page">
+  <header class="client-form-page__header">
+    <a routerLink="/clients" class="back-link">← Clientes</a>
+    <h1>Nuevo cliente</h1>
+    <p>
+      Crea la company, genera la API key del dominio y da de alta el admin en
+      Keycloak con contraseña temporal. Entrégasela al cliente; en el primer
+      login el sistema pedirá crear una nueva.
+    </p>
+  </header>
+
+  @if (error()) {
+    <div class="client-form-page__error" role="alert">{{ error() }}</div>
+  }
+
+  <form class="client-form" (ngSubmit)="submit()">
+    <fieldset>
+      <legend>Empresa</legend>
+      <label>
+        Nombre
+        <input
+          type="text"
+          required
+          [ngModel]="companyName()"
+          (ngModelChange)="companyName.set($event)"
+          name="companyName"
+          autocomplete="organization"
+        />
+      </label>
+      <label>
+        Nombre del sitio
+        <input
+          type="text"
+          [ngModel]="siteName()"
+          (ngModelChange)="siteName.set($event)"
+          name="siteName"
+        />
+      </label>
+      <label>
+        Dominio canónico
+        <input
+          type="text"
+          required
+          placeholder="ejemplo.com"
+          [ngModel]="canonicalDomain()"
+          (ngModelChange)="canonicalDomain.set($event)"
+          name="canonicalDomain"
+        />
+      </label>
+      <label>
+        Aliases (separados por comas)
+        <input
+          type="text"
+          placeholder="www.ejemplo.com, shop.ejemplo.com"
+          [ngModel]="domainAliases()"
+          (ngModelChange)="domainAliases.set($event)"
+          name="domainAliases"
+        />
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Admin del cliente (Console)</legend>
+      <label>
+        Nombre
+        <input
+          type="text"
+          required
+          [ngModel]="adminFirstName()"
+          (ngModelChange)="adminFirstName.set($event)"
+          name="adminFirstName"
+          autocomplete="given-name"
+        />
+      </label>
+      <label>
+        Apellidos
+        <input
+          type="text"
+          required
+          [ngModel]="adminLastName()"
+          (ngModelChange)="adminLastName.set($event)"
+          name="adminLastName"
+          autocomplete="family-name"
+        />
+      </label>
+      <label>
+        Email
+        <input
+          type="email"
+          required
+          [ngModel]="adminEmail()"
+          (ngModelChange)="adminEmail.set($event)"
+          name="adminEmail"
+          autocomplete="email"
+        />
+      </label>
+      <label>
+        Teléfono (opcional)
+        <input
+          type="tel"
+          [ngModel]="adminTel()"
+          (ngModelChange)="adminTel.set($event)"
+          name="adminTel"
+        />
+      </label>
+      <label>
+        Contraseña temporal
+        <input
+          type="text"
+          required
+          minlength="6"
+          [ngModel]="adminPassword()"
+          (ngModelChange)="adminPassword.set($event)"
+          name="adminPassword"
+          autocomplete="new-password"
+        />
+        <span class="field-hint">
+          Mín. 6 caracteres. Entrégala al admin; en el primer acceso deberá crear
+          una nueva con formato seguro.
+        </span>
+      </label>
+    </fieldset>
+
+    <div class="client-form__actions">
+      <a routerLink="/clients" class="btn btn--ghost">Cancelar</a>
+      <button type="submit" class="btn btn--primary" [disabled]="saving()">
+        {{ saving() ? 'Creando…' : 'Crear cliente' }}
+      </button>
+    </div>
+  </form>
+</div>

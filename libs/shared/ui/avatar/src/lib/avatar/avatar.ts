@@ -40,6 +40,11 @@ export class Avatar {
   readonly presenceStatus = input<PresenceStatus | undefined>(undefined);
 
   /**
+   * URL de foto de perfil (si hay, sustituye la inicial)
+   */
+  readonly imageUrl = input<string | null | undefined>(undefined);
+
+  /**
    * Avatar size
    */
   readonly size = input<AvatarSize>('medium');
@@ -50,6 +55,11 @@ export class Avatar {
    */
   readonly avatarColor = computed(() => {
     return this.generateColorFromId(this.userId());
+  });
+
+  readonly hasImage = computed(() => {
+    const url = this.imageUrl()?.trim();
+    return !!url;
   });
 
   /**

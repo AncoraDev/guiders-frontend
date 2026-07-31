@@ -4,7 +4,7 @@ import { EMPTY, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { SessionService } from './session.service';
 import { ENVIRONMENT_TOKEN } from './environment.token';
-import { resolveAuthApp, resolveAuthReturnUrl } from './resolve-auth-app';
+import { redirectToBffLogin } from './redirect-to-login';
 
 /**
  * Guard to prevent duplicate 401 redirects when multiple concurrent requests
@@ -44,36 +44,30 @@ export const globalErrorInterceptor: HttpInterceptorFn = (req, next) => {
       if (error.status === 401) {
         if (!redirectingToLogin) {
           redirectingToLogin = true;
-          console.warn('[GlobalErrorInterceptor] Unrecoverable 401 — clearing session and redirecting to BFF login', req.url);
+          console.warn(
+            '[GlobalErrorInterceptor] Unrecoverable 401 — clearing session and redirecting to BFF login',
+            req.url,
+          );
           sessionService.clearCache();
-          const app = resolveAuthApp(environment);
-          const ret = encodeURIComponent(resolveAuthReturnUrl());
-          location.replace(`${environment.api.baseUrl}/bff/auth/login/${app}?redirect=${ret}`);
-          setTimeout(() => { redirectingToLogin = false; }, 5000);
+          redirectToBffLogin(environment);
+          setTimeout(() => {
+            redirectingToLogin = false;
+          }, 5000);
         }
         return EMPTY;
       }
 
-      // /bff/auth/me falló por un motivo distinto a 401.
-      // El usuario está autenticado en Keycloak pero el backend no puede
-      // provisionarlo (puede ser 403, 500, 503 o un error de red status 0).
-      // Normalizamos a 403 user_not_provisioned para que authGuard y
-      // SessionService.ensureSession$() lo manejen de forma consistente.
-      if (req.url.includes('/bff/auth/me')) {
-        console.warn(
-          '[GlobalErrorInterceptor] /bff/auth/me falló con status',
-          error.status,
-          '— marcando usuario como no provisionado',
-          req.url
-        );
+      // /bff/auth/me: 403 real de no provisionado. Otros errores no se
+      // normalizan a "not provisioned" (evita confundir fallos de red / 5xx
+      // con falta de alta en BD).
+      if (
+        req.url.includes('/bff/auth/me') &&
+        error.status === 403 &&
+        (error.error as { reason?: string } | null)?.reason ===
+          'user_not_provisioned'
+      ) {
         sessionService.markUserNotProvisioned();
-        const specificError = new HttpErrorResponse({
-          status: 403,
-          statusText: 'User Not Provisioned',
-          url: req.url,
-          error: { reason: 'user_not_provisioned' },
-        });
-        return throwError(() => specificError);
+        return throwError(() => error);
       }
 
       if (error.status === 500 || error.status === 503 || error.status === 0) {

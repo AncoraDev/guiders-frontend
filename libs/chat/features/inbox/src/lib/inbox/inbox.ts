@@ -3,7 +3,6 @@ import {
   inject,
   signal,
   computed,
-  effect,
   OnInit,
   OnDestroy,
   DestroyRef,
@@ -11,9 +10,6 @@ import {
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ChatService } from '@guiders-frontend/chat-service';
-import {
-  TourUiBridgeService,
-} from '@guiders-frontend/tour-sandbox';
 import {
   Chat,
   Message,
@@ -74,7 +70,6 @@ export class Inbox implements OnInit, OnDestroy {
   private readonly visitorsDataService = inject(VisitorsDataService);
   private readonly leadContactService = inject(LeadContactService);
   private readonly commercialPresence = inject(CommercialPresenceService);
-  private readonly tourUiBridge = inject(TourUiBridgeService, { optional: true });
 
   // ===== ESTADO PRINCIPAL =====
   readonly selectedConversationId = signal<string | null>(null);
@@ -103,19 +98,6 @@ export class Inbox implements OnInit, OnDestroy {
 
   // Estado del panel de detalles del visitante
   readonly showVisitorPanel = signal<boolean>(false);
-
-  /**
-   * Sync the visitor detail panel open/close with the tour UI bridge so the
-   * interactive tour can auto-open the panel during step 5
-   * (visitor-detail-panel) without requiring the user to click. Only active
-   * when the bridge is provided (i.e. tour-sandbox lib is loaded).
-   */
-  private readonly _tourPanelSync = this.tourUiBridge
-    ? effect(() => {
-        const requested = this.tourUiBridge!.visitorPanelOpenRequested();
-        this.showVisitorPanel.set(requested);
-      })
-    : null;
 
   // URL actual del visitante seleccionado
   readonly visitorCurrentUrl = signal<string | null>(null);
@@ -551,7 +533,8 @@ export class Inbox implements OnInit, OnDestroy {
   /**
    * Manejar envío de mensaje
    */
-  onSendMessage(content: string): void {
+  onSendMessage(payload: { content: string } | string): void {
+    const content = typeof payload === 'string' ? payload : payload.content;
     const chatId = this.selectedConversationId();
 
     if (!chatId) {

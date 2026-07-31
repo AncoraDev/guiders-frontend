@@ -13,7 +13,13 @@ import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { forkJoin, interval, of } from 'rxjs';
-import { catchError, finalize, map, switchMap } from 'rxjs/operators';
+import {
+  catchError,
+  finalize,
+  map,
+  startWith,
+  switchMap,
+} from 'rxjs/operators';
 import { ChatService } from '@guiders-frontend/chat-service';
 import { SessionService } from '@guiders-frontend/auth/data-access/session';
 import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service';
@@ -24,6 +30,7 @@ import {
 } from '@guiders-frontend/visitors-data-service';
 import { GuidersChatPlaceholderComponent } from '@guiders-frontend/chat/ui/chat-placeholder';
 import type { VisitorChatProfile } from '@guiders-frontend/chat/ui/chat-placeholder';
+import type { MessageSendPayload } from '@guiders-frontend/chat/ui/message-input';
 import { GuidersChatWelcomeStateComponent } from '@guiders-frontend/chat/ui/chat-welcome-state';
 import { VisitorDetailPanel } from '@guiders-frontend/visitor-detail-panel';
 import { LeadContactService } from '@guiders-frontend/lead-contact-service';
@@ -31,12 +38,10 @@ import {
   getContactDisplayName,
   getVisitorDisplayName,
 } from '@guiders-frontend/visitor-display-name';
-import {
-  ToastHostComponent,
-  ToastService,
-} from '@guiders-frontend/shared/ui/toast';
+import { ToastService } from '@guiders-frontend/shared/ui/toast';
 import { StatusSelector } from '@guiders-frontend/status-selector';
 import { CommercialPresenceService } from '@guiders-frontend/commercial-presence';
+import { CompanyUsersService } from '@guiders-frontend/company-users-service';
 import {
   Chat,
   LeadContactData,
@@ -93,7 +98,6 @@ export interface AtencionListItem {
     GuidersChatPlaceholderComponent,
     GuidersChatWelcomeStateComponent,
     VisitorDetailPanel,
-    ToastHostComponent,
     StatusSelector,
   ],
   templateUrl: './atencion.html',
@@ -111,6 +115,7 @@ export class Atencion implements OnInit, OnDestroy {
   private readonly leadContactService = inject(LeadContactService);
   private readonly toastService = inject(ToastService);
   private readonly commercialPresence = inject(CommercialPresenceService);
+  private readonly companyUsersService = inject(CompanyUsersService);
   private readonly route = inject(ActivatedRoute);
 
   /** Chats PENDING ya notificados (WS + poll) para no duplicar toasts. */
@@ -143,6 +148,49 @@ export class Atencion implements OnInit, OnDestroy {
     });
   };
 
+  /** Chats de Míos a los que estamos unidos por WS (para leave al salir de la cola). */
+  private wiredMineChatIds = new Set<string>();
+
+  /**
+   * Transferencia en Atención: el origen suelta sala; el destino refresca Míos.
+   * El toast lo muestra TransferNotificationService (shell global de Console).
+   */
+  private readonly onCommercialAssigned = (data: unknown): void => {
+    const payload = data as {
+      chatId?: string;
+      commercialId?: string;
+      assignmentReason?: string;
+      previousCommercialId?: string;
+    };
+    if (!payload?.chatId || !payload.commercialId) return;
+    if (payload.assignmentReason !== 'transfer') return;
+
+    const selfId = this.currentUserId();
+    if (!selfId) return;
+
+    // Origen: dejar de recibir message:new / notificaciones de este chat
+    if (payload.previousCommercialId === selfId) {
+      this.ngZone.run(() => {
+        this.releaseChatRealtime(payload.chatId!);
+        this.mineItems.update((list) =>
+          list.filter((item) => item.chatId !== payload.chatId),
+        );
+        if (this.selectedChat()?.chatId === payload.chatId) {
+          this.clearSelectedChat();
+        }
+        this.refreshAll(true);
+      });
+      return;
+    }
+
+    if (payload.commercialId !== selfId) return;
+
+    this.ngZone.run(() => {
+      this.refreshAll(true);
+      this.activeCola.set('mios');
+    });
+  };
+
   readonly activeCola = signal<AtencionCola>('pendientes');
   readonly isLoading = signal(false);
   readonly isClaiming = signal(false);
@@ -166,9 +214,22 @@ export class Atencion implements OnInit, OnDestroy {
   readonly visitorContactData = signal<LeadContactData | null>(null);
   readonly savingContactData = signal(false);
   readonly showVisitorPanel = signal(false);
+  /** Comerciales online (excluye al usuario actual) para @mention. */
+  readonly mentionCandidates = signal<
+    Array<{ id: string; name: string; avatarUrl?: string | null }>
+  >([]);
+  /** Layout estrecho: colas y detalles en overlay (no restan ancho al chat). */
+  readonly isCompactLayout = signal(false);
+  /** Drawer de colas (solo relevante en compact). */
+  readonly queuesOpen = signal(false);
   readonly pageHistory = signal<VisitorPageHistoryItem[]>([]);
   readonly pageHistoryTotal = signal(0);
   readonly pageHistoryLoading = signal(false);
+
+  private compactMql: MediaQueryList | null = null;
+  private readonly onCompactLayoutChange = (event: MediaQueryListEvent): void => {
+    this.applyCompactLayout(event.matches);
+  };
 
   readonly currentUserId = computed(
     () => this.sessionService.getCurrentUser()?.sub ?? null
@@ -373,6 +434,8 @@ export class Atencion implements OnInit, OnDestroy {
       });
 
     this.setupLiveSync();
+    this.setupCompactLayoutWatcher();
+    this.setupMentionCandidatesPolling();
     this.refreshAll();
 
     interval(POLL_MS)
@@ -381,7 +444,13 @@ export class Atencion implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.compactMql?.removeEventListener('change', this.onCompactLayoutChange);
+    this.compactMql = null;
     this.chatService.webSocketService.off('chat:created', this.onChatCreated);
+    this.chatService.webSocketService.off(
+      'chat:commercial-assigned',
+      this.onCommercialAssigned,
+    );
     this.unreadMessagesService.setActiveChat(null);
     this.chatService.selectChat(null);
   }
@@ -389,6 +458,21 @@ export class Atencion implements OnInit, OnDestroy {
   selectCola(cola: AtencionCola): void {
     this.activeCola.set(cola);
     this.clearSelectedChat();
+    if (this.isCompactLayout()) {
+      this.queuesOpen.set(false);
+    }
+  }
+
+  toggleQueuesDrawer(): void {
+    const next = !this.queuesOpen();
+    this.queuesOpen.set(next);
+    if (next && this.isCompactLayout()) {
+      this.showVisitorPanel.set(false);
+    }
+  }
+
+  closeQueuesDrawer(): void {
+    this.queuesOpen.set(false);
   }
 
   onCloseChat(): void {
@@ -399,6 +483,9 @@ export class Atencion implements OnInit, OnDestroy {
     const next = !this.showVisitorPanel();
     this.showVisitorPanel.set(next);
     if (next) {
+      if (this.isCompactLayout()) {
+        this.queuesOpen.set(false);
+      }
       const visitorId = this.selectedChat()?.visitorId;
       if (visitorId) this.loadVisitorContactData(visitorId);
     }
@@ -406,6 +493,27 @@ export class Atencion implements OnInit, OnDestroy {
 
   onCloseVisitorPanel(): void {
     this.showVisitorPanel.set(false);
+  }
+
+  private setupCompactLayoutWatcher(): void {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+    this.compactMql = window.matchMedia('(max-width: 1280px)');
+    this.applyCompactLayout(this.compactMql.matches);
+    this.compactMql.addEventListener('change', this.onCompactLayoutChange);
+  }
+
+  private applyCompactLayout(compact: boolean): void {
+    this.ngZone.run(() => {
+      this.isCompactLayout.set(compact);
+      if (compact) {
+        this.showVisitorPanel.set(false);
+        this.queuesOpen.set(false);
+      } else {
+        this.queuesOpen.set(false);
+      }
+    });
   }
 
   onSaveContactData(request: SaveContactDataRequest): void {
@@ -647,6 +755,10 @@ export class Atencion implements OnInit, OnDestroy {
   onSelectItem(item: AtencionListItem): void {
     if (this.isClaiming()) return;
 
+    if (this.isCompactLayout()) {
+      this.queuesOpen.set(false);
+    }
+
     if (item.kind === 'pending' && item.chatId) {
       this.claimAndOpen(item);
       return;
@@ -670,7 +782,14 @@ export class Atencion implements OnInit, OnDestroy {
     this.startChatWithVisitor(item, { withGreeting: true });
   }
 
-  onSendMessage(content: string): void {
+  onSendMessage(payload: MessageSendPayload | string): void {
+    const content =
+      typeof payload === 'string' ? payload : payload.content;
+    const transferToCommercialId =
+      typeof payload === 'string' ? undefined : payload.transferToCommercialId;
+    const transferToDisplayName =
+      typeof payload === 'string' ? undefined : payload.transferToDisplayName;
+
     const chat = this.selectedChat();
     const userId = this.currentUserId();
     if (!chat || !userId || !content.trim()) return;
@@ -680,15 +799,124 @@ export class Atencion implements OnInit, OnDestroy {
       return;
     }
 
+    const chatId = chat.chatId;
+
     this.chatService
       .sendMessage({
-        chatId: chat.chatId,
+        chatId,
         content: content.trim(),
         type: 'text',
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
+        next: () => {
+          if (!transferToCommercialId) return;
+          this.transferChatAfterMessage(
+            chatId,
+            transferToCommercialId,
+            transferToDisplayName,
+          );
+        },
         error: () => this.error.set('Error al enviar el mensaje'),
+      });
+  }
+
+  private transferChatAfterMessage(
+    chatId: string,
+    commercialId: string,
+    displayName?: string,
+  ): void {
+    this.visitorsService
+      .transferChat(chatId, commercialId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          // Salir de la sala YA: si no, seguimos recibiendo message:new del visitante
+          this.releaseChatRealtime(chatId);
+          this.mineItems.update((list) =>
+            list.filter((item) => item.chatId !== chatId),
+          );
+          this.clearSelectedChat();
+          this.toastService.success(
+            displayName
+              ? `Transferido a ${displayName}`
+              : 'Chat transferido',
+          );
+          this.refreshAll(true);
+        },
+        error: (err: unknown) => {
+          const message =
+            (err as { error?: { message?: string } })?.error?.message ||
+            'No se pudo transferir el chat. El mensaje sí se envió.';
+          this.toastService.error(message);
+        },
+      });
+  }
+
+  /** Sale de la sala WS y deja de notificar unread para este chat. */
+  private releaseChatRealtime(chatId: string): void {
+    this.chatService.webSocketService.leaveRoom(chatId);
+    this.unreadMessagesService.unregisterChat(chatId);
+    this.wiredMineChatIds.delete(chatId);
+    this.presenceByChat.update((map) => {
+      if (!(chatId in map)) return map;
+      const next = { ...map };
+      delete next[chatId];
+      return next;
+    });
+  }
+
+  private setupMentionCandidatesPolling(): void {
+    interval(POLL_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() =>
+          forkJoin({
+            online: this.commercialPresence.getOnlineCommercials().pipe(
+              catchError(() => of([])),
+            ),
+            users: this.companyUsersService.listCompanyUsers().pipe(
+              catchError(() => of({ users: [] })),
+            ),
+          }),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(({ online, users }) => {
+        const selfId = this.currentUserId();
+        const onlineIds = new Set(online.map((c) => c.id));
+        const profileByKeycloak = new Map(
+          users.users
+            .filter((u) => !!u.keycloakId)
+            .map((u) => {
+              const fromEmail = u.email?.split('@')[0]?.trim();
+              const label = u.name?.trim() || fromEmail || u.email || u.id;
+              return [
+                u.keycloakId as string,
+                {
+                  name: label,
+                  avatarUrl: u.avatarUrl ?? null,
+                },
+              ] as const;
+            }),
+        );
+
+        const candidates = online
+          .filter((c) => c.id && c.id !== selfId)
+          .map((c) => {
+            const profile = profileByKeycloak.get(c.id);
+            const resolvedName =
+              profile?.name ||
+              (c.name && c.name !== c.id ? c.name.trim() : '') ||
+              c.id.slice(0, 8);
+            return {
+              id: c.id,
+              name: resolvedName,
+              avatarUrl: c.avatarUrl || profile?.avatarUrl || null,
+            };
+          });
+
+        this.mentionCandidates.set(candidates);
       });
   }
 
@@ -743,12 +971,29 @@ export class Atencion implements OnInit, OnDestroy {
 
     // Nuevo chat PENDING en el tenant → toast + refresh Pendientes
     this.chatService.webSocketService.on('chat:created', this.onChatCreated);
+
+    // Transferencia recibida (también llega a sala commercial:{id})
+    this.chatService.webSocketService.on(
+      'chat:commercial-assigned',
+      this.onCommercialAssigned,
+    );
   }
 
   private wireMineRealtime(mine: AtencionListItem[]): void {
     const chatIds = mine
       .map((m) => m.chatId)
       .filter((id): id is string => !!id);
+    const nextIds = new Set(chatIds);
+
+    // Salas que ya no están en Míos (transferidos, cerrados, etc.)
+    for (const prevId of this.wiredMineChatIds) {
+      if (!nextIds.has(prevId)) {
+        this.releaseChatRealtime(prevId);
+      }
+    }
+
+    this.wiredMineChatIds = nextIds;
+    this.unreadMessagesService.syncNotifyChats(chatIds);
 
     if (chatIds.length === 0) return;
 
@@ -948,8 +1193,8 @@ export class Atencion implements OnInit, OnDestroy {
     this.loadChatPresence(resolved.chatId);
     this.loadVisitorProfile(item.visitorId, item.rawVisitor);
 
-    // Panel de detalles abierto por defecto al seleccionar visitante/chat
-    this.showVisitorPanel.set(true);
+    // En compact los detalles van en overlay: no abrir por defecto (deja sitio al chat)
+    this.showVisitorPanel.set(!this.isCompactLayout());
   }
 
   private loadVisitorProfile(

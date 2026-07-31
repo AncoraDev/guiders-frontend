@@ -13,11 +13,21 @@
         : 'Conectar: actualmente desconectado'
     "
   >
-    <span
-      class="status-selector__dot"
-      [attr.data-status]="isOnline() ? 'online' : 'offline'"
-      aria-hidden="true"
-    ></span>
+    @if (resolvedAvatarUrl(); as url) {
+      <span
+        class="status-selector__avatar"
+        [attr.data-status]="isOnline() ? 'online' : 'offline'"
+        aria-hidden="true"
+      >
+        <img [src]="url" alt="" class="status-selector__avatar-img" />
+      </span>
+    } @else {
+      <span
+        class="status-selector__dot"
+        [attr.data-status]="isOnline() ? 'online' : 'offline'"
+        aria-hidden="true"
+      ></span>
+    }
     <span class="status-selector__label">{{ label() }}</span>
     @if (isUpdating()) {
       <span class="status-selector__busy">…</span>

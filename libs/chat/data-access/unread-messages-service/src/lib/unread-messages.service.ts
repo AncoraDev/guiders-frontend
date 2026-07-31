@@ -83,6 +83,13 @@ export class UnreadMessagesService {
   private readonly chatToVisitorMap = signal<Record<string, string>>({});
 
   /**
+   * Chats asignados a este comercial para notificaciones/badges.
+   * null = sin filtro (comportamiento legacy hasta que Atención/Inbox sincronice).
+   * Tras una transferencia, el chat sale de este set y deja de notificar.
+   */
+  private notifyChatIds: Set<string> | null = null;
+
+  /**
    * Mapa de contadores de mensajes no leídos por visitorId
    * { 'visitor-uuid-1': 5, 'visitor-uuid-2': 2, ... }
    */
@@ -655,6 +662,55 @@ export class UnreadMessagesService {
   }
 
   /**
+   * Sincroniza la allowlist de chats que pueden generar notificaciones/badges
+   * (típicamente la cola «Míos» del comercial).
+   */
+  syncNotifyChats(chatIds: string[]): void {
+    this.notifyChatIds = new Set(chatIds.filter(Boolean));
+  }
+
+  /**
+   * Deja de trackear un chat (p. ej. tras transferirlo): limpia unread local
+   * y lo excluye de futuras notificaciones.
+   */
+  unregisterChat(chatId: string): void {
+    if (!chatId) return;
+
+    this.notifyChatIds?.delete(chatId);
+
+    this.chatToVisitorMap.update((map) => {
+      if (!(chatId in map)) return map;
+      const next = { ...map };
+      delete next[chatId];
+      return next;
+    });
+
+    this.unreadMessagesMap.update((map) => {
+      if (!(chatId in map)) return map;
+      const next = { ...map };
+      delete next[chatId];
+      return next;
+    });
+
+    this.unreadCountMap.update((map) => {
+      if (!(chatId in map)) return map;
+      const next = { ...map };
+      delete next[chatId];
+      return next;
+    });
+    this.unreadCountSubject.next(this.unreadCountMap());
+
+    if (this.totalUnreadCount() === 0) {
+      this.stopTitleFlashing();
+    }
+  }
+
+  private shouldNotifyForChat(chatId: string): boolean {
+    if (!this.notifyChatIds) return true;
+    return this.notifyChatIds.has(chatId);
+  }
+
+  /**
    * Verificar si un visitante tiene mensajes no leídos
    * (en cualquiera de sus chats asignados al comercial)
    */
@@ -705,6 +761,19 @@ export class UnreadMessagesService {
           console.log(
             '[UnreadMessagesService] 📋 CurrentUserId:',
             this.currentUserId
+          );
+          return;
+        }
+
+        if (message.senderType === 'SYSTEM' || message.type === 'SYSTEM') {
+          return;
+        }
+
+        // Tras transferencia (u otro release): no notificar chats que ya no son nuestros
+        if (!this.shouldNotifyForChat(message.chatId)) {
+          console.log(
+            '[UnreadMessagesService] ⏭️ Chat no asignado a este comercial, ignorando notificación:',
+            message.chatId
           );
           return;
         }
@@ -850,6 +919,11 @@ export class UnreadMessagesService {
     this.webSocket.on('chat:unread_count', (data: unknown) => {
       const payload = data as { chatId: string; unreadMessagesCount: number };
       if (!payload?.chatId) return;
+
+      if (!this.shouldNotifyForChat(payload.chatId)) {
+        // Chat transferido / no asignado: no actualizar badge aquí
+        return;
+      }
 
       console.log(
         `[UnreadMessagesService] 📊 chat:unread_count received — chatId: ${payload.chatId}, count: ${payload.unreadMessagesCount}`

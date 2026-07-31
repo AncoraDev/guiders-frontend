@@ -1,0 +1,113 @@
+<div class="client-detail">
+  <a routerLink="/clients" class="back-link">← Clientes</a>
+
+  @if (loading() && !company()) {
+    <p class="muted">Cargando…</p>
+  } @else if (error() && !company()) {
+    <div class="error" role="alert">{{ error() }}</div>
+  } @else if (company()) {
+    <header class="client-detail__header">
+      <div>
+        <h1>{{ company()!.companyName }}</h1>
+        <p class="muted mono">{{ company()!.id }}</p>
+      </div>
+    </header>
+
+    <section class="panel">
+      <h2>Sitios / dominios</h2>
+      <ul class="sites">
+        @for (site of company()!.sites; track site.id) {
+          <li>
+            <strong>{{ site.name }}</strong>
+            <span class="mono">{{ site.canonicalDomain }}</span>
+            @if (site.domainAliases.length) {
+              <span class="muted"
+                >(aliases: {{ site.domainAliases.join(', ') }})</span
+              >
+            }
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>API keys (widget / plugin)</h2>
+      <p class="muted">
+        Usa estas keys en el plugin WordPress o SDK del cliente.
+      </p>
+
+      @if (lastCreatedKey()) {
+        <div class="key-banner">
+          <span>API key:</span>
+          <code>{{ lastCreatedKey() }}</code>
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            (click)="copy(lastCreatedKey()!)"
+          >
+            Copiar
+          </button>
+        </div>
+      }
+
+      @if (copyFeedback()) {
+        <p class="muted">{{ copyFeedback() }}</p>
+      }
+
+      <div class="key-form">
+        <input
+          type="text"
+          placeholder="nuevo-dominio.com"
+          [ngModel]="newDomain()"
+          (ngModelChange)="newDomain.set($event)"
+        />
+        <button
+          type="button"
+          class="btn btn--primary"
+          (click)="createApiKey()"
+          [disabled]="creatingKey()"
+        >
+          {{ creatingKey() ? 'Creando…' : 'Crear / reutilizar key' }}
+        </button>
+      </div>
+      @if (keyError()) {
+        <div class="error" role="alert">{{ keyError() }}</div>
+      }
+
+      @if (apiKeys().length === 0) {
+        <p class="muted">No hay API keys todavía.</p>
+      } @else {
+        <table class="keys-table">
+          <thead>
+            <tr>
+              <th>Dominio</th>
+              <th>Key</th>
+              <th>Creada</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (k of apiKeys(); track k.kid) {
+              <tr>
+                <td>{{ k.domain }}</td>
+                <td class="mono key-cell">{{ k.apiKey }}</td>
+                <td>
+                  {{ k.createdAt ? (k.createdAt | date: 'short') : '—' }}
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="copy(k.apiKey)"
+                  >
+                    Copiar
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  }
+</div>

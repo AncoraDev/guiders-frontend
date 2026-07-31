@@ -1,16 +1,18 @@
-import { Component, signal, inject, computed, effect } from '@angular/core';
+import { Component, signal, inject, computed, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterModule } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Sidebar, SidebarItem, SidebarConfig } from '@guiders-frontend/sidebar';
 import { UserService, ENVIRONMENT_TOKEN } from '@guiders-frontend/auth/data-access/session';
+import { ProfileService } from '@guiders-frontend/profile-service';
 import { CommercialPresenceService } from '@guiders-frontend/commercial-presence';
 import { ChatWidgetComponent } from '@guiders-frontend/chat/ui/chat-widget';
 import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service';
-import { TourService } from '@guiders-frontend/shared/util/tour';
-import { TourId } from '@guiders-frontend/shared/util/tour';
+import { ToastHostComponent } from '@guiders-frontend/shared/ui/toast';
+import { TransferNotificationService } from './transfer-notification.service';
 
 @Component({
-  imports: [RouterModule, Sidebar, ChatWidgetComponent],
+  imports: [RouterModule, Sidebar, ChatWidgetComponent, ToastHostComponent],
   selector: 'console-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -18,10 +20,12 @@ import { TourId } from '@guiders-frontend/shared/util/tour';
 export class App {
   private readonly userService = inject(UserService);
   private readonly presenceService = inject(CommercialPresenceService);
+  private readonly profileService = inject(ProfileService);
   private readonly router = inject(Router);
   private readonly unreadMessagesService = inject(UnreadMessagesService);
   private readonly environment = inject(ENVIRONMENT_TOKEN);
-  private readonly tourService = inject(TourService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly transferNotifications = inject(TransferNotificationService);
 
   protected title = 'console';
 
@@ -30,25 +34,30 @@ export class App {
 
   // Usuario actual desde el servicio
   readonly currentUser = this.userService.currentUser;
+  readonly userName = signal<string | null>(null);
+  readonly avatarUrl = signal<string | null>(null);
 
   constructor() {
-    // Auto-start tour on first login.
-    effect(() => {
-      const user = this.currentUser();
-      if (!user?.sub) return;
-      if (this.tourService.isRunning) return;
-      if (this.tourService.hasStartedFor('console', user.sub)) return;
-      if (this.tourService.isCompleted('console', user.sub)) return;
+    // Toast global de transferencias (cualquier ruta de Console)
+    this.transferNotifications.start();
 
-      this.tourService.startTour('console', user.sub);
-    });
+    this.profileService
+      .getUserProfile()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (profile) => {
+          this.userName.set(profile.name || null);
+          this.avatarUrl.set(profile.avatarUrl || null);
+        },
+        error: (err) => {
+          console.warn('[Console] No se pudo cargar el perfil para el avatar', err);
+        },
+      });
   }
 
-  // App Switcher - solo visible para admins
   readonly isAdmin = computed(() =>
     this.currentUser()?.roles?.includes('admin') ?? false
   );
-  readonly adminUrl = this.environment.adminUrl ?? '';
 
   // Configuración del sidebar para console
   readonly sidebarConfig = signal<SidebarConfig>({
@@ -81,10 +90,6 @@ export class App {
         label: 'Visitantes',
         icon: 'users',
         route: '/visitors',
-        badge: {
-          text: 'Borrador',
-          variant: 'warning' as const,
-        },
       },
       {
         id: 'conexiones',
@@ -107,12 +112,6 @@ export class App {
 
   onSidebarItemClick(item: SidebarItem): void {
     console.log('Console sidebar item clicked:', item);
-  }
-
-  onStartTour(tourId: string): void {
-    const user = this.currentUser();
-    if (!user?.sub) return;
-    this.tourService.restartTour(tourId as TourId, user.sub);
   }
 
   onSidebarToggle(collapsed: boolean): void {

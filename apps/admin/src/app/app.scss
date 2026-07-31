@@ -28,9 +28,11 @@
   width: 100%;
 }
 
-@media (max-width: 768px) {
-  .admin-app {
-    flex-direction: column;
+// Responsive: el sidebar es overlay. Mantener fila para que el main no colapse.
+@media (max-width: 1280px) {
+  .admin-main {
+    width: 100%;
+    min-width: 0;
   }
 
   .admin-content {

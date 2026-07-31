@@ -243,18 +243,46 @@
 
         <div class="user-form-panel__content">
           <section class="user-form-panel__section">
-            <div class="user-form-panel__field">
-              <label class="user-form-panel__label" for="usuarios-form-name">Nombre</label>
-              <input
-                id="usuarios-form-name"
-                class="user-form-panel__input"
-                type="text"
-                [ngModel]="formName()"
-                (ngModelChange)="formName.set($event)"
-                [disabled]="saving()"
-                autocomplete="name"
-              />
-            </div>
+            @if (panelMode() === 'create') {
+              <div class="user-form-panel__field">
+                <label class="user-form-panel__label" for="usuarios-form-first-name">Nombre</label>
+                <input
+                  id="usuarios-form-first-name"
+                  class="user-form-panel__input"
+                  type="text"
+                  [ngModel]="formFirstName()"
+                  (ngModelChange)="formFirstName.set($event)"
+                  [disabled]="saving()"
+                  autocomplete="given-name"
+                />
+              </div>
+
+              <div class="user-form-panel__field">
+                <label class="user-form-panel__label" for="usuarios-form-last-name">Apellidos</label>
+                <input
+                  id="usuarios-form-last-name"
+                  class="user-form-panel__input"
+                  type="text"
+                  [ngModel]="formLastName()"
+                  (ngModelChange)="formLastName.set($event)"
+                  [disabled]="saving()"
+                  autocomplete="family-name"
+                />
+              </div>
+            } @else {
+              <div class="user-form-panel__field">
+                <label class="user-form-panel__label" for="usuarios-form-name">Nombre</label>
+                <input
+                  id="usuarios-form-name"
+                  class="user-form-panel__input"
+                  type="text"
+                  [ngModel]="formName()"
+                  (ngModelChange)="formName.set($event)"
+                  [disabled]="saving()"
+                  autocomplete="name"
+                />
+              </div>
+            }
 
             <div class="user-form-panel__field">
               <label class="user-form-panel__label" for="usuarios-form-email">Email</label>
@@ -267,12 +295,39 @@
                 [disabled]="saving() || panelMode() === 'edit'"
                 autocomplete="email"
               />
-              @if (panelMode() === 'create') {
-                <p class="user-form-panel__hint">
-                  Recibirá un email de Keycloak para definir su contraseña.
-                </p>
-              }
             </div>
+
+            @if (panelMode() === 'create') {
+              <div class="user-form-panel__field">
+                <label class="user-form-panel__label" for="usuarios-form-phone">Teléfono (opcional)</label>
+                <input
+                  id="usuarios-form-phone"
+                  class="user-form-panel__input"
+                  type="tel"
+                  [ngModel]="formPhone()"
+                  (ngModelChange)="formPhone.set($event)"
+                  [disabled]="saving()"
+                  autocomplete="tel"
+                />
+              </div>
+
+              <div class="user-form-panel__field">
+                <label class="user-form-panel__label" for="usuarios-form-password">Contraseña temporal</label>
+                <input
+                  id="usuarios-form-password"
+                  class="user-form-panel__input"
+                  type="text"
+                  [ngModel]="formPassword()"
+                  (ngModelChange)="formPassword.set($event)"
+                  [disabled]="saving()"
+                  autocomplete="new-password"
+                />
+                <p class="user-form-panel__hint">
+                  Entrégala al usuario. En el primer login deberá crear una nueva
+                  con formato seguro.
+                </p>
+              </div>
+            }
           </section>
 
           <section class="user-form-panel__section">

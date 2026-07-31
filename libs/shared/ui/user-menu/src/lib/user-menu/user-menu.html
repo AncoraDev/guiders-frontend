@@ -15,9 +15,18 @@
   <!-- Avatar del usuario -->
   <div
     class="user-menu__avatar"
-    [style.background-color]="getAvatarBackgroundColor()"
+    [class.user-menu__avatar--with-image]="!!avatarUrl()"
+    [style.background-color]="avatarUrl() ? 'transparent' : getAvatarBackgroundColor()"
   >
-    <span class="user-menu__initial">{{ getUserInitials() }}</span>
+    @if (avatarUrl(); as url) {
+      <img
+        class="user-menu__avatar-img"
+        [src]="url"
+        [alt]="userName() || userEmail()"
+      />
+    } @else {
+      <span class="user-menu__initial">{{ getUserInitials() }}</span>
+    }
     <!-- Indicador de estado de conexión -->
     <span
       class="user-menu__status-badge"
@@ -62,8 +71,20 @@
   >
     <!-- Header con info del usuario -->
     <div class="user-menu__dropdown-header">
-      <div class="user-menu__dropdown-avatar" [style.background-color]="getAvatarBackgroundColor()">
-        <span class="user-menu__dropdown-avatar-initial">{{ getUserInitials() }}</span>
+      <div
+        class="user-menu__dropdown-avatar"
+        [class.user-menu__dropdown-avatar--with-image]="!!avatarUrl()"
+        [style.background-color]="avatarUrl() ? 'transparent' : getAvatarBackgroundColor()"
+      >
+        @if (avatarUrl(); as url) {
+          <img
+            class="user-menu__avatar-img"
+            [src]="url"
+            [alt]="userName() || userEmail()"
+          />
+        } @else {
+          <span class="user-menu__dropdown-avatar-initial">{{ getUserInitials() }}</span>
+        }
       </div>
       <div class="user-menu__dropdown-header-info">
         @if (userName()) {

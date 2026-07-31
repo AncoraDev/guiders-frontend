@@ -3,12 +3,6 @@
 // Design Tokens - única fuente de verdad para estilos
 @use '../../../libs/shared/design-tokens/src/lib/tokens-vars.scss' as tokens;
 
-// Shepherd.js base styles (provides position, z-index, popper container, etc.)
-@use 'shepherd.js/dist/css/shepherd.css';
-
-// Tour Styles overrides (must be before @import rules)
-@use './tour';
-
 // Angular Material prebuilt theme
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
 

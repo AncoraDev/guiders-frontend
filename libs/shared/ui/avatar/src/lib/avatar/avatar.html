@@ -1,9 +1,18 @@
 <div
   [ngClass]="avatarClasses()"
-  [style.background-color]="avatarColor()"
+  [class.guiders-avatar--image]="hasImage()"
+  [style.background-color]="hasImage() ? 'transparent' : avatarColor()"
   [attr.aria-label]="'Avatar for ' + (name() || email() || 'visitor')"
 >
-  <span class="guiders-avatar__text">{{ initial() }}</span>
+  @if (hasImage()) {
+    <img
+      class="guiders-avatar__image"
+      [src]="imageUrl()!"
+      [alt]="name() || email() || 'Avatar'"
+    />
+  } @else {
+    <span class="guiders-avatar__text">{{ initial() }}</span>
+  }
   @if (showPresenceBadge()) {
     <span
       class="guiders-avatar__presence-indicator"

@@ -12,7 +12,8 @@ import {
   UpdateStatusRequest,
   CommercialInfo,
   ApiResponse,
-  CommercialStatusResponse
+  CommercialStatusResponse,
+  OnlineCommercialsResponse,
 } from './commercial-presence.types';
 
 /**
@@ -696,6 +697,18 @@ export class CommercialPresenceService {
     this.activityListenersEnabled = false;
     this.lastActivityEmissionTime = 0;
     console.log('[CommercialPresenceService] 🔇 Listeners de actividad WebSocket deshabilitados');
+  }
+
+  /**
+   * Lista de comerciales actualmente online (para @mention / transferencia).
+   */
+  getOnlineCommercials(): Observable<CommercialInfo[]> {
+    return this.http
+      .get<OnlineCommercialsResponse>(`${this.baseUrl}/active`, this.getHttpOptions())
+      .pipe(
+        map((res) => res.commercials ?? []),
+        catchError((error) => this.handleError('Error al obtener comerciales activos', error))
+      );
   }
 
   /**

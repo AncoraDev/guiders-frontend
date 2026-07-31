@@ -1,0 +1,339 @@
+<div class="platform-users">
+  <header class="platform-users__header">
+    <div>
+      <h1>Usuarios</h1>
+      <p class="platform-users__subtitle">
+        Gestiona personas de cualquier company · vista plataforma Guiders
+      </p>
+    </div>
+    <div class="platform-users__actions">
+      <button type="button" class="btn btn--ghost" (click)="load()" [disabled]="loading()">
+        Actualizar
+      </button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        (click)="openCreatePanel()"
+        [disabled]="loading() || companies().length === 0"
+      >
+        Nuevo usuario
+      </button>
+    </div>
+  </header>
+
+  @if (summary(); as s) {
+    <div class="stats">
+      <div class="stat">
+        <span class="stat__value">{{ s.total }}</span>
+        <span class="stat__label">Total</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ s.active }}</span>
+        <span class="stat__label">Activos</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ s.inactive }}</span>
+        <span class="stat__label">Inactivos</span>
+      </div>
+      @for (chip of roleChips().slice(3); track chip.id) {
+        <div class="stat">
+          <span class="stat__value">{{ chip.count }}</span>
+          <span class="stat__label">{{ chip.label }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <div class="filters">
+    <div class="chips">
+      @for (chip of roleChips(); track chip.id) {
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="roleFilter() === chip.id"
+          (click)="roleFilter.set(chip.id)"
+        >
+          {{ chip.label }}
+          <span class="chip__count">{{ chip.count }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="filters__row">
+      <input
+        type="search"
+        class="filters__search"
+        placeholder="Buscar nombre, email, company, rol…"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+      />
+      <select
+        class="filters__select"
+        [ngModel]="companyFilter()"
+        (ngModelChange)="companyFilter.set($event)"
+      >
+        <option value="all">Todas las companies</option>
+        @for (c of companies(); track c.id) {
+          <option [value]="c.id">{{ c.companyName }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="error" role="alert">{{ error() }}</div>
+  }
+
+  @if (loading() && users().length === 0) {
+    <p class="muted">Cargando usuarios…</p>
+  } @else if (!loading() && filtered().length === 0) {
+    <p class="muted">No hay usuarios con estos filtros.</p>
+  } @else {
+    <p class="muted results">
+      Mostrando {{ filtered().length }} de {{ users().length }}
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Company</th>
+            <th>Roles</th>
+            <th>Estado</th>
+            <th>Alta</th>
+            <th class="col-actions">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (u of filtered(); track u.id) {
+            <tr>
+              <td>
+                <span class="name">{{ u.name || '—' }}</span>
+                @if (isCurrentUser(u)) {
+                  <span class="you">Tú</span>
+                }
+              </td>
+              <td class="mono">{{ u.email }}</td>
+              <td>
+                <a [routerLink]="['/clients', u.companyId]" class="company-link">{{
+                  companyName(u.companyId)
+                }}</a>
+              </td>
+              <td>
+                <div class="roles">
+                  @for (r of u.roles; track r) {
+                    <span class="role-badge">{{ roleLabel(r) }}</span>
+                  }
+                </div>
+              </td>
+              <td>
+                <span
+                  class="status"
+                  [class.status--active]="u.isActive"
+                  [class.status--inactive]="!u.isActive"
+                >
+                  {{ u.isActive ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td>{{ u.createdAt | date: 'shortDate' }}</td>
+              <td class="col-actions">
+                @if (!isCurrentUser(u)) {
+                  <div class="row-actions">
+                    <button type="button" class="link-btn" (click)="openEditPanel(u)">
+                      Editar
+                    </button>
+                    <button type="button" class="link-btn" (click)="onToggleActive(u)">
+                      {{ u.isActive ? 'Desactivar' : 'Activar' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="link-btn link-btn--danger"
+                      (click)="onDelete(u)"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+@if (panelOpen()) {
+  <div class="panel__backdrop" (click)="closePanel()">
+    <aside
+      class="panel"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="platform-users-form-title"
+    >
+      <header class="panel__header">
+        <h2 id="platform-users-form-title">{{ panelTitle() }}</h2>
+        <button
+          type="button"
+          class="panel__close"
+          (click)="closePanel()"
+          [disabled]="saving()"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+      </header>
+
+      <div class="panel__body">
+        <label class="field">
+          <span class="field__label">Company</span>
+          <select
+            class="field__input"
+            [ngModel]="formCompanyId()"
+            (ngModelChange)="formCompanyId.set($event)"
+            [disabled]="saving() || panelMode() === 'edit'"
+          >
+            <option value="" disabled>Selecciona company…</option>
+            @for (c of companies(); track c.id) {
+              <option [value]="c.id">{{ c.companyName }}</option>
+            }
+          </select>
+        </label>
+
+        @if (panelMode() === 'create') {
+          <label class="field">
+            <span class="field__label">Nombre</span>
+            <input
+              class="field__input"
+              type="text"
+              [ngModel]="formFirstName()"
+              (ngModelChange)="formFirstName.set($event)"
+              [disabled]="saving()"
+              autocomplete="given-name"
+            />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Apellidos</span>
+            <input
+              class="field__input"
+              type="text"
+              [ngModel]="formLastName()"
+              (ngModelChange)="formLastName.set($event)"
+              [disabled]="saving()"
+              autocomplete="family-name"
+            />
+          </label>
+        } @else {
+          <label class="field">
+            <span class="field__label">Nombre</span>
+            <input
+              class="field__input"
+              type="text"
+              [ngModel]="formName()"
+              (ngModelChange)="formName.set($event)"
+              [disabled]="saving()"
+              autocomplete="name"
+            />
+          </label>
+        }
+
+        <label class="field">
+          <span class="field__label">Email</span>
+          <input
+            class="field__input"
+            type="email"
+            [ngModel]="formEmail()"
+            (ngModelChange)="formEmail.set($event)"
+            [disabled]="saving() || panelMode() === 'edit'"
+            autocomplete="email"
+          />
+        </label>
+
+        @if (panelMode() === 'create') {
+          <label class="field">
+            <span class="field__label">Teléfono (opcional)</span>
+            <input
+              class="field__input"
+              type="tel"
+              [ngModel]="formPhone()"
+              (ngModelChange)="formPhone.set($event)"
+              [disabled]="saving()"
+              autocomplete="tel"
+            />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Contraseña temporal</span>
+            <input
+              class="field__input"
+              type="text"
+              [ngModel]="formPassword()"
+              (ngModelChange)="formPassword.set($event)"
+              [disabled]="saving()"
+              autocomplete="new-password"
+            />
+            <span class="field__hint">
+              Entrégala al usuario. En el primer login Keycloak pedirá crear una
+              nueva con formato seguro.
+            </span>
+          </label>
+        }
+
+        <div class="field">
+          <span class="field__label">Roles</span>
+          @if (formRolesLocked()) {
+            <p class="field__hint">
+              Este usuario es superadmin. Puedes cambiar el nombre; el rol se gestiona
+              por operaciones (CLI / Keycloak).
+            </p>
+          } @else {
+            <div class="role-chips">
+              @for (opt of roleOptions; track opt.id) {
+                <label
+                  class="role-chip"
+                  [class.role-chip--active]="isRoleSelected(opt.id)"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="isRoleSelected(opt.id)"
+                    (change)="toggleRole(opt.id)"
+                    [disabled]="saving()"
+                  />
+                  <span>{{ opt.label }}</span>
+                </label>
+              }
+            </div>
+          }
+        </div>
+
+        @if (formError()) {
+          <p class="panel__error" role="alert">{{ formError() }}</p>
+        }
+      </div>
+
+      <footer class="panel__footer">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          (click)="closePanel()"
+          [disabled]="saving()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn--primary"
+          (click)="submitPanel()"
+          [disabled]="saving()"
+        >
+          {{ saving() ? 'Guardando…' : panelMode() === 'create' ? 'Crear usuario' : 'Guardar' }}
+        </button>
+      </footer>
+    </aside>
+  </div>
+}

@@ -30,6 +30,7 @@ export class UserMenu {
   // Inputs
   userEmail = input.required<string>();
   userName = input<string | null>(null);
+  avatarUrl = input<string | null>(null);
   compact = input<boolean>(false); // Modo compacto para sidebar colapsado
 
   // App Switcher inputs

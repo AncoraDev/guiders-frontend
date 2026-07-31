@@ -50,6 +50,11 @@ export class WebSocketService {
 
   private socket: Socket | null = null;
   private config: WebSocketConfig = {};
+  /** Listeners registrados antes de que exista el socket (se aplican en connect). */
+  private readonly pendingCustomListeners: Array<{
+    eventName: string;
+    callback: (...args: unknown[]) => void;
+  }> = [];
 
   // ===== SIGNALS (ESTADO REACTIVO) =====
   readonly isConnected = signal<boolean>(false);
@@ -130,6 +135,7 @@ export class WebSocketService {
     });
 
     this.setupEventListeners();
+    this.flushPendingCustomListeners();
   }
 
   /**
@@ -673,7 +679,10 @@ export class WebSocketService {
    */
   on(eventName: string, callback: (...args: unknown[]) => void): void {
     if (!this.socket) {
-      console.error('[WebSocket] Socket no inicializado');
+      console.warn(
+        `[WebSocket] Socket no listo — listener "${eventName}" en cola`,
+      );
+      this.pendingCustomListeners.push({ eventName, callback });
       return;
     }
 
@@ -686,12 +695,32 @@ export class WebSocketService {
    * Dejar de escuchar evento personalizado
    */
   off(eventName: string, callback?: (...args: unknown[]) => void): void {
+    for (let i = this.pendingCustomListeners.length - 1; i >= 0; i--) {
+      const pending = this.pendingCustomListeners[i];
+      if (pending.eventName !== eventName) continue;
+      if (!callback || pending.callback === callback) {
+        this.pendingCustomListeners.splice(i, 1);
+      }
+    }
+
     if (!this.socket) return;
 
     if (callback) {
       this.socket.off(eventName, callback);
     } else {
       this.socket.off(eventName);
+    }
+  }
+
+  private flushPendingCustomListeners(): void {
+    if (!this.socket || this.pendingCustomListeners.length === 0) return;
+    const pending = [...this.pendingCustomListeners];
+    this.pendingCustomListeners.length = 0;
+    for (const { eventName, callback } of pending) {
+      this.socket.on(eventName, callback);
+      console.log(
+        `[WebSocket] ✅ Listener en cola aplicado: "${eventName}"`,
+      );
     }
   }
 }

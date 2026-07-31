@@ -1,0 +1,126 @@
+@use '../../../../../../shared/design-tokens/src/lib/tokens-vars' as tokens;
+
+:host {
+  display: block;
+  height: 100%;
+  overflow: auto;
+}
+
+.client-form-page {
+  padding: tokens.$spacing-xl;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-md;
+}
+
+.client-form-page__header {
+  h1 {
+    margin: tokens.$spacing-sm 0;
+    font-size: tokens.$font-size-2xl;
+  }
+
+  p {
+    margin: 0;
+    color: tokens.$color-text-secondary;
+    font-size: tokens.$font-size-sm;
+    line-height: 1.45;
+  }
+}
+
+.back-link {
+  font-size: tokens.$font-size-sm;
+  color: tokens.$color-text-secondary;
+  text-decoration: none;
+
+  &:hover {
+    color: tokens.$color-text-primary;
+  }
+}
+
+.client-form-page__error {
+  padding: tokens.$spacing-md;
+  border-radius: tokens.$border-radius-md;
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+  font-size: tokens.$font-size-sm;
+}
+
+.client-form {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-lg;
+
+  fieldset {
+    border: 1px solid tokens.$color-border-subtle;
+    border-radius: tokens.$border-radius-md;
+    padding: tokens.$spacing-md;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: tokens.$spacing-md;
+  }
+
+  legend {
+    padding: 0 tokens.$spacing-xs;
+    font-weight: tokens.$font-weight-medium;
+    font-size: tokens.$font-size-sm;
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: tokens.$spacing-xs;
+    font-size: tokens.$font-size-sm;
+    color: tokens.$color-text-secondary;
+  }
+
+  input {
+    padding: tokens.$spacing-sm tokens.$spacing-md;
+    border: 1px solid tokens.$color-border-subtle;
+    border-radius: tokens.$border-radius-md;
+    font-size: tokens.$font-size-base;
+    background: tokens.$color-surface-primary;
+    color: tokens.$color-text-primary;
+  }
+
+  .field-hint {
+    font-size: tokens.$font-size-xs;
+    color: tokens.$color-text-tertiary;
+  }
+}
+
+.client-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: tokens.$spacing-sm;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border-radius: tokens.$border-radius-md;
+  font-size: tokens.$font-size-sm;
+  font-weight: tokens.$font-weight-medium;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  background: transparent;
+  color: tokens.$color-text-primary;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    background: tokens.$color-text-primary;
+    color: tokens.$color-surface-primary;
+  }
+
+  &--ghost {
+    border-color: tokens.$color-border-subtle;
+  }
+}

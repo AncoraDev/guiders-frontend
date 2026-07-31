@@ -88,10 +88,17 @@ interface ApiMessageResponse {
   editedAt?: string;
   updatedAt?: string; // Formato nuevo del backend
   metadata?: Record<string, unknown>;
+  systemData?: {
+    action?: string;
+    fromUserId?: string;
+    toUserId?: string;
+    reason?: string;
+  };
   
   // Campos adicionales del nuevo formato
   isInternal?: boolean;
   isFirstResponse?: boolean;
+  isAI?: boolean;
 }
 
 // Tipo para mensajes del WebSocket (pueden venir con sentAt como string o Date)
@@ -108,6 +115,14 @@ interface WebSocketMessage {
   edited?: boolean;
   editedAt?: string | Date;
   metadata?: Record<string, unknown>;
+  systemData?: {
+    action?: string;
+    fromUserId?: string;
+    toUserId?: string;
+    reason?: string;
+  };
+  isInternal?: boolean;
+  isAI?: boolean;
 }
 
 interface CreateChatWithMessageResponse {
@@ -974,6 +989,10 @@ export class ChatService {
       editedAt: apiMessage.editedAt || apiMessage.updatedAt ? 
         new Date(apiMessage.editedAt || apiMessage.updatedAt || '') : 
         undefined,
+      isInternal: apiMessage.isInternal,
+      isFirstResponse: apiMessage.isFirstResponse,
+      isAI: apiMessage.isAI,
+      systemData: apiMessage.systemData,
       metadata: apiMessage.metadata
     };
   }
@@ -983,11 +1002,14 @@ export class ChatService {
    * Los mensajes del WebSocket pueden venir con sentAt como string
    */
   private normalizeMessage(message: Message | WebSocketMessage): Message {
+    const senderType =
+      message.type === 'SYSTEM' ? 'SYSTEM' : message.senderType;
+
     return {
       messageId: message.messageId,
       chatId: message.chatId,
       senderId: message.senderId,
-      senderType: message.senderType,
+      senderType,
       content: message.content,
       type: message.type,
       sentAt: message.sentAt instanceof Date ? message.sentAt : new Date(message.sentAt),
@@ -997,6 +1019,9 @@ export class ChatService {
       editedAt: message.editedAt ? 
         (message.editedAt instanceof Date ? message.editedAt : new Date(message.editedAt)) : 
         undefined,
+      isInternal: message.isInternal,
+      isAI: message.isAI,
+      systemData: message.systemData,
       metadata: message.metadata
     };
   }

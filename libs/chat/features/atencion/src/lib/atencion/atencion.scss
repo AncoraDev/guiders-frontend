@@ -11,11 +11,12 @@
   height: 100%;
   width: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .atencion {
   display: grid;
-  grid-template-columns: 200px minmax(280px, 360px) 1fr;
+  grid-template-columns: 200px minmax(240px, 300px) 1fr;
   height: 100%;
   width: 100%;
   min-height: 0;
@@ -25,7 +26,7 @@
   color: var(--color-text-primary, #111);
 
   &--panel-open {
-    grid-template-columns: 200px minmax(240px, 320px) 1fr minmax(300px, 360px);
+    grid-template-columns: 200px minmax(220px, 280px) 1fr minmax(300px, 360px);
   }
 }
 
@@ -161,6 +162,35 @@
     font-size: 12px;
     color: var(--color-text-secondary, #64748b);
   }
+}
+
+.atencion__queues-toggle {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-border-default, #d4d4d8);
+  border-radius: 8px;
+  background: var(--color-surface-primary, #fff);
+  color: var(--color-text-primary, #111);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-bg-hover, rgba(0, 0, 0, 0.04));
+  }
+}
+
+.atencion__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: rgba(15, 23, 42, 0.35);
+  cursor: pointer;
 }
 
 .atencion__empty {
@@ -379,23 +409,59 @@
   overflow: hidden;
 }
 
-@media (max-width: 960px) {
+/* Compact: colas + detalles en overlay; lista + chat ocupan el ancho. */
+@media (max-width: 1280px) {
+  .atencion {
+    grid-template-columns: minmax(240px, 300px) 1fr;
+    position: relative;
+
+    &--panel-open {
+      grid-template-columns: minmax(240px, 300px) 1fr;
+    }
+
+    .atencion__queues {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 40;
+      width: min(280px, 86vw);
+      border-right: 1px solid var(--color-border-default, #d4d4d8);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+      transform: translateX(-105%);
+      transition: transform 0.2s ease-out;
+      pointer-events: none;
+    }
+
+    &--queues-open .atencion__queues {
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    .atencion__detail-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 40;
+      width: min(360px, 92vw);
+      border-left: 1px solid var(--color-border-default, #d4d4d8);
+      box-shadow: -8px 0 24px rgba(15, 23, 42, 0.16);
+      animation: none;
+    }
+  }
+}
+
+@media (max-width: 768px) {
   .atencion {
     grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(200px, 40%) 1fr;
+
+    &--panel-open {
+      grid-template-columns: 1fr;
+    }
   }
 
-  .atencion__queues {
-    border-right: none;
-    border-bottom: 1px solid var(--color-border-subtle, #e5e7eb);
-  }
-
-  .atencion__queue-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  .atencion__queue-btn {
-    flex: 1 1 auto;
+  .atencion__list {
+    max-width: none;
   }
 }

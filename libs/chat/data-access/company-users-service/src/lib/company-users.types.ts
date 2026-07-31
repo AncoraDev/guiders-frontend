@@ -6,6 +6,7 @@ export interface CompanyUser {
   companyId: string;
   isActive: boolean;
   keycloakId: string | null;
+  avatarUrl?: string | null;
   createdAt: string;
   lastLoginAt: string | null;
 }
@@ -18,9 +19,12 @@ export interface CompanyUsersListResponse {
 export type AssignableCompanyRole = 'admin' | 'commercial' | 'supervisor';
 
 export interface CreateCompanyUserRequest {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
+  phone?: string;
   roles: AssignableCompanyRole[];
+  temporaryPassword: string;
 }
 
 export interface UpdateCompanyUserRequest {

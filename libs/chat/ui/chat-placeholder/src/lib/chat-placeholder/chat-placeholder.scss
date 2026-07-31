@@ -354,6 +354,54 @@
     max-width: 60%;
   }
 
+  &__transfer-marker {
+    display: flex;
+    align-items: center;
+    gap: tokens.$spacing-sm;
+    width: 100%;
+    max-width: 100%;
+    margin: tokens.$spacing-xs 0;
+    align-self: stretch;
+  }
+
+  &__transfer-marker-line {
+    flex: 1;
+    height: 1px;
+    background: var(--color-border-subtle);
+    min-width: tokens.$spacing-md;
+  }
+
+  &__transfer-marker-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: tokens.$spacing-2xs;
+    flex-shrink: 1;
+    max-width: min(100%, 28rem);
+    padding: tokens.$spacing-2xs tokens.$spacing-sm;
+    border-radius: tokens.$border-radius-full;
+    background: var(--color-accent-muted);
+    color: var(--color-text-secondary);
+    font-size: tokens.$font-size-xs;
+    font-weight: tokens.$font-weight-medium;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 0 0 1px var(--color-border-subtle);
+
+    guiders-icon {
+      flex-shrink: 0;
+      color: var(--color-accent);
+    }
+  }
+
+  &__transfer-marker-time {
+    flex-shrink: 0;
+    margin-left: tokens.$spacing-2xs;
+    color: var(--color-text-tertiary);
+    font-weight: tokens.$font-weight-regular;
+  }
+
   &__message-container {
     display: flex;
     flex-direction: column;

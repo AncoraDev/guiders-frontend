@@ -16,14 +16,17 @@ import {
   SessionService,
   SessionGuardianService,
   globalErrorInterceptor,
+  guidersAppInterceptor,
+  redirectToBffLogin,
 } from '@guiders-frontend/auth/data-access/session';
+import { HttpErrorResponse } from '@angular/common/http';
 import { SETTINGS_CLOSE_ROUTE } from '@guiders-frontend/auth/data-access/session';
 import { CommercialPresenceService } from '@guiders-frontend/commercial-presence';
 import { WebSocketService } from '@guiders-frontend/chat/data-access/websocket-service';
 import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service';
 import { ChatService } from '@guiders-frontend/chat-service';
-import { CHAT_TOUR_SANDBOX_HOOK_PROVIDER } from '@guiders-frontend/tour-sandbox';
 import { firstValueFrom } from 'rxjs';
+import { TransferNotificationService } from './transfer-notification.service';
 
 /**
  * Factory para inicializar el usuario y presencia del comercial al arrancar la aplicación.
@@ -35,6 +38,8 @@ function initializeApp() {
   const webSocketService = inject(WebSocketService);
   const unreadMessagesService = inject(UnreadMessagesService);
   const chatService = inject(ChatService);
+  const environmentToken = inject(ENVIRONMENT_TOKEN);
+  const transferNotifications = inject(TransferNotificationService);
 
   return async () => {
     // 1. Cargar el usuario — usa ensureSession$() para que el authGuard comparta
@@ -45,8 +50,9 @@ function initializeApp() {
       const user = await firstValueFrom(sessionService.ensureSession$());
       if (!user?.sub) {
         console.warn(
-          '[AppInitializer] ⚠️ Usuario sin sub — abortando WebSocket y servicios'
+          '[AppInitializer] ⚠️ Usuario sin sub — redirigiendo al login'
         );
+        redirectToBffLogin(environmentToken);
         return;
       }
       console.log('[AppInitializer] ✅ Usuario cargado:', user.sub);
@@ -155,6 +161,9 @@ function initializeApp() {
 
             webSocketService.joinPresenceRoom(user.sub, 'commercial');
 
+            // Notificaciones de transferencia (sala commercial:{sub})
+            transferNotifications.start();
+
             console.log('');
             console.log(
               '✅ [AppInitializer] Proceso de unión a sala de presencia completado'
@@ -258,8 +267,14 @@ function initializeApp() {
         '[AppInitializer] ⚠️ No se pudo cargar el usuario:',
         errorMessage
       );
-      // No lanzar error para permitir que la app continúe
-      // El auth guard manejará la redirección al login si es necesario
+      // Sin cookie de Console (p. ej. sesión solo en Admin) → login de Console
+      const isNotProvisioned =
+        error instanceof HttpErrorResponse &&
+        error.status === 403 &&
+        (error.error as { reason?: string })?.reason === 'user_not_provisioned';
+      if (!isNotProvisioned) {
+        redirectToBffLogin(environmentToken);
+      }
     }
   };
 }
@@ -288,6 +303,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(appRoutes),
     provideHttpClient(
       withInterceptors([
+        guidersAppInterceptor, // Marca console vs admin para no mezclar cookies BFF
         authRefreshInterceptor, // Refresh automático antes que el auth interceptor
         authInterceptor(),
         globalErrorInterceptor, // Captura 401 irrecuperables, 500, 503 y errores de red
@@ -322,8 +338,5 @@ export const appConfig: ApplicationConfig = {
       useFactory: initializeSessionGuardian,
       multi: true,
     },
-    // Registrar el hook de sandbox del tour para sembrar/limpiar
-    // datos demo en ChatService alrededor del ciclo de vida del tour console.
-    CHAT_TOUR_SANDBOX_HOOK_PROVIDER,
   ],
 };

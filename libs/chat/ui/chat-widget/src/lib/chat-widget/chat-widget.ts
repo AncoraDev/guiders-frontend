@@ -592,7 +592,8 @@ export class ChatWidgetComponent
   /**
    * Enviar mensaje
    */
-  onSendMessage(content: string): void {
+  onSendMessage(payload: { content: string } | string): void {
+    const content = typeof payload === 'string' ? payload : payload.content;
     if (!this.commercialPresence.getCurrentStatus().isConnected) {
       this.error.set('Conéctate para poder enviar mensajes');
       return;

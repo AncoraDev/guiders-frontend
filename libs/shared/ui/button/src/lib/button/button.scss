@@ -168,9 +168,11 @@
       opacity: 0.5;
     }
 
-    // Estado activo — fondo + texto (ruta actual del menú)
+    // Estado activo: solo tipografía/color.
+    // El fondo lo pinta el host (.sidebar__nav-link--active) para evitar
+    // doble capa (host + button) visible sobre todo en themes con accent fuerte (LeadCars).
     &.guiders-button--active {
-      background-color: var(--sidebar-bg-active);
+      background-color: transparent;
       color: var(--sidebar-text-active);
       font-weight: var(--font-weight-semibold, 600);
     }

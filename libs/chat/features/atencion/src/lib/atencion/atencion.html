@@ -1,12 +1,27 @@
 <div class="atencion-root" data-testid="atencion-workspace">
-  <guiders-toast-host />
-
   <div
     class="atencion"
     [class.atencion--panel-open]="showVisitorPanel()"
+    [class.atencion--compact]="isCompactLayout()"
+    [class.atencion--queues-open]="queuesOpen()"
   >
+  @if (isCompactLayout() && (queuesOpen() || showVisitorPanel())) {
+    <button
+      type="button"
+      class="atencion__backdrop"
+      aria-label="Cerrar panel"
+      (click)="closeQueuesDrawer(); onCloseVisitorPanel()"
+    ></button>
+  }
+
   <!-- Colas -->
-  <aside class="atencion__queues" aria-label="Colas de atención" data-testid="atencion-queues">
+  <aside
+    id="atencion-queues"
+    class="atencion__queues"
+    aria-label="Colas de atención"
+    data-testid="atencion-queues"
+    [attr.aria-hidden]="isCompactLayout() && !queuesOpen() ? true : null"
+  >
     <header class="atencion__queues-header">
       <h1>Atención</h1>
       <button
@@ -69,6 +84,18 @@
   <!-- Lista -->
   <section class="atencion__list" aria-label="Lista de personas">
     <header class="atencion__list-header">
+      @if (isCompactLayout()) {
+        <button
+          type="button"
+          class="atencion__queues-toggle"
+          (click)="toggleQueuesDrawer()"
+          [attr.aria-expanded]="queuesOpen()"
+          aria-controls="atencion-queues"
+          title="Colas de atención"
+        >
+          Colas
+        </button>
+      }
       @switch (activeCola()) {
         @case ('pendientes') {
           <h2>Sin atender</h2>
@@ -200,6 +227,8 @@
         [isLoadingMore]="false"
         [hasMoreMessages]="false"
         [visitorProfile]="visitorProfile()"
+        [enableMentions]="true"
+        [mentionCandidates]="mentionCandidates()"
         (messageSent)="onSendMessage($event)"
         (loadMoreMessages)="onLoadMoreMessages()"
         (closeChat)="onCloseChat()"

@@ -1,0 +1,91 @@
+<div class="clients-page">
+  <header class="clients-page__header">
+    <div>
+      <h1>Clientes</h1>
+      <p class="clients-page__subtitle">
+        Alta y gestión de companies para el equipo Guiders
+      </p>
+    </div>
+    <a routerLink="/clients/new" class="btn btn--primary">Nuevo cliente</a>
+  </header>
+
+  <div class="clients-page__toolbar">
+    <input
+      type="search"
+      class="clients-page__search"
+      placeholder="Buscar por nombre, dominio o ID…"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+    />
+    <button type="button" class="btn btn--ghost" (click)="load()" [disabled]="loading()">
+      Actualizar
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="clients-page__error" role="alert">{{ error() }}</div>
+  }
+
+  @if (loading() && companies().length === 0) {
+    <p class="clients-page__empty">Cargando clientes…</p>
+  } @else if (!loading() && filtered().length === 0) {
+    <p class="clients-page__empty">
+      No hay clientes{{ search() ? ' que coincidan con la búsqueda' : '' }}.
+      <a routerLink="/clients/new">Crear el primero</a>
+    </p>
+  } @else {
+    <div class="clients-table-wrap">
+      <table class="clients-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Dominios</th>
+            <th>Usuarios</th>
+            <th>Creada</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of filtered(); track c.id) {
+            <tr>
+              <td>
+                <a [routerLink]="['/clients', c.id]" class="clients-table__name">{{
+                  c.companyName
+                }}</a>
+                <div class="clients-table__id">{{ c.id }}</div>
+              </td>
+              <td>
+                <span class="clients-table__domains">{{
+                  c.domains.join(', ') || '—'
+                }}</span>
+              </td>
+              <td>
+                @let stats = userStats(c.id);
+                <div class="clients-table__users">
+                  <span class="clients-table__users-total">{{ stats.total }}</span>
+                  @if (stats.byRole.length > 0) {
+                    <div class="clients-table__users-roles">
+                      @for (r of stats.byRole; track r.role) {
+                        <span class="clients-table__role-chip">
+                          {{ r.label }} {{ r.count }}
+                        </span>
+                      }
+                    </div>
+                  } @else {
+                    <span class="clients-table__users-empty">Sin usuarios</span>
+                  }
+                </div>
+              </td>
+              <td>{{ c.createdAt | date: 'shortDate' }}</td>
+              <td class="clients-table__actions">
+                <a [routerLink]="['/clients', c.id]" class="btn btn--ghost btn--sm"
+                  >Ver</a
+                >
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

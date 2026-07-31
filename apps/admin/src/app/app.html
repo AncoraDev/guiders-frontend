@@ -1,21 +1,16 @@
 <div class="admin-app" [class.embed-mode]="isEmbedMode()">
   @if (!isEmbedMode()) {
     <guiders-sidebar
-      data-tour="sidebar-nav"
       [items]="sidebarItems()"
       [config]="sidebarConfig()"
       [userEmail]="currentUser()?.email ?? null"
-      [userName]="null"
-      [showAppSwitcher]="isAdmin()"
-      [appSwitcherLabel]="'Ir a Console'"
-      [appSwitcherUrl]="consoleUrl"
-      [showTourButton]="true"
+      [userName]="userName()"
+      [avatarUrl]="avatarUrl()"
       [appVersion]="appVersion"
       (itemClick)="onSidebarItemClick($event)"
       (toggleSidebar)="onSidebarToggle($event)"
       (userLogout)="onLogout()"
-      (userConfigureAccount)="onConfigureAccount()"
-      (userStartTour)="onRestartTour()">
+      (userConfigureAccount)="onConfigureAccount()">
     </guiders-sidebar>
   }
 

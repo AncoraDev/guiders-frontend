@@ -19,7 +19,11 @@ import { CommonModule } from '@angular/common';
 import { Chat, User, PresenceStatus, Participant } from '@guiders-frontend/shared/types';
 import { IconComponent } from '@guiders-frontend/icon';
 import { Message } from '@guiders-frontend/shared/types';
-import { MessageInput } from '@guiders-frontend/chat/ui/message-input';
+import {
+  MessageInput,
+  MessageMentionCandidate,
+  MessageSendPayload,
+} from '@guiders-frontend/chat/ui/message-input';
 import { PresenceService } from '@guiders-frontend/presence-service';
 import { Avatar } from '@guiders-frontend/avatar';
 import { getVisitorDisplayName } from '@guiders-frontend/visitor-display-name';
@@ -59,10 +63,13 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
   @Input() hasMoreMessages = false; // Indica si hay más mensajes antiguos
   /** Perfil/navegación del visitante (página actual, sesiones, etc.). */
   @Input() visitorProfile: VisitorChatProfile | null = null;
+  /** Comerciales online para @mention / transferencia. */
+  @Input() mentionCandidates: MessageMentionCandidate[] = [];
+  @Input() enableMentions = false;
 
   @Output() settingsClicked = new EventEmitter<void>();
   @Output() closeChat = new EventEmitter<void>();
-  @Output() messageSent = new EventEmitter<string>();
+  @Output() messageSent = new EventEmitter<MessageSendPayload>();
   @Output() loadMoreMessages = new EventEmitter<void>(); // Evento para cargar más mensajes
 
   @ViewChild('messagesContainer') private messagesContainer?: ElementRef<HTMLDivElement>;
@@ -419,7 +426,14 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
   }
 
   isSystemMessage(message: Message): boolean {
-    return message.senderType === 'SYSTEM';
+    return message.senderType === 'SYSTEM' || message.type === 'SYSTEM';
+  }
+
+  /** Marcador de transferencia (origen → destino) en el hilo. */
+  isTransferMessage(message: Message): boolean {
+    if (!this.isSystemMessage(message)) return false;
+    if (message.systemData?.action === 'transferred') return true;
+    return /^transferido de /i.test(message.content?.trim() ?? '');
   }
 
   getSenderLabel(message: Message): string {
@@ -529,8 +543,8 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
     }).format(messageDate);
   }
 
-  onMessageSent(content: string): void {
-    this.messageSent.emit(content);
+  onMessageSent(payload: MessageSendPayload): void {
+    this.messageSent.emit(payload);
   }
 
   private scheduleScrollToBottom(): void {

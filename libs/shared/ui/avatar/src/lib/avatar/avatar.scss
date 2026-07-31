@@ -72,6 +72,19 @@
   user-select: none;
 }
 
+.guiders-avatar--image {
+  overflow: hidden;
+  background: var(--color-surface-secondary, #e5e7eb);
+}
+
+.guiders-avatar__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+
 // === PRESENCE INDICATOR ===
 .guiders-avatar__presence-indicator {
   position: absolute;

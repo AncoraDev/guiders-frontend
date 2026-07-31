@@ -1,0 +1,19 @@
+{
+  "name": "platform-companies-service",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/admin/data-access/platform-companies-service/src",
+  "projectType": "library",
+  "tags": ["type:data-access", "scope:admin"],
+  "targets": {
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "../../../../coverage/libs/admin/data-access/platform-companies-service"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

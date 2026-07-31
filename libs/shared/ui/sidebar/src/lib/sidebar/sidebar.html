@@ -1,3 +1,15 @@
+@if (isCollapsed()) {
+  <button
+    type="button"
+    class="sidebar__mobile-open"
+    (click)="onToggleSidebar()"
+    aria-label="Abrir menú de navegación"
+    title="Abrir menú"
+  >
+    <guiders-icon name="menu" size="md" [config]="{ decorative: true }" />
+  </button>
+}
+
 <aside
   [ngClass]="sidebarClasses()"
   [style.width]="sidebarWidth()"
@@ -93,15 +105,15 @@
           />
           } @if (!isCollapsed()) {
           <span class="sidebar__nav-text">{{ item.label }}</span>
-
-          @if (item.badge) {
+          } @if (item.badge) {
           <guiders-badge
             [text]="item.badge.text"
             [variant]="item.badge.variant || 'primary'"
             size="small"
             class="sidebar__nav-badge"
+            [class.sidebar__nav-badge--collapsed]="isCollapsed()"
           />
-          } @if (item.children && item.children.length > 0) {
+          } @if (!isCollapsed() && item.children && item.children.length > 0) {
           <guiders-icon
             name="chevron-down"
             size="sm"
@@ -112,7 +124,7 @@
                     decorative: false
                   }"
           />
-          } }
+          }
         </guiders-button>
 
         <!-- Submenu normal (modo expandido) -->
@@ -455,6 +467,7 @@
     <guiders-user-menu
       [userEmail]="userEmail()!"
       [userName]="userName()"
+      [avatarUrl]="avatarUrl()"
       [compact]="isCollapsed()"
       [showAppSwitcher]="showAppSwitcher()"
       [appSwitcherLabel]="appSwitcherLabel()"

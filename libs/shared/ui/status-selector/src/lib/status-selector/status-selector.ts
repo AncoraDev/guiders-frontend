@@ -3,6 +3,7 @@ import {
   signal,
   inject,
   computed,
+  input,
   DestroyRef,
   ChangeDetectionStrategy,
 } from '@angular/core';
@@ -11,6 +12,7 @@ import {
   CommercialPresenceService,
   ConnectionStatus,
 } from '@guiders-frontend/commercial-presence';
+import { ProfileService } from '@guiders-frontend/profile-service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, of, timeout, catchError } from 'rxjs';
 
@@ -28,15 +30,23 @@ import { Observable, of, timeout, catchError } from 'rxjs';
 })
 export class StatusSelector {
   private readonly presenceService = inject(CommercialPresenceService);
+  private readonly profileService = inject(ProfileService);
   private readonly destroyRef = inject(DestroyRef);
+
+  /** Avatar opcional; si no se pasa, se intenta cargar del perfil del usuario. */
+  readonly avatarUrl = input<string | null>(null);
 
   readonly currentStatus = signal<ConnectionStatus>('offline');
   readonly isUpdating = signal<boolean>(false);
   readonly error = signal<string | null>(null);
+  private readonly loadedAvatarUrl = signal<string | null>(null);
 
   readonly isOnline = computed(() => this.currentStatus() === 'online');
   readonly label = computed(() =>
     this.isOnline() ? 'Conectado' : 'Desconectado'
+  );
+  readonly resolvedAvatarUrl = computed(
+    () => this.avatarUrl() || this.loadedAvatarUrl()
   );
 
   constructor() {
@@ -44,6 +54,18 @@ export class StatusSelector {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((status) => {
         this.currentStatus.set(status === 'online' ? 'online' : 'offline');
+      });
+
+    this.profileService
+      .getUserProfile()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (profile) => {
+          this.loadedAvatarUrl.set(profile.avatarUrl || null);
+        },
+        error: () => {
+          // Sin avatar: se mantiene el punto de estado habitual
+        },
       });
   }
 

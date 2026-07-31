@@ -246,10 +246,11 @@ Each feature has its own `AGENTS.md` with specific guidelines. Use these as your
 - **[Contacts Feature](libs/chat/features/contacts/AGENTS.md)** - Contact management, CRM, contact groups
 ### Admin Domain
 
-- **[Dashboard Feature](libs/admin/features/dashboard/AGENTS.md)** - System overview, metrics widgets, team monitoring
-- **[Users Feature](libs/admin/features/users/AGENTS.md)** - User management, roles, permissions
+- **[Clients Feature](libs/admin/features/clients/AGENTS.md)** - Plataforma Guiders (`superadmin`): alta de clientes, API keys widget
+- **[Dashboard Feature](libs/admin/features/dashboard/AGENTS.md)** - System overview (stub; no en nav MVP)
+- **[Users Feature](libs/admin/features/users/AGENTS.md)** - User management (stub; equipo del cliente → Console Usuarios)
 - **[AI Config Feature](libs/admin/features/ai-config/AGENTS.md)** - AI model selection, prompt customization, behavior tuning
-- **[Integrations Feature](libs/admin/features/integrations/AGENTS.md)** - OAuth setup, API key management, webhook configuration
+- **[Integrations Feature](libs/admin/features/integrations/AGENTS.md)** - LeadCars (fuera del nav MVP hasta companyId de ruta)
 - **[White Label Config Feature](libs/admin/features/white-label-config/AGENTS.md)** - Branding, color schemes, custom domains
 
 ### Analytics Domain
@@ -268,10 +269,11 @@ Each feature has its own `AGENTS.md` with specific guidelines. Use these as your
 
 ```
 Need to work on...                        → Go to...
+Guiders platform (clients / API keys)     → Clients (Admin :4201)
 Messaging & conversations                 → Inbox / Atención
 Visitor management & filtering            → Visitors
 Customer contact information              → Contacts
-User accounts & permissions               → Users
+Tenant user accounts                      → Usuarios (Console)
 System overview & metrics                 → Dashboard
 AI/ML configuration                       → AI Config
 Third-party services                      → Integrations

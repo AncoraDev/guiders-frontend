@@ -45,6 +45,11 @@
   --sidebar-bg-active: var(--color-sidebar-bg-active, #{tokens.$color-sidebar-dark-bg-active});
   --sidebar-text: var(--color-sidebar-text, #{tokens.$color-sidebar-dark-text});
   --sidebar-text-active: var(--color-sidebar-text-active, #{tokens.$color-sidebar-dark-text-active});
+  // Hover de ítems inactivos (no reutilizar text-active: en LeadCars es navy sobre navy)
+  --sidebar-text-hover: var(
+    --color-sidebar-text-hover,
+    var(--sidebar-text-active, #{tokens.$color-sidebar-dark-text-active})
+  );
   --sidebar-text-muted: var(--color-sidebar-text-muted, #{tokens.$color-sidebar-dark-text-muted});
   --sidebar-border: var(--color-sidebar-border, #{tokens.$color-sidebar-dark-border});
 
@@ -105,6 +110,18 @@
         margin-right: 0;
         margin-left: 0;
       }
+    }
+
+    // Badge anclado al icono cuando el menú está colapsado
+    .sidebar__nav-badge--collapsed {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      margin: 0;
+      pointer-events: none;
+      z-index: 1;
+      transform: scale(0.9);
+      transform-origin: top right;
     }
 
     .sidebar__logo {
@@ -229,9 +246,9 @@
     border: none !important;
     color: var(--sidebar-text) !important;
 
-    &:hover {
+    &:hover:not(.sidebar__nav-link--active) {
       background: var(--sidebar-bg-hover) !important;
-      color: var(--sidebar-text-active, var(--sidebar-text)) !important;
+      color: var(--sidebar-text-hover, var(--sidebar-text)) !important;
     }
 
     &:focus-visible {
@@ -270,6 +287,16 @@
     .sidebar__nav-icon {
       color: var(--sidebar-text-active) !important;
     }
+
+    // Hover no debe pisar el activo (evita navy sobre navy / perder el lime)
+    &:hover {
+      background: var(--sidebar-bg-active) !important;
+      color: var(--sidebar-text-active) !important;
+
+      .sidebar__nav-icon {
+        color: var(--sidebar-text-active) !important;
+      }
+    }
   }
 
   // Activo con unstyled (colapsado)
@@ -301,6 +328,11 @@
   font-weight: tokens.$font-weight-medium;
   line-height: tokens.$line-height-tight;
   color: inherit; // Heredar color del enlace padre
+}
+
+.sidebar__nav-badge {
+  margin-left: tokens.$spacing-sm;
+  flex-shrink: 0;
 }
 
 .sidebar__nav-arrow {
@@ -439,11 +471,51 @@
   }
 }
 
-@media (max-width: 768px) {
-  .sidebar {
+.sidebar__mobile-open {
+  display: none;
+}
+
+// Overlay desde tablet/desktop estrecho: libera ancho al chat (Atención, etc.)
+@media (max-width: tokens.$breakpoint-xl) {
+  // El host no debe ocupar espacio en el flex del shell (si no, con
+  // height:100% + flex-column el contenido principal queda a altura 0).
+  :host {
     position: fixed;
     top: 0;
     left: 0;
+    z-index: 150;
+    width: 0 !important;
+    height: 100% !important;
+    overflow: visible;
+  }
+
+  .sidebar__mobile-open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 151;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: tokens.$border-radius-md;
+    background: var(--color-sidebar-bg, #{tokens.$color-sidebar-dark-bg});
+    color: var(--color-sidebar-text, #{tokens.$color-sidebar-dark-text});
+    box-shadow: tokens.$shadow-md;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-sidebar-bg-hover, #{tokens.$color-sidebar-dark-bg-hover});
+    }
+  }
+
+  .sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
     z-index: 150;
     transform: translateX(-100%);
     transition: transform tokens.$duration-normal tokens.$easing-standard;

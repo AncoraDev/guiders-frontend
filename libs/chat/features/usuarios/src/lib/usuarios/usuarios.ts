@@ -67,8 +67,12 @@ export class Usuarios implements OnInit {
   readonly panelOpen = signal(false);
   readonly panelMode = signal<PanelMode>('create');
   readonly editingUserId = signal<string | null>(null);
+  readonly formFirstName = signal('');
+  readonly formLastName = signal('');
   readonly formName = signal('');
   readonly formEmail = signal('');
+  readonly formPhone = signal('');
+  readonly formPassword = signal('');
   readonly formRoles = signal<AssignableCompanyRole[]>(['commercial']);
 
   readonly quickFilters: QuickFilter[] = [
@@ -215,8 +219,12 @@ export class Usuarios implements OnInit {
   openCreatePanel(): void {
     this.panelMode.set('create');
     this.editingUserId.set(null);
+    this.formFirstName.set('');
+    this.formLastName.set('');
     this.formName.set('');
     this.formEmail.set('');
+    this.formPhone.set('');
+    this.formPassword.set('');
     this.formRoles.set(['commercial']);
     this.formError.set(null);
     this.panelOpen.set(true);
@@ -226,8 +234,12 @@ export class Usuarios implements OnInit {
     if (this.isCurrentUser(user)) return;
     this.panelMode.set('edit');
     this.editingUserId.set(user.id);
+    this.formFirstName.set('');
+    this.formLastName.set('');
     this.formName.set(user.name || '');
     this.formEmail.set(user.email);
+    this.formPhone.set('');
+    this.formPassword.set('');
     const roles = (user.roles ?? []).filter((r): r is AssignableCompanyRole =>
       ['admin', 'commercial', 'supervisor'].includes(r),
     );
@@ -243,18 +255,8 @@ export class Usuarios implements OnInit {
   }
 
   submitPanel(): void {
-    const name = this.formName().trim();
-    const email = this.formEmail().trim();
     const roles = this.formRoles();
 
-    if (!name) {
-      this.formError.set('El nombre es obligatorio');
-      return;
-    }
-    if (this.panelMode() === 'create' && !email) {
-      this.formError.set('El email es obligatorio');
-      return;
-    }
     if (roles.length === 0) {
       this.formError.set('Debes asignar al menos un rol');
       return;
@@ -265,8 +267,39 @@ export class Usuarios implements OnInit {
     this.mutateSub?.unsubscribe();
 
     if (this.panelMode() === 'create') {
+      const firstName = this.formFirstName().trim();
+      const lastName = this.formLastName().trim();
+      const email = this.formEmail().trim();
+      const phone = this.formPhone().trim();
+      const temporaryPassword = this.formPassword();
+
+      if (!firstName || !lastName) {
+        this.saving.set(false);
+        this.formError.set('Nombre y apellidos son obligatorios');
+        return;
+      }
+      if (!email) {
+        this.saving.set(false);
+        this.formError.set('El email es obligatorio');
+        return;
+      }
+      if (!temporaryPassword || temporaryPassword.trim().length < 6) {
+        this.saving.set(false);
+        this.formError.set(
+          'La contraseña temporal debe tener al menos 6 caracteres',
+        );
+        return;
+      }
+
       this.mutateSub = this.usersService
-        .createCompanyUser({ name, email, roles })
+        .createCompanyUser({
+          firstName,
+          lastName,
+          email,
+          phone: phone || undefined,
+          roles,
+          temporaryPassword,
+        })
         .pipe(finalize(() => this.saving.set(false)))
         .subscribe({
           next: () => {
@@ -280,8 +313,15 @@ export class Usuarios implements OnInit {
       return;
     }
 
+    const name = this.formName().trim();
     const userId = this.editingUserId();
     if (!userId) return;
+
+    if (!name) {
+      this.saving.set(false);
+      this.formError.set('El nombre es obligatorio');
+      return;
+    }
 
     this.mutateSub = this.usersService
       .updateCompanyUser(userId, { name, roles })

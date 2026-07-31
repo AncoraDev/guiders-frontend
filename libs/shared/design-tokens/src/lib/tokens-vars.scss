@@ -1842,10 +1842,12 @@ $_heat-7: #e82020;
 
   // Sidebar — navy header/menu from LeadCars
   --color-sidebar-bg: #1b3149;
-  --color-sidebar-bg-hover: rgba(255, 255, 255, 0.08);
-  --color-sidebar-bg-active: rgba(169, 203, 87, 0.22);
+  --color-sidebar-bg-hover: rgba(169, 203, 87, 0.18);
+  // Accent sólido LeadCars (#a9cb57), no el wash oliva diluido
+  --color-sidebar-bg-active: #a9cb57;
   --color-sidebar-text: #b8cfde;
-  --color-sidebar-text-active: #ffffff;
+  --color-sidebar-text-active: #1b3149;
+  --color-sidebar-text-hover: #ffffff;
   --color-sidebar-text-muted: #8aa8bc;
   --color-sidebar-border: #243a52;
 

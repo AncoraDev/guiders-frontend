@@ -279,6 +279,15 @@ export class VisitorsDataService {
     );
   }
 
+  /** Transfiere un chat ASSIGNED/ACTIVE a otro comercial conectado. */
+  transferChat(chatId: string, commercialId: string): Observable<unknown> {
+    return this.http.put(
+      `${this.baseUrl}/v2/chats/${chatId}/transfer/${commercialId}`,
+      {},
+      { withCredentials: true }
+    );
+  }
+
   // Identificar visitante (para tracking)
   identifyVisitor(
     request: IdentifyVisitorRequest

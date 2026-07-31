@@ -114,7 +114,20 @@
 
         @let own = isOwnMessage(message);
         @let system = isSystemMessage(message);
+        @let transfer = isTransferMessage(message);
         @let isAIMessage = message.isAI || message.type === 'AI';
+
+        @if (transfer) {
+        <div class="guiders-chat-placeholder__transfer-marker" role="status">
+          <span class="guiders-chat-placeholder__transfer-marker-line" aria-hidden="true"></span>
+          <span class="guiders-chat-placeholder__transfer-marker-pill">
+            <guiders-icon name="users" size="xs" />
+            <span>{{ message.content }}</span>
+            <span class="guiders-chat-placeholder__transfer-marker-time">{{ formatMessageTime(message.sentAt) }}</span>
+          </span>
+          <span class="guiders-chat-placeholder__transfer-marker-line" aria-hidden="true"></span>
+        </div>
+        } @else {
         <div class="guiders-chat-placeholder__message-row" [class.guiders-chat-placeholder__message-row--own]="own"
           [class.guiders-chat-placeholder__message-row--system]="system"
           [class.guiders-chat-placeholder__message-row--ai]="isAIMessage">
@@ -154,6 +167,7 @@
           </div>
         </div>
         }
+        }
       </div>
     </div>
     } @else {
@@ -179,5 +193,11 @@
     }
   </div>
 
-  <guiders-message-input [chatId]="selectedChat.chatId" [mode]="'inbox'" (messageSent)="onMessageSent($event)" />
+  <guiders-message-input
+    [chatId]="selectedChat.chatId"
+    [mode]="'inbox'"
+    [enableMentions]="enableMentions"
+    [mentionCandidates]="mentionCandidates"
+    (messageSent)="onMessageSent($event)"
+  />
 </div>

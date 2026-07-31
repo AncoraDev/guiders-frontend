@@ -1,0 +1,192 @@
+@use '../../../../../../shared/design-tokens/src/lib/tokens-vars' as tokens;
+
+:host {
+  display: block;
+  height: 100%;
+  overflow: auto;
+}
+
+.clients-page {
+  padding: tokens.$spacing-xl;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-md;
+  max-width: 1200px;
+}
+
+.clients-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: tokens.$spacing-md;
+
+  h1 {
+    margin: 0;
+    font-size: tokens.$font-size-2xl;
+    font-weight: tokens.$font-weight-semibold;
+  }
+}
+
+.clients-page__subtitle {
+  margin: tokens.$spacing-xs 0 0;
+  color: tokens.$color-text-secondary;
+  font-size: tokens.$font-size-sm;
+}
+
+.clients-page__toolbar {
+  display: flex;
+  gap: tokens.$spacing-sm;
+  align-items: center;
+}
+
+.clients-page__search {
+  flex: 1;
+  max-width: 360px;
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  font-size: tokens.$font-size-base;
+  background: tokens.$color-surface-primary;
+  color: tokens.$color-text-primary;
+}
+
+.clients-page__error {
+  padding: tokens.$spacing-md;
+  border-radius: tokens.$border-radius-md;
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+  font-size: tokens.$font-size-sm;
+}
+
+.clients-page__empty {
+  color: tokens.$color-text-secondary;
+  font-size: tokens.$font-size-base;
+
+  a {
+    color: tokens.$color-text-primary;
+    font-weight: tokens.$font-weight-medium;
+  }
+}
+
+.clients-table-wrap {
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  overflow: auto;
+}
+
+.clients-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: tokens.$font-size-base;
+
+  th,
+  td {
+    text-align: left;
+    padding: tokens.$spacing-md;
+    border-bottom: 1px solid tokens.$color-border-subtle;
+  }
+
+  th {
+    font-weight: tokens.$font-weight-medium;
+    color: tokens.$color-text-secondary;
+    font-size: tokens.$font-size-sm;
+    background: tokens.$color-surface-secondary;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.clients-table__name {
+  font-weight: tokens.$font-weight-medium;
+  color: tokens.$color-text-primary;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.clients-table__id {
+  font-size: tokens.$font-size-xs;
+  color: tokens.$color-text-tertiary;
+  margin-top: 2px;
+  font-family: ui-monospace, monospace;
+}
+
+.clients-table__domains {
+  color: tokens.$color-text-secondary;
+  font-size: tokens.$font-size-sm;
+}
+
+.clients-table__users {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.clients-table__users-total {
+  font-weight: tokens.$font-weight-semibold;
+  font-size: tokens.$font-size-sm;
+  color: tokens.$color-text-primary;
+}
+
+.clients-table__users-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.clients-table__role-chip {
+  font-size: tokens.$font-size-xs;
+  padding: 2px 6px;
+  border-radius: tokens.$border-radius-sm;
+  background: tokens.$color-surface-secondary;
+  color: tokens.$color-text-secondary;
+  white-space: nowrap;
+}
+
+.clients-table__users-empty {
+  font-size: tokens.$font-size-xs;
+  color: tokens.$color-text-tertiary;
+}
+
+.clients-table__actions {
+  text-align: right;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border-radius: tokens.$border-radius-md;
+  font-size: tokens.$font-size-sm;
+  font-weight: tokens.$font-weight-medium;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  background: transparent;
+  color: tokens.$color-text-primary;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    background: tokens.$color-text-primary;
+    color: tokens.$color-surface-primary;
+  }
+
+  &--ghost {
+    border-color: tokens.$color-border-subtle;
+  }
+
+  &--sm {
+    padding: 4px tokens.$spacing-sm;
+    font-size: tokens.$font-size-xs;
+  }
+}

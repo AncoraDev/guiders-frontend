@@ -92,6 +92,11 @@
                 <div class="header-content">Etapa</div>
               </th>
 
+              <!-- Comercial asignado -->
+              <th class="visitors-table__header visitors-table__header--commercial" scope="col">
+                <div class="header-content">Comercial</div>
+              </th>
+
               <!-- Creado -->
               <th
                 class="visitors-table__header visitors-table__header--sortable visitors-table__header--created"
@@ -213,28 +218,6 @@
                       </div>
                     </div>
                   </div>
-                  <!-- Hover action overlay — anchored to visitor cell (Notion-style) -->
-                  <div class="visitor-actions-overlay">
-                    @if (!visitor.hasActiveChat) {
-                      <button
-                        type="button"
-                        class="row-action-btn row-action-btn--primary"
-                        (click)="onCreateChat(visitor, $event)"
-                        title="Iniciar conversación"
-                      >
-                        Chat
-                      </button>
-                    } @else {
-                      <button
-                        type="button"
-                        class="row-action-btn row-action-btn--active"
-                        (click)="onViewChat(visitor, $event)"
-                        title="Ver conversación activa"
-                      >
-                        Ver chat
-                      </button>
-                    }
-                  </div>
                 </td>
 
                 <!-- Estado conexión -->
@@ -274,6 +257,32 @@
                       </span>
                     }
                   </div>
+                </td>
+
+                <!-- Comercial -->
+                <td class="visitors-table__cell visitors-table__cell--commercial">
+                  @if (visitor.assignedCommercial; as commercial) {
+                    <div class="assigned-commercial" [title]="commercial.name">
+                      @if (commercial.avatarUrl) {
+                        <img
+                          class="assigned-commercial__avatar assigned-commercial__avatar--img"
+                          [src]="commercial.avatarUrl"
+                          [alt]="commercial.name"
+                        />
+                      } @else {
+                        <span
+                          class="assigned-commercial__avatar"
+                          [attr.data-tone]="avatarTone(commercial.id)"
+                          aria-hidden="true"
+                        >
+                          {{ commercial.name.charAt(0).toUpperCase() }}
+                        </span>
+                      }
+                      <span class="assigned-commercial__name">{{ commercial.name }}</span>
+                    </div>
+                  } @else {
+                    <span class="assigned-commercial__empty">—</span>
+                  }
                 </td>
 
                 <!-- Creado -->
@@ -350,19 +359,6 @@
       </svg>
       Etiquetar
     </button>
-    @if (dropdownVisitor.pendingChatIds && dropdownVisitor.pendingChatIds.length > 0) {
-      <button
-        class="dropdown-item"
-        [class.dropdown-item--disabled]="isProcessing(dropdownVisitor.id)"
-        [disabled]="isProcessing(dropdownVisitor.id)"
-        (click)="onViewPendingChats(dropdownVisitor, $event); closeDropdown()"
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 13.8214 2.48697 15.5291 3.33782 17L2.5 21.5L7 20.6622C8.47087 21.513 10.1786 22 12 22Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        {{ isProcessing(dropdownVisitor.id) ? 'Procesando...' : 'Tomar pendiente (' + dropdownVisitor.pendingChatIds.length + ')' }}
-      </button>
-    }
   </div>
 }
 </div>
@@ -412,6 +408,9 @@
                   </td>
                   <td class="visitors-table__cell visitors-table__cell--lifecycle">
                     <div class="skeleton skeleton--badge"></div>
+                  </td>
+                  <td class="visitors-table__cell visitors-table__cell--commercial">
+                    <div class="skeleton skeleton--text"></div>
                   </td>
                   <td class="visitors-table__cell visitors-table__cell--created">
                     <div class="skeleton skeleton--text"></div>

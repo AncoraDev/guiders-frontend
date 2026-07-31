@@ -3,7 +3,11 @@ import { inject } from '@angular/core';
 import { CanActivateFn } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
-import { SessionService, ENVIRONMENT_TOKEN } from '@guiders-frontend/auth/data-access/session';
+import {
+  SessionService,
+  ENVIRONMENT_TOKEN,
+  redirectToBffLogin,
+} from '@guiders-frontend/auth/data-access/session';
 
 export const authGuard: CanActivateFn = () => {
   const sessionService = inject(SessionService);
@@ -12,7 +16,27 @@ export const authGuard: CanActivateFn = () => {
   console.log('AuthGuard: Checking user session...');
 
   return sessionService.ensureSession$().pipe(
-    map(user => !!user),
+    map((user) => {
+      if (!user) return false;
+
+      const consoleRoles = ['admin', 'commercial', 'supervisor'];
+      const hasConsoleRole = user.roles?.some((r) => consoleRoles.includes(r));
+
+      // Solo superadmin (staff Guiders) → Admin :4201, no Console de cliente
+      if (!hasConsoleRole) {
+        if (user.roles?.includes('superadmin') && environment.adminUrl) {
+          console.warn(
+            '[AuthGuard] Usuario superadmin sin rol de Console — redirigiendo a Admin',
+          );
+          location.replace(environment.adminUrl);
+          return false;
+        }
+        redirectToBffLogin(environment);
+        return false;
+      }
+
+      return true;
+    }),
     catchError((error: unknown) => {
       // 403 user_not_provisioned: el usuario está autenticado en Keycloak pero
       // no existe en la BD del backend. Redirigir al login causaría un loop
@@ -30,10 +54,9 @@ export const authGuard: CanActivateFn = () => {
         return of(false);
       }
 
-      // Cualquier otro error (401, red, etc.): redirigir al login BFF
-      const ret = encodeURIComponent(window.location.href);
-      location.replace(`${environment.api.baseUrl}/bff/auth/login?redirect=${ret}`);
+      // Sin sesión de Console (p. ej. solo hay cookie de Admin): ir al login
+      redirectToBffLogin(environment);
       return of(false);
-    })
+    }),
   );
 };

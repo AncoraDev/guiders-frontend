@@ -48,6 +48,47 @@
       </div>
     }
 
+    @if (showMentionPicker()) {
+      <div
+        class="message-input__mention-picker"
+        role="listbox"
+        aria-label="Comerciales conectados"
+      >
+        @if (filteredMentions().length === 0) {
+          <p class="message-input__mention-empty">
+            @if (mentionCandidates().length === 0) {
+              No hay otros comerciales conectados
+            } @else {
+              Sin coincidencias para “{{ mentionQuery() }}”
+            }
+          </p>
+        } @else {
+          @for (candidate of filteredMentions(); track candidate.id; let i = $index) {
+            <button
+              type="button"
+              class="message-input__mention-option"
+              [class.message-input__mention-option--active]="i === mentionHighlightIndex()"
+              role="option"
+              [attr.aria-selected]="i === mentionHighlightIndex()"
+              (pointerdown)="onMentionPointerDown($event, candidate)"
+            >
+              <guiders-avatar
+                [userId]="candidate.id"
+                [name]="candidate.name"
+                [imageUrl]="candidate.avatarUrl"
+                presenceStatus="online"
+                size="small"
+              />
+              <span class="message-input__mention-meta">
+                <span class="message-input__mention-name">{{ candidate.name }}</span>
+                <span class="message-input__mention-hint">Conectado</span>
+              </span>
+            </button>
+          }
+        }
+      </div>
+    }
+
     <div class="message-input__input-wrapper message-input__input-wrapper--inbox" data-tour="message-input">
       <textarea
         #textarea
@@ -56,7 +97,7 @@
         (ngModelChange)="messageText.set($event); onInput()"
         (blur)="onBlur()"
         (keydown)="onKeyDown($event)"
-        [placeholder]="isComposerLocked() ? 'Conéctate para escribir…' : 'Escribe un mensaje...'"
+        [placeholder]="isComposerLocked() ? 'Conéctate para escribir…' : (enableMentions() ? 'Escribe un mensaje… Usa @ para transferir' : 'Escribe un mensaje...')"
         rows="1"
         [disabled]="isSending() || isComposerLocked()"
       ></textarea>
