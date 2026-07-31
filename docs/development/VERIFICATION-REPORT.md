@@ -23,9 +23,9 @@ Se ha creado e implementado un **sistema jerárquico de documentación AGENTS.md
 | Archivo                     | Líneas | Propósito                      |
 | --------------------------- | ------ | ------------------------------ |
 | `AGENTS.md`                 | 286    | Documentación general y guías  |
-| `AGENTS-SYSTEM.md`          | 415    | Sistema y arquitectura de docs |
-| `AGENTS-INDEX.md`           | 343    | Índice visual y navegación     |
-| `AGENTS-QUICK-REFERENCE.md` | 337    | Referencia rápida              |
+| `../agents/AGENTS-SYSTEM.md`          | 415    | Sistema y arquitectura de docs |
+| `../agents/AGENTS-INDEX.md`           | 343    | Índice visual y navegación     |
+| `../agents/AGENTS-QUICK-REFERENCE.md` | 337    | Referencia rápida              |
 
 #### Features (11 AGENTS.md específicas)
 
@@ -185,15 +185,15 @@ Se ha creado e implementado un **sistema jerárquico de documentación AGENTS.md
 
 ### Para principiantes (5-10 minutos)
 
-1. Abre `AGENTS-QUICK-REFERENCE.md`
+1. Abre `../agents/AGENTS-QUICK-REFERENCE.md`
 2. Busca tu feature
 3. Navega a su AGENTS.md específica
 
 ### Para entender el sistema (30 minutos)
 
 1. Lee `AGENTS.md` (raíz)
-2. Lee `AGENTS-SYSTEM.md`
-3. Consulta `AGENTS-INDEX.md`
+2. Lee `../agents/AGENTS-SYSTEM.md`
+3. Consulta `../agents/AGENTS-INDEX.md`
 4. Abre feature específica según sea necesario
 
 ### Para trabajar en una feature

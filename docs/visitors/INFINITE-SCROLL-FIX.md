@@ -124,7 +124,7 @@ Para verificar que la solución funciona correctamente:
 ## 📌 Referencias
 
 - Endpoint V2 documentación: `/docs/api-ai/endpoint-chat-with-message.md`
-- Implementación scroll infinito: `/docs/INFINITE-SCROLL-IMPLEMENTATION.md`
+- Implementación scroll infinito: `./INFINITE-SCROLL-IMPLEMENTATION.md`
 - Chat Service: `libs/chat/data-access/chat-service/src/lib/chat.service.ts`
 - Inbox Component: `libs/chat/features/inbox/src/lib/inbox/inbox.ts`
 

@@ -20,8 +20,8 @@
 
 ```
 AGENTS.md (root)              ← Guías generales, código, build
-├── AGENTS-SYSTEM.md          ← Cómo funciona el sistema
-├── AGENTS-INDEX.md           ← Índice visual y navegación
+├── docs/agents/AGENTS-SYSTEM.md   ← Cómo funciona el sistema
+├── docs/agents/AGENTS-INDEX.md    ← Índice visual y navegación
 │
 └── libs/[domain]/features/[feature]/AGENTS.md
     ├── auth/features/login/AGENTS.md

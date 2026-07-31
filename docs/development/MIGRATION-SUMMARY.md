@@ -368,7 +368,7 @@ Ahora que todos los tokens existen, la migración de los componentes restantes e
 
 ## 📝 DOCUMENTACIÓN GENERADA
 
-1. **`VARIABLES-AUDIT-REPORT.md`**
+1. **`./VARIABLES-AUDIT-REPORT.md`**
    - Reporte de auditoría inicial
    - Variables inexistentes identificadas
    - Recomendaciones de expansión

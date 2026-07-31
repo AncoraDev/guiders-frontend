@@ -38,8 +38,8 @@ api: {
 
 ### 3. Documentación Creada
 
-- ✅ `/docs/WEBSOCKET-TROUBLESHOOTING.md` - Guía completa de troubleshooting
-- ✅ `/docs/fixes/WEBSOCKET-INVALID-NAMESPACE-FIX.md` - Detalles del fix
+- ✅ `./WEBSOCKET-TROUBLESHOOTING.md` - Guía completa de troubleshooting
+- ✅ `../fixes/WEBSOCKET-INVALID-NAMESPACE-FIX.md` - Detalles del fix
 - ✅ `libs/chat/data-access/websocket-service/README.md` - Actualizado con nueva config
 
 ---
@@ -175,9 +175,9 @@ El WebSocketService usa esta lógica para determinar la URL:
 ## 📚 Documentación de Referencia
 
 ### Documentos Principales
-- **Integración completa**: `/docs/WEBSOCKET-INTEGRATION-SUMMARY.md`
-- **Troubleshooting**: `/docs/WEBSOCKET-TROUBLESHOOTING.md`
-- **Este fix**: `/docs/fixes/WEBSOCKET-INVALID-NAMESPACE-FIX.md`
+- **Integración completa**: `./WEBSOCKET-INTEGRATION-SUMMARY.md`
+- **Troubleshooting**: `./WEBSOCKET-TROUBLESHOOTING.md`
+- **Este fix**: `../fixes/WEBSOCKET-INVALID-NAMESPACE-FIX.md`
 - **README del servicio**: `libs/chat/data-access/websocket-service/README.md`
 
 ### Recursos Externos

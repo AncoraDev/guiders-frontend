@@ -328,7 +328,7 @@ Este error ocurría porque Socket.IO intentaba conectarse a `http://localhost:30
    - `apps/console/src/environments/*.ts` - Todas las environments con `wsUrl`
    - `libs/chat/data-access/websocket-service/src/lib/websocket.service.ts` - Lógica de URL
 
-**Documentación completa**: Ver `/docs/WEBSOCKET-TROUBLESHOOTING.md`
+**Documentación completa**: Ver `./WEBSOCKET-TROUBLESHOOTING.md`
 
 ### Problema: No recibo mensajes
 

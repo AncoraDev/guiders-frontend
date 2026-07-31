@@ -935,10 +935,13 @@ nx e2e console-e2e --ui         # With Playwright UI
 
 ## Important References
 
+📚 **Documentation index**: [`docs/README.md`](docs/README.md)
+
 ### Key Files
 
 | File | Purpose |
 |---------|-----------|
+| `docs/README.md` | Índice único de documentación |
 | `tsconfig.base.json` | Path mappings (`@guiders-frontend/*`) |
 | `nx.json` | Nx configuration, generator defaults |
 | `.eslintrc.json` | Linting rules and module boundaries |

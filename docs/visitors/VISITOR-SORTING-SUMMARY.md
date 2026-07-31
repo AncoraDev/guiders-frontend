@@ -108,7 +108,7 @@ Se corrigieron variables SCSS indefinidas:
 ## 📚 Documentación Adicional
 
 Ver documentación completa en:
-- `docs/VISITOR-SORTING-IMPLEMENTATION.md`
+- `./VISITOR-SORTING-IMPLEMENTATION.md`
 
 ## 🚀 Listo para Deploy
 

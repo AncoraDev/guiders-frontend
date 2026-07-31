@@ -2,6 +2,8 @@
 
 Instructions for AI coding agents working in this Angular 20 + Nx 21 monorepo.
 
+📚 **Documentation index**: [`docs/README.md`](docs/README.md)
+
 ## Build/Lint/Test Commands
 
 ### Development Servers
@@ -220,6 +222,12 @@ readonly data$ = this._data.asObservable();
 | `eslint.config.mjs`  | ESLint 9 flat config                 |
 | `.prettierrc`        | Prettier config                      |
 | `.claude/rules/`     | Detailed architecture rules          |
+
+## Product documentation
+
+Índice técnico (guías, fixes, mock, websocket, visitors): [`docs/README.md`](docs/README.md)
+
+Meta del sistema AGENTS: [`docs/agents/`](docs/agents/)
 
 ## Feature Documentation
 

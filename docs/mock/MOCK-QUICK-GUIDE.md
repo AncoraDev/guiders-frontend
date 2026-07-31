@@ -72,4 +72,4 @@ if (this.useMockData) {
 
 ## 📚 Más información
 
-Ver `MOCK-DATA-SYSTEM.md` para documentación completa.
+Ver `./MOCK-DATA-SYSTEM.md` para documentación completa.

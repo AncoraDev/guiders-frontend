@@ -204,7 +204,7 @@ console.log('Error:', chatService.webSocketService.connectionError()); // null
 
 Se crearon dos documentos de soporte:
 
-1. **`/docs/WEBSOCKET-TROUBLESHOOTING.md`**: Guía completa de troubleshooting para WebSocket
+1. **`../websocket/WEBSOCKET-TROUBLESHOOTING.md`**: Guía completa de troubleshooting para WebSocket
    - Solución paso a paso para "Invalid namespace"
    - Otros errores comunes (CORS, Unauthorized, Timeout)
    - Configuración esperada del backend
@@ -251,8 +251,8 @@ Se crearon dos documentos de soporte:
 - Issue: "Invalid namespace" error en WebSocket
 - PR: N/A (cambio directo en develop)
 - Related Docs:
-  - `/docs/WEBSOCKET-INTEGRATION-SUMMARY.md`
-  - `/docs/WEBSOCKET-TROUBLESHOOTING.md`
+  - `../websocket/WEBSOCKET-INTEGRATION-SUMMARY.md`
+  - `../websocket/WEBSOCKET-TROUBLESHOOTING.md`
   - `libs/chat/data-access/websocket-service/README.md`
 
 ---
