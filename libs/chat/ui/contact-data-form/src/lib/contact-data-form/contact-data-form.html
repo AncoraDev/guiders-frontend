@@ -1,5 +1,26 @@
 <form class="contact-data-form" [formGroup]="form" (ngSubmit)="onSubmit()">
   <div class="contact-data-form__fields">
+    <!-- Alias (primero, ancho completo) -->
+    <div class="contact-data-form__field contact-data-form__field--full">
+      <label class="contact-data-form__label" for="alias">Alias</label>
+      <input
+        class="contact-data-form__input"
+        [class.contact-data-form__input--error]="getError('alias')"
+        id="alias"
+        type="text"
+        formControlName="alias"
+        placeholder="Cómo quieres identificarlo"
+        autocomplete="off"
+        [attr.aria-invalid]="!!getError('alias')"
+        [attr.aria-describedby]="getError('alias') ? 'alias-error' : null"
+      />
+      @if (getError('alias')) {
+      <span class="contact-data-form__error" id="alias-error" role="alert">
+        {{ getError('alias') }}
+      </span>
+      }
+    </div>
+
     <!-- Nombre -->
     <div class="contact-data-form__field">
       <label class="contact-data-form__label" for="nombre">Nombre</label>
@@ -41,7 +62,7 @@
     </div>
 
     <!-- Email -->
-    <div class="contact-data-form__field">
+    <div class="contact-data-form__field contact-data-form__field--full">
       <label class="contact-data-form__label" for="email">Email</label>
       <input
         class="contact-data-form__input"
@@ -61,7 +82,7 @@
     </div>
 
     <!-- Teléfono -->
-    <div class="contact-data-form__field">
+    <div class="contact-data-form__field contact-data-form__field--full">
       <label class="contact-data-form__label" for="telefono">Teléfono</label>
       <input
         class="contact-data-form__input"
@@ -81,7 +102,7 @@
     </div>
 
     <!-- Población -->
-    <div class="contact-data-form__field">
+    <div class="contact-data-form__field contact-data-form__field--full">
       <label class="contact-data-form__label" for="poblacion">Población</label>
       <input
         class="contact-data-form__input"

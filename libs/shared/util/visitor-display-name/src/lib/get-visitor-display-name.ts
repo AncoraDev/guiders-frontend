@@ -9,77 +9,115 @@ export interface VisitorInfo {
   id?: string;
   name?: string;
   email?: string;
+  /** Alias de contacto (prioridad máxima si existe) */
+  alias?: string;
+}
+
+export interface ContactNameInfo {
+  alias?: string;
+  nombre?: string;
+  apellidos?: string;
+  email?: string;
+  telefono?: string;
+}
+
+function buildPersonName(nombre?: string, apellidos?: string): string {
+  return [nombre, apellidos]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+}
+
+/**
+ * Formato con alias: "Alias (Nombre Apellidos)".
+ * Sin nombre real → solo alias. Sin alias → no añade paréntesis.
+ */
+function formatAliasWithPersonName(alias: string, personName: string): string {
+  return personName ? `${alias} (${personName})` : alias;
+}
+
+/**
+ * Nombre a mostrar a partir de datos de contacto del lead.
+ * Prioridad: alias (+ nombre/apellidos entre paréntesis) → nombre+apellidos → email → teléfono.
+ */
+export function getContactDisplayName(
+  contact: ContactNameInfo | null | undefined
+): string | null {
+  if (!contact) return null;
+
+  const personName = buildPersonName(contact.nombre, contact.apellidos);
+  const alias = contact.alias?.trim();
+  if (alias) return formatAliasWithPersonName(alias, personName);
+
+  if (personName) return personName;
+
+  if (contact.email?.trim()) return contact.email.trim();
+  if (contact.telefono?.trim()) return contact.telefono.trim();
+
+  return null;
 }
 
 /**
  * Obtiene el nombre de visualización para un visitante.
  *
  * Estrategia de fallback:
- * 1. Si existe name y no está vacío ni es genérico → usar name
- * 2. Si existe email y no está vacío → usar email
- * 3. Si existe id → mostrar "Visitante #[últimos 8 caracteres del ID]"
- * 4. Si no hay nada → mostrar "Visitante anónimo"
- *
- * @param visitor - Información del visitante (id, name, email)
- * @returns Nombre de visualización del visitante
- *
- * @example
- * ```typescript
- * // Con nombre
- * getVisitorDisplayName({ name: 'Juan Pérez', id: '123' })
- * // => 'Juan Pérez'
- *
- * // Nombre genérico del backend
- * getVisitorDisplayName({ name: 'Visitante', id: 'abc123def456' })
- * // => 'Visitante #def456'
- *
- * // Sin nombre, con email
- * getVisitorDisplayName({ email: 'juan@example.com', id: '123' })
- * // => 'juan@example.com'
- *
- * // Solo ID
- * getVisitorDisplayName({ id: 'abc123def456' })
- * // => 'Visitante #def456' (últimos 8 caracteres)
- *
- * // Sin nada
- * getVisitorDisplayName({})
- * // => 'Visitante anónimo'
- * ```
+ * 1. Si existe alias → "Alias (name)" si hay name útil; si no, solo alias
+ * 2. Si existe name y no está vacío ni es genérico → usar name
+ * 3. Si existe email y no está vacío → usar email
+ * 4. Si existe id → mostrar "Visitante #[últimos 8 caracteres del ID]"
+ * 5. Si no hay nada → mostrar "Visitante anónimo"
  */
 export function getVisitorDisplayName(visitor: VisitorInfo): string {
   // Nombres genéricos que deben ser ignorados (tratados como vacíos)
-  const genericNames = ['Visitante', 'Chat sin título', 'visitante', 'Visitor', 'visitor'];
+  const genericNames = [
+    'Visitante',
+    'Chat sin título',
+    'visitante',
+    'Visitor',
+    'visitor',
+  ];
 
-  // 1. Prioridad: nombre si existe, no está vacío y no es genérico
-  if (visitor.name && visitor.name.trim()) {
-    const trimmedName = visitor.name.trim();
-    // Solo usar el nombre si no es uno de los valores genéricos
-    if (!genericNames.includes(trimmedName)) {
-      return trimmedName;
+  const alias = visitor.alias?.trim();
+  const trimmedName = visitor.name?.trim() ?? '';
+  const usefulName =
+    trimmedName &&
+    !genericNames.includes(trimmedName) &&
+    trimmedName !== alias
+      ? trimmedName
+      : '';
+
+  // 1. Prioridad: alias (+ nombre entre paréntesis si aplica)
+  if (alias) {
+    // Evitar "Alias (Alias (Nombre))" si name ya viene formateado
+    if (usefulName.startsWith(`${alias} (`)) {
+      return usefulName;
     }
+    return formatAliasWithPersonName(alias, usefulName);
   }
 
-  // 2. Fallback: email si existe y no está vacío
+  // 2. Prioridad: nombre si existe, no está vacío y no es genérico
+  if (usefulName) {
+    return usefulName;
+  }
+
+  // 3. Fallback: email si existe y no está vacío
   if (visitor.email && visitor.email.trim()) {
     return visitor.email.trim();
   }
 
-  // 3. Fallback: ID con formato "Visitante #XXXXXXXX"
+  // 4. Fallback: ID con formato "Visitante #XXXXXXXX"
   if (visitor.id && visitor.id.trim()) {
-    const shortId = visitor.id.slice(-8); // Últimos 8 caracteres
+    const shortId = visitor.id.slice(-8);
     return `Visitante #${shortId}`;
   }
 
-  // 4. Fallback final: visitante anónimo
+  // 5. Fallback final
   return 'Visitante anónimo';
 }
 
 /**
  * Obtiene el nombre de visualización a partir de un participante de chat.
- * Wrapper para mantener compatibilidad con la interfaz Participant/User.
- *
- * @param participant - Participante del chat
- * @returns Nombre de visualización del visitante
  */
 export function getParticipantDisplayName(
   participant: { id?: string; name?: string; email?: string } | undefined | null

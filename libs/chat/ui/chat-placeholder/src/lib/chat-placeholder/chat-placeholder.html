@@ -4,7 +4,7 @@
       <!-- Avatar unificado -->
       <guiders-avatar
         [userId]="visitorId()"
-        [name]="visitorName()"
+        [name]="getChatDisplayName()"
         [email]="visitorEmail()"
         [presenceStatus]="getParticipantPresenceStatus()"
         size="medium"
@@ -12,24 +12,22 @@
 
       <!-- Información del visitante -->
       <div class="guiders-chat-placeholder__info">
-        <h3 class="guiders-chat-placeholder__name">{{ getChatDisplayName() }}</h3>
-        @if (getParticipantPresenceStatus(); as presenceStatus) {
-        <span class="guiders-chat-placeholder__status-text" [attr.data-status]="presenceStatus">
-          {{ getPresenceStatusLabel(presenceStatus) }}
-        </span>
-        }
+        <div class="guiders-chat-placeholder__title-row">
+          <h3 class="guiders-chat-placeholder__name">{{ getChatDisplayName() }}</h3>
+          @if (getParticipantPresenceStatus(); as presenceStatus) {
+          <span
+            class="guiders-chat-placeholder__status-text"
+            [attr.data-status]="presenceStatus">
+            {{ getPresenceStatusLabel(presenceStatus) }}
+          </span>
+          }
+        </div>
         @if (visitorProfile; as profile) {
         <div class="guiders-chat-placeholder__profile" data-testid="visitor-chat-profile">
           @if (profilePath(profile.currentUrl); as pagePath) {
-          <a
-            class="guiders-chat-placeholder__profile-url"
-            [href]="profile.currentUrl!"
-            target="_blank"
-            rel="noopener noreferrer"
-            [title]="profile.currentUrl!"
-          >
-            {{ pagePath }}
-          </a>
+          <span class="guiders-chat-placeholder__last-page" [title]="profile.currentUrl || pagePath">
+            Última página: {{ pagePath }}
+          </span>
           }
           <div class="guiders-chat-placeholder__profile-stats">
             @if (profile.browser) {

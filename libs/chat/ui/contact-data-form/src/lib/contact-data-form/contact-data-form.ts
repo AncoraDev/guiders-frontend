@@ -17,6 +17,7 @@ import {
 } from '@guiders-frontend/shared/types';
 
 export interface ContactDataFormValue {
+  alias: string;
   nombre: string;
   apellidos: string;
   email: string;
@@ -44,6 +45,7 @@ export class ContactDataForm implements OnInit {
   readonly cancelEdit = output<void>();
 
   readonly form = this.fb.group({
+    alias: ['', [Validators.maxLength(100)]],
     nombre: ['', [Validators.maxLength(100)]],
     apellidos: ['', [Validators.maxLength(100)]],
     email: ['', [Validators.email, Validators.maxLength(255)]],
@@ -70,6 +72,7 @@ export class ContactDataForm implements OnInit {
     }
 
     return (
+      (formValue.alias?.trim() || '') !== (current.alias || '') ||
       (formValue.nombre?.trim() || '') !== (current.nombre || '') ||
       (formValue.apellidos?.trim() || '') !== (current.apellidos || '') ||
       (formValue.email?.trim() || '') !== (current.email || '') ||
@@ -84,6 +87,7 @@ export class ContactDataForm implements OnInit {
       if (data) {
         this.form.patchValue(
           {
+            alias: data.alias || '',
             nombre: data.nombre || '',
             apellidos: data.apellidos || '',
             email: data.email || '',
@@ -111,6 +115,7 @@ export class ContactDataForm implements OnInit {
   private updateFormValiditySignal(): void {
     const formValue = this.form.value;
     const isValid = !!(
+      formValue.alias?.trim() ||
       formValue.nombre?.trim() ||
       formValue.apellidos?.trim() ||
       formValue.email?.trim() ||
@@ -124,6 +129,7 @@ export class ContactDataForm implements OnInit {
     const data = this.contactData();
     if (data) {
       this.form.patchValue({
+        alias: data.alias || '',
         nombre: data.nombre || '',
         apellidos: data.apellidos || '',
         email: data.email || '',
@@ -141,6 +147,7 @@ export class ContactDataForm implements OnInit {
     const formValue = this.form.value;
 
     const request: SaveContactDataRequest = {
+      ...(formValue.alias?.trim() && { alias: formValue.alias.trim() }),
       ...(formValue.nombre?.trim() && { nombre: formValue.nombre.trim() }),
       ...(formValue.apellidos?.trim() && {
         apellidos: formValue.apellidos.trim(),
@@ -161,6 +168,7 @@ export class ContactDataForm implements OnInit {
     const data = this.contactData();
     if (data) {
       this.form.patchValue({
+        alias: data.alias || '',
         nombre: data.nombre || '',
         apellidos: data.apellidos || '',
         email: data.email || '',

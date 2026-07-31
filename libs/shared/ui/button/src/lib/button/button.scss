@@ -168,9 +168,11 @@
       opacity: 0.5;
     }
 
-    // Estado activo - solo cambia el color del texto
+    // Estado activo — fondo + texto (ruta actual del menú)
     &.guiders-button--active {
+      background-color: var(--sidebar-bg-active);
       color: var(--sidebar-text-active);
+      font-weight: var(--font-weight-semibold, 600);
     }
   }
 

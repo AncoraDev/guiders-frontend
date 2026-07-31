@@ -1,0 +1,22 @@
+---
+description: Console product work goes in Atención, not Inbox/Bandeja
+alwaysApply: true
+---
+
+# Atención = superficie principal de Console
+
+Para UX / features del comercial en Console, implementar y verificar en:
+
+`libs/chat/features/atencion` → ruta `/atencion`
+
+**No** usar por defecto `inbox` (Bandeja), `visitors` ni `escalations` (legacy/secundarios). Solo tocarlos si el usuario lo pide o hay un bug compartido inevitable.
+
+UI compartida que Atención consume (cambiar + probar en `/atencion`):
+
+- `libs/chat/ui/visitor-detail-panel`
+- `libs/chat/ui/contact-data-form`
+- `libs/chat/ui/chat-placeholder`
+- `libs/chat/data-access/lead-contact-service`
+- `libs/shared/util/visitor-display-name` (prioridad: alias → nombre → email)
+
+Checklist: wiring en `atencion.ts`/`atencion.html`, prueba en `/atencion`, y si hay display name propagar a Pendientes / Míos / En la web + chat abierto.

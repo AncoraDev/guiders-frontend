@@ -55,7 +55,7 @@ describe('SessionService self-chat integration', () => {
     const initSpy = vi.spyOn(selfChat, 'initialize');
 
     service.ensureSession$().subscribe();
-    const req = httpMock.expectOne('https://test-api.com/bff/auth/me');
+    const req = httpMock.expectOne('https://test-api.com/bff/auth/me/console');
     req.flush(mockUser);
 
     expect(initSpy).toHaveBeenCalledWith({

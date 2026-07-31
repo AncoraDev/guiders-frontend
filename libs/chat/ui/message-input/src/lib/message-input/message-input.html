@@ -2,6 +2,7 @@
   class="message-input"
   [class.message-input--inbox]="mode() === 'inbox'"
   [class.message-input--widget]="mode() === 'widget'"
+  [class.message-input--locked]="isComposerLocked()"
 >
   @if (mode() === 'widget') {
     <div class="message-input__input-wrapper message-input__input-wrapper--widget">
@@ -12,15 +13,16 @@
         (ngModelChange)="messageText.set($event); onInput()"
         (blur)="onBlur()"
         (keydown)="onKeyDown($event)"
-        placeholder="Escribe un mensaje..."
+        [placeholder]="isComposerLocked() ? 'Conéctate para escribir…' : 'Escribe un mensaje...'"
         rows="1"
-        [disabled]="isSending()"
+        [disabled]="isSending() || isComposerLocked()"
       ></textarea>
       <button
         type="button"
         class="message-input__send-button"
         (click)="messageText().trim() && sendMessage()"
-        [class.message-input__send-button--disabled]="!messageText().trim() || isSending()"
+        [class.message-input__send-button--disabled]="!messageText().trim() || isSending() || isComposerLocked()"
+        [disabled]="isComposerLocked()"
         aria-label="Enviar mensaje"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -31,7 +33,7 @@
   }
 
   @if (mode() === 'inbox') {
-    @if (showEmojiPicker()) {
+    @if (showEmojiPicker() && !isComposerLocked()) {
       <div class="message-input__emoji-picker" role="listbox" aria-label="Emojis rápidos">
         @for (emoji of emojis; track emoji) {
           <button
@@ -54,9 +56,9 @@
         (ngModelChange)="messageText.set($event); onInput()"
         (blur)="onBlur()"
         (keydown)="onKeyDown($event)"
-        placeholder="Escribe un mensaje..."
+        [placeholder]="isComposerLocked() ? 'Conéctate para escribir…' : 'Escribe un mensaje...'"
         rows="1"
-        [disabled]="isSending()"
+        [disabled]="isSending() || isComposerLocked()"
       ></textarea>
 
       <div class="message-input__actions">
@@ -67,6 +69,7 @@
           (pointerdown)="toggleEmojiPicker($event)"
           aria-label="Añadir emoji"
           title="Emojis"
+          [disabled]="isComposerLocked()"
           [attr.aria-expanded]="showEmojiPicker()"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -81,7 +84,8 @@
           type="button"
           class="message-input__send-button"
           (click)="messageText().trim() && sendMessage()"
-          [class.message-input__send-button--disabled]="!messageText().trim() || isSending()"
+          [class.message-input__send-button--disabled]="!messageText().trim() || isSending() || isComposerLocked()"
+          [disabled]="isComposerLocked()"
           aria-label="Enviar mensaje"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateFn } from '@angular/router';
 import { catchError, map, of, from, switchMap } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SessionService, ENVIRONMENT_TOKEN } from '@guiders-frontend/auth/data-access/session';
@@ -7,7 +7,6 @@ import { RedirectConfirmService } from './redirect-confirm.service';
 
 export const adminGuard: CanActivateFn = () => {
   const sessionService = inject(SessionService);
-  const router = inject(Router);
   const environment = inject(ENVIRONMENT_TOKEN);
   const redirectConfirmService = inject(RedirectConfirmService);
 
@@ -46,8 +45,8 @@ export const adminGuard: CanActivateFn = () => {
       ) {
         return of(false);
       }
-      const ret = encodeURIComponent(router.url);
-      location.replace(`${environment.api.baseUrl}/bff/auth/login?redirect=${ret}`);
+      const ret = encodeURIComponent(window.location.href);
+      location.replace(`${environment.api.baseUrl}/bff/auth/login/admin?redirect=${ret}`);
       return of(false);
     })
   );

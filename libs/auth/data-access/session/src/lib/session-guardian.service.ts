@@ -2,6 +2,7 @@ import { Injectable, inject, OnDestroy } from '@angular/core';
 import { AuthRefreshService } from './auth-refresh.service';
 import { firstValueFrom } from 'rxjs';
 import { ENVIRONMENT_TOKEN } from './environment.token';
+import { resolveAuthApp, resolveAuthReturnUrl } from './resolve-auth-app';
 
 /**
  * Configuración del Session Guardian
@@ -282,20 +283,10 @@ export class SessionGuardianService implements OnDestroy {
   }
 
   /**
-   * Determina la app actual basándose en la URL
+   * Determina la app actual basándose en la URL o configuración
    */
   private getCurrentApp(): string {
-    if (typeof window === 'undefined') return 'console';
-
-    const pathname = window.location.pathname;
-
-    // Si estamos en una ruta que incluye '/admin', es admin
-    if (pathname.includes('/admin') || window.location.hostname.includes('admin')) {
-      return 'admin';
-    }
-
-    // Por defecto, asumir console
-    return 'console';
+    return resolveAuthApp(this.environment);
   }
 
   /**
@@ -305,7 +296,7 @@ export class SessionGuardianService implements OnDestroy {
     if (typeof window === 'undefined') return;
 
     const currentApp = this.getCurrentApp();
-    const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+    const returnUrl = encodeURIComponent(resolveAuthReturnUrl());
     const bffBase = this.environment.api.baseUrl.startsWith('/')
       ? window.location.origin + this.environment.api.baseUrl
       : this.environment.api.baseUrl;

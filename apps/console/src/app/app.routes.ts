@@ -24,6 +24,13 @@ export const appRoutes: Route[] = [
 		canActivate: [authGuard],
 	},
 	{
+		path: 'conexiones',
+		loadChildren: () =>
+			import('@guiders-frontend/conexiones').then((m) => m.conexionesRoutes),
+		title: 'Conexiones',
+		canActivate: [authGuard],
+	},
+	{
 		path: 'contacts',
 		loadChildren: () => import('@guiders-frontend/contacts').then(m => m.contactsRoutes),
 		title: 'Contactos',

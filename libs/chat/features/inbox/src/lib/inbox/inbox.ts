@@ -35,6 +35,7 @@ import { GuidersChatWelcomeStateComponent } from '@guiders-frontend/chat/ui/chat
 import { GuidersChatPlaceholderComponent } from '@guiders-frontend/chat/ui/chat-placeholder';
 import { VisitorDetailPanel } from '@guiders-frontend/visitor-detail-panel';
 import { getVisitorDisplayName } from '@guiders-frontend/visitor-display-name';
+import { CommercialPresenceService } from '@guiders-frontend/commercial-presence';
 
 /**
  * Inbox - Coordinador principal del chat
@@ -72,6 +73,7 @@ export class Inbox implements OnInit, OnDestroy {
   private readonly presenceService = inject(PresenceService);
   private readonly visitorsDataService = inject(VisitorsDataService);
   private readonly leadContactService = inject(LeadContactService);
+  private readonly commercialPresence = inject(CommercialPresenceService);
   private readonly tourUiBridge = inject(TourUiBridgeService, { optional: true });
 
   // ===== ESTADO PRINCIPAL =====
@@ -515,6 +517,7 @@ export class Inbox implements OnInit, OnDestroy {
             id: this.visitorContactData()?.id || `temp-${Date.now()}`,
             visitorId: visitorId,
             companyId: this.visitorContactData()?.companyId || 'unknown',
+            alias: request.alias,
             nombre: request.nombre,
             apellidos: request.apellidos,
             email: request.email,
@@ -553,6 +556,11 @@ export class Inbox implements OnInit, OnDestroy {
 
     if (!chatId) {
       console.error('No se puede enviar el mensaje: falta chatId');
+      return;
+    }
+
+    if (!this.commercialPresence.getCurrentStatus().isConnected) {
+      this.error.set('Conéctate para poder enviar mensajes');
       return;
     }
 

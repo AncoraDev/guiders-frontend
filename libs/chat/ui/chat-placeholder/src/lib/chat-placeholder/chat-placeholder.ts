@@ -77,13 +77,13 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
    * Computed properties para el Avatar component
    */
   readonly visitorId = computed(() => {
-    const visitor = this.selectedChat.participants?.find((p: User) => p.role === 'visitor');
+    if (this.selectedChat.visitorId) {
+      return this.selectedChat.visitorId;
+    }
+    const visitor = this.selectedChat.participants?.find(
+      (p: User) => p.role === 'visitor',
+    );
     return visitor?.id || this.selectedChat.chatId || 'anonymous';
-  });
-
-  readonly visitorName = computed(() => {
-    const visitor = this.selectedChat.participants?.find((p: User) => p.role === 'visitor');
-    return visitor?.name;
   });
 
   readonly visitorEmail = computed(() => {

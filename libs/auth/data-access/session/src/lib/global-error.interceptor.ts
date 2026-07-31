@@ -4,6 +4,7 @@ import { EMPTY, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { SessionService } from './session.service';
 import { ENVIRONMENT_TOKEN } from './environment.token';
+import { resolveAuthApp, resolveAuthReturnUrl } from './resolve-auth-app';
 
 /**
  * Guard to prevent duplicate 401 redirects when multiple concurrent requests
@@ -45,8 +46,9 @@ export const globalErrorInterceptor: HttpInterceptorFn = (req, next) => {
           redirectingToLogin = true;
           console.warn('[GlobalErrorInterceptor] Unrecoverable 401 — clearing session and redirecting to BFF login', req.url);
           sessionService.clearCache();
-          const ret = encodeURIComponent(window.location.href);
-          location.replace(`${environment.api.baseUrl}/bff/auth/login?redirect=${ret}`);
+          const app = resolveAuthApp(environment);
+          const ret = encodeURIComponent(resolveAuthReturnUrl());
+          location.replace(`${environment.api.baseUrl}/bff/auth/login/${app}?redirect=${ret}`);
           setTimeout(() => { redirectingToLogin = false; }, 5000);
         }
         return EMPTY;

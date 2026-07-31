@@ -258,6 +258,8 @@
   }
 
   // Estado activo - texto más prominente y fondo sutil
+  // Especificidad >= que `&.sidebar__nav-link` (transparent) para que gane
+  &.sidebar__nav-link--active,
   &--active,
   &--active.guiders-button--ghost {
     background: var(--sidebar-bg-active) !important;
@@ -377,9 +379,11 @@
   }
 
   // Estado activo para submenu
+  &.sidebar__submenu-link--active,
   &--active,
   &--active.guiders-button--ghost {
-    color: var(--sidebar-text, #ffffff) !important;
+    background: var(--sidebar-bg-active) !important;
+    color: var(--sidebar-text-active, var(--sidebar-text, #ffffff)) !important;
   }
 }
 

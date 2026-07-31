@@ -5,6 +5,8 @@ export interface LeadContactData {
   id: string;
   visitorId: string;
   companyId: string;
+  /** Alias interno para identificar al visitante en consola */
+  alias?: string;
   // Campos principales (mapean a LeadCars)
   nombre?: string;
   apellidos?: string;
@@ -26,6 +28,7 @@ export interface LeadContactData {
 // Request para guardar datos de contacto
 // NOTA: visitorId va en la URL del endpoint, NO en el body
 export interface SaveContactDataRequest {
+  alias?: string;
   nombre?: string;
   apellidos?: string;
   email?: string;
@@ -120,6 +123,7 @@ export type SyncStatus = 'pending' | 'synced' | 'failed' | 'partial';
 
 // Contact data embedded en los sync records (devuelto por el backend via ContactDataDto)
 export interface LeadCarsSyncRecordContactData {
+  alias?: string;
   nombre?: string;
   apellidos?: string;
   email?: string;

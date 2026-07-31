@@ -96,14 +96,3 @@
     border-radius: 3px;
   }
 }
-
-.placeholder-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px tokens.$spacing-sm;
-  background: var(--color-bg-secondary);
-  color: var(--color-text-tertiary);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: tokens.$border-radius-full;
-  font-size: tokens.$font-size-xs;
-}

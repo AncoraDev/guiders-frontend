@@ -54,7 +54,7 @@ describe('SessionService', () => {
       expect(user).toEqual(mockUser);
     });
 
-    const req = httpMock.expectOne('https://test-api.com/bff/auth/me');
+    const req = httpMock.expectOne('https://test-api.com/bff/auth/me/console');
     expect(req.request.method).toBe('GET');
     expect(req.request.withCredentials).toBe(true);
     req.flush(mockUser);
@@ -73,7 +73,7 @@ describe('SessionService', () => {
     service.ensureSession$().subscribe();
 
     // Solo debe hacer una petición HTTP
-    const req = httpMock.expectOne('https://test-api.com/bff/auth/me');
+    const req = httpMock.expectOne('https://test-api.com/bff/auth/me/console');
     req.flush(mockUser);
   });
 
@@ -86,7 +86,7 @@ describe('SessionService', () => {
 
     // Primera llamada
     service.ensureSession$().subscribe();
-    const req1 = httpMock.expectOne('https://test-api.com/bff/auth/me');
+    const req1 = httpMock.expectOne('https://test-api.com/bff/auth/me/console');
     req1.flush(mockUser);
 
     // Limpiar cache
@@ -94,7 +94,7 @@ describe('SessionService', () => {
 
     // Segunda llamada después de limpiar cache
     service.ensureSession$().subscribe();
-    const req2 = httpMock.expectOne('https://test-api.com/bff/auth/me');
+    const req2 = httpMock.expectOne('https://test-api.com/bff/auth/me/console');
     req2.flush(mockUser);
   });
 
@@ -112,7 +112,7 @@ describe('SessionService', () => {
 
     // First subscription completes synchronously after flush
     const sub1 = service.ensureSession$().subscribe();
-    const req1 = httpMock.expectOne('https://test-api.com/bff/auth/me');
+    const req1 = httpMock.expectOne('https://test-api.com/bff/auth/me/console');
     req1.flush(mockUser);
     sub1.unsubscribe();
 
@@ -120,6 +120,6 @@ describe('SessionService', () => {
     service.ensureSession$().subscribe();
 
     // No new HTTP request should be made — the cached value must be replayed
-    httpMock.expectNone('https://test-api.com/bff/auth/me');
+    httpMock.expectNone('https://test-api.com/bff/auth/me/console');
   });
 });

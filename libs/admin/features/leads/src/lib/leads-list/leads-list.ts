@@ -71,6 +71,7 @@ export class LeadsList implements OnInit {
         const cd = r.contactData;
         if (!cd) return r.visitorId.toLowerCase().includes(query);
         return (
+          cd.alias?.toLowerCase().includes(query) ||
           cd.nombre?.toLowerCase().includes(query) ||
           cd.apellidos?.toLowerCase().includes(query) ||
           cd.email?.toLowerCase().includes(query) ||
@@ -148,6 +149,7 @@ export class LeadsList implements OnInit {
   getDisplayName(record: LeadCarsSyncRecord): string {
     const cd = record.contactData;
     if (!cd) return '-';
+    if (cd.alias?.trim()) return cd.alias.trim();
     const parts = [cd.nombre, cd.apellidos].filter(Boolean);
     return parts.length > 0 ? parts.join(' ') : '-';
   }
@@ -155,6 +157,9 @@ export class LeadsList implements OnInit {
   getInitials(record: LeadCarsSyncRecord): string {
     const cd = record.contactData;
     if (!cd) return '?';
+    if (cd.alias?.trim()) {
+      return cd.alias.trim().slice(0, 2).toUpperCase();
+    }
     const nombre = cd.nombre?.[0] ?? '';
     const apellido = cd.apellidos?.[0] ?? '';
     return (nombre + apellido).toUpperCase() || '?';
@@ -162,7 +167,7 @@ export class LeadsList implements OnInit {
 
   hasContactData(record: LeadCarsSyncRecord): boolean {
     const cd = record.contactData;
-    return !!(cd && (cd.nombre || cd.email || cd.telefono));
+    return !!(cd && (cd.alias || cd.nombre || cd.email || cd.telefono));
   }
 
   getStatusVariant(

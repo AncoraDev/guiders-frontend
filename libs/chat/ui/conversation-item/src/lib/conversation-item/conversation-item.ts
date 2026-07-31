@@ -40,11 +40,7 @@ export class ConversationItem {
     return visitor?.id || chat.chatId;
   });
 
-  readonly visitorName = computed(() => {
-    const chat = this.conversation();
-    const visitor = chat.participants?.find((p: User) => p.role === 'visitor');
-    return visitor?.name;
-  });
+  readonly visitorName = computed(() => this.getChatDisplayName());
 
   readonly visitorEmail = computed(() => {
     const chat = this.conversation();

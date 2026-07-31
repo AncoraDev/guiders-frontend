@@ -6,6 +6,10 @@
   flex-wrap: wrap;
   gap: tokens.$spacing-sm;
 
+  &--chips-only:not(:has(.active-filters__chips)) {
+    display: none;
+  }
+
   &__actions {
     display: flex;
     align-items: center;

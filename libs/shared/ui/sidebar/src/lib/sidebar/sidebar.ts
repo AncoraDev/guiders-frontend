@@ -9,8 +9,10 @@ import {
   ElementRef,
   ViewChild,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map, startWith } from 'rxjs';
 import { SidebarItem, SidebarConfig } from './sidebar.types';
 import { Button } from '@guiders-frontend/button';
 import { IconComponent } from '@guiders-frontend/icon';
@@ -30,6 +32,16 @@ import {
 })
 export class Sidebar {
   private readonly router = inject(Router);
+
+  /** URL actual sin query/fragment — reacciona a cada navegación */
+  private readonly currentPath = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map(() => this.router.url.split('?')[0].split('#')[0]),
+      startWith(this.router.url.split('?')[0].split('#')[0])
+    ),
+    { initialValue: this.router.url.split('?')[0].split('#')[0] }
+  );
   private readonly themeService = inject(ThemeService);
 
   // Logo y branding configurables via inputs (con valores por defecto)
@@ -360,13 +372,16 @@ export class Sidebar {
   }
 
   isItemActive(item: SidebarItem): boolean {
-    // Verificar si el item actual está activo
-    if (item.route && this.router.url === item.route) {
+    if (item.isActive) {
       return true;
     }
 
-    if (item.isActive) {
-      return true;
+    if (item.route) {
+      const path = this.currentPath();
+      const route = item.route.startsWith('/') ? item.route : `/${item.route}`;
+      if (path === route || path.startsWith(`${route}/`)) {
+        return true;
+      }
     }
 
     // Si tiene hijos, verificar si alguno de sus hijos está activo

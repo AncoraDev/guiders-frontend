@@ -120,6 +120,12 @@
       "@guiders-frontend/commercial-presence": [
         "libs/auth/data-access/commercial-presence/src/index.ts"
       ],
+      "@guiders-frontend/connection-sessions-service": [
+        "libs/chat/data-access/connection-sessions-service/src/index.ts"
+      ],
+      "@guiders-frontend/conexiones": [
+        "libs/chat/features/conexiones/src/index.ts"
+      ],
       "@guiders-frontend/commercial-status": [
         "libs/auth/data-access/commercial-status/src/index.ts"
       ],

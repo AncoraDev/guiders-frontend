@@ -13,7 +13,15 @@ import {
 } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
-import { catchError, finalize, of, Subject, switchMap, takeUntil, interval } from 'rxjs';
+import {
+  catchError,
+  finalize,
+  of,
+  Subject,
+  switchMap,
+  takeUntil,
+  interval,
+} from 'rxjs';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { USE_MOCK_DATA } from '@guiders-frontend/shared/config';
 import { ChatWidgetService } from '@guiders-frontend/chat/data-access/chat-widget-service';
@@ -54,6 +62,11 @@ import {
   Chat,
 } from '@guiders-frontend/shared/types';
 import { PresenceChangedEvent } from '@guiders-frontend/shared/types';
+import { LeadContactService } from '@guiders-frontend/lead-contact-service';
+import {
+  getContactDisplayName,
+  getVisitorDisplayName,
+} from '@guiders-frontend/visitor-display-name';
 import {
   getMockVisitorsResponse,
   getMockVisitorStats,
@@ -100,6 +113,8 @@ export class VisitorsComponent implements OnInit, OnDestroy {
   private readonly tourSandbox = inject(TourSandboxService, { optional: true });
   private readonly tourService = inject(TourService);
   private readonly userService = inject(UserService);
+  private readonly leadContactService = inject(LeadContactService);
+  private readonly destroy$ = new Subject<void>();
 
   // Referencia al componente hijo de la lista de visitantes
   @ViewChild(VisitorsListComponent)
@@ -296,8 +311,9 @@ export class VisitorsComponent implements OnInit, OnDestroy {
     }
 
     if (filters.lifecycle?.length) {
-      visitors = visitors.filter(
-        (v) => filters.lifecycle?.includes(v.lifecycle) ?? false
+      const wanted = filters.lifecycle.map((l) => String(l).toUpperCase());
+      visitors = visitors.filter((v) =>
+        wanted.includes(String(v.lifecycle).toUpperCase()),
       );
     }
 
@@ -335,8 +351,9 @@ export class VisitorsComponent implements OnInit, OnDestroy {
       online,
       withActiveChat: withChat,
       newVisitors,
-      leads: visitors.filter((v) => ['LEAD', 'CONVERTED'].includes(v.lifecycle))
-        .length,
+      leads: visitors.filter((v) =>
+        ['LEAD', 'CONVERTED'].includes(String(v.lifecycle).toUpperCase()),
+      ).length,
     };
   });
 
@@ -563,6 +580,8 @@ export class VisitorsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
     this._cancelLoadMore$.next();
     this._cancelLoadMore$.complete();
     if (this._ariaResetTimeout !== null) {
@@ -607,8 +626,9 @@ export class VisitorsComponent implements OnInit, OnDestroy {
     }
 
     if (filters.lifecycle?.length) {
-      filtered = filtered.filter(
-        (v) => filters.lifecycle?.includes(v.lifecycle) ?? false
+      const wanted = filters.lifecycle.map((l) => String(l).toUpperCase());
+      filtered = filtered.filter((v) =>
+        wanted.includes(String(v.lifecycle).toUpperCase()),
       );
     }
 
@@ -710,7 +730,6 @@ export class VisitorsComponent implements OnInit, OnDestroy {
           })
         )
         .subscribe((response) => {
-          // Mapear VisitorSearchResult a Visitor
           const mappedVisitors: Visitor[] = this.applyDemoVisitorIfActive(
             this.mapSearchResultsToVisitors(response.visitors)
           );
@@ -724,9 +743,8 @@ export class VisitorsComponent implements OnInit, OnDestroy {
               totalCount: response.pagination.total,
             },
           });
-
-          // Actualizar timestamp de última carga
           this.lastRefreshTime.set(new Date());
+          this.enrichVisitorsWithContacts(mappedVisitors);
         });
     }
   }
@@ -1221,7 +1239,6 @@ export class VisitorsComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe((response) => {
-        // Mapear VisitorSearchResult a Visitor
         const mappedVisitors: Visitor[] = this.applyDemoVisitorIfActive(
           this.mapSearchResultsToVisitors(response.visitors)
         );
@@ -1237,7 +1254,56 @@ export class VisitorsComponent implements OnInit, OnDestroy {
 
         this.lastRefreshTime.set(new Date());
         this.loadQuickFilters(); // Actualizar contadores
+        this.enrichVisitorsWithContacts(mappedVisitors);
       });
+  }
+
+  /**
+   * Enriquece la lista con alias/nombre vía caché compartida (misma que Atención).
+   */
+  private enrichVisitorsWithContacts(visitors: Visitor[]): void {
+    if (!visitors.length) return;
+
+    this.leadContactService
+      .ensureContacts(visitors.map((v) => v.id))
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => this.reapplyContactNamesToVisitors(),
+        error: (err) =>
+          console.warn('[Visitors] No se pudieron enriquecer contactos', err),
+      });
+  }
+
+  /** Reaplica alias/nombre de contacto sobre los visitantes ya cargados */
+  private reapplyContactNamesToVisitors(): void {
+    const current = this.state().visitors;
+    if (!current.length) return;
+
+    const enriched = current.map((visitor) => this.applyContactToVisitor(visitor));
+    const changed = enriched.some(
+      (v, i) =>
+        v.name !== current[i]?.name ||
+        v.email !== current[i]?.email ||
+        v.phone !== current[i]?.phone
+    );
+    if (!changed) return;
+
+    this.updateState({ visitors: enriched });
+  }
+
+  private applyContactToVisitor(visitor: Visitor): Visitor {
+    const contact = this.leadContactService.peekCache(visitor.id);
+    if (!contact) return visitor;
+
+    const contactName = getContactDisplayName(contact);
+    if (!contactName) return visitor;
+
+    return {
+      ...visitor,
+      name: contactName,
+      email: contact.email || visitor.email,
+      phone: contact.telefono || visitor.phone,
+    };
   }
 
   /** Mapear array de resultados de búsqueda a Visitors */
@@ -1285,18 +1351,31 @@ export class VisitorsComponent implements OnInit, OnDestroy {
       });
     }
 
+    const contact = this.leadContactService.peekCache(result.id);
+    const contactName = getContactDisplayName(contact);
+    const displayName =
+      contactName ||
+      getVisitorDisplayName({
+        id: result.id,
+        name: result.name,
+        email: result.email || contact?.email,
+        alias: contact?.alias,
+      });
+
     return {
       id: result.id,
       fingerprint: result.fingerprint || '',
-      lifecycle: result.lifecycle,
+      // Backend persiste lifecycle en minúsculas; la UI filtra en mayúsculas (LEAD, ANON…)
+      lifecycle: (result.lifecycle?.toUpperCase?.() ??
+        result.lifecycle) as typeof result.lifecycle,
       isNewVisitor: result.totalSessionsCount === 1,
       status,
       connectionStatus: result.connectionStatus,
       currentUrl: result.currentUrl,
-      // name, email and domain are NOT returned by the visitor search endpoint.
-      // They must be enriched from a separate contact/profile endpoint when needed.
-      name: result.name,
-      email: result.email,
+      // Search no garantiza contacto; enriquecemos vía LeadContactService.ensureContacts
+      name: displayName,
+      email: contact?.email || result.email,
+      phone: contact?.telefono,
       domain: result.domain ?? '',
       siteId: result.siteId,
       companyId: result.tenantId,
@@ -1471,6 +1550,7 @@ export class VisitorsComponent implements OnInit, OnDestroy {
           },
         });
         this.lastRefreshTime.set(new Date());
+        this.enrichVisitorsWithContacts(newVisitors);
       });
   }
 
@@ -1834,53 +1914,98 @@ export class VisitorsComponent implements OnInit, OnDestroy {
     return ids;
   });
 
+  /** Asegura nombre de contacto antes de abrir el widget de chat */
+  private withContactName(visitor: Visitor): Visitor {
+    return this.applyContactToVisitor(visitor);
+  }
+
   /** Handle openChat output from VisitorsListComponent */
   onOpenChat(visitor: Visitor): void {
-    this.chatService.getVisitorMyChats(visitor.id).subscribe({
-      next: (response: { chats: Chat[]; total: number; totalVisitorChats: number; hasMore: boolean; nextCursor?: string | null }) => {
-        const chatsToRegister = response.chats.map(c => ({ chatId: c.chatId, visitorId: visitor.id }));
-        if (chatsToRegister.length) {
-          this.unreadMessagesService.registerChatsVisitors(chatsToRegister);
-        }
-        if (response.chats.length > 1) {
-          this.chatWidgetService.openWithTabs(response.chats, visitor, 0);
-        } else if (response.chats.length === 1) {
-          this.chatWidgetService.openWithChat(response.chats[0].chatId, visitor);
-        } else if (visitor.pendingChatIds?.length) {
-          // Hay chats PENDING del visitante aún no asignados a este comercial
-          this.chatWidgetService.openPendingChat(
-            visitor.pendingChatIds[0],
-            visitor,
-          );
-        } else if (response.totalVisitorChats === 0) {
-          this.chatWidgetService.openWidget(visitor);
-        } else {
-          // Hay chats del visitante pero no asignados a mí y sin pendingChatIds en el DTO
-          this.chatWidgetService.openWidget(visitor);
-        }
-      },
-      error: (error: unknown) => console.error('[Visitors] Error al verificar chats del visitante:', error),
-    });
+    this.leadContactService
+      .ensureContacts([visitor.id])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        const enriched = this.withContactName(visitor);
+        this.chatService.getVisitorMyChats(enriched.id).subscribe({
+          next: (response: {
+            chats: Chat[];
+            total: number;
+            totalVisitorChats: number;
+            hasMore: boolean;
+            nextCursor?: string | null;
+          }) => {
+            const chatsToRegister = response.chats.map((c) => ({
+              chatId: c.chatId,
+              visitorId: enriched.id,
+            }));
+            if (chatsToRegister.length) {
+              this.unreadMessagesService.registerChatsVisitors(chatsToRegister);
+            }
+            if (response.chats.length > 1) {
+              this.chatWidgetService.openWithTabs(response.chats, enriched, 0);
+            } else if (response.chats.length === 1) {
+              this.chatWidgetService.openWithChat(
+                response.chats[0].chatId,
+                enriched
+              );
+            } else if (enriched.pendingChatIds?.length) {
+              this.chatWidgetService.openPendingChat(
+                enriched.pendingChatIds[0],
+                enriched
+              );
+            } else {
+              this.chatWidgetService.openWidget(enriched);
+            }
+          },
+          error: (error: unknown) =>
+            console.error(
+              '[Visitors] Error al verificar chats del visitante:',
+              error
+            ),
+        });
+      });
   }
 
   /** Handle openWidget output from VisitorsListComponent */
   onOpenWidget(visitor: Visitor): void {
-    this.chatService.getVisitorMyChats(visitor.id).subscribe({
-      next: (response: { chats: Chat[]; total: number; totalVisitorChats: number; hasMore: boolean; nextCursor?: string | null }) => {
-        const chatsToRegister = response.chats.map(c => ({ chatId: c.chatId, visitorId: visitor.id }));
-        if (chatsToRegister.length) {
-          this.unreadMessagesService.registerChatsVisitors(chatsToRegister);
-        }
-        if (response.chats.length > 1) {
-          this.chatWidgetService.openWithTabs(response.chats, visitor, 0);
-        } else if (response.chats.length === 1) {
-          this.chatWidgetService.openWithChat(response.chats[0].chatId, visitor);
-        } else {
-          this.chatWidgetService.openWidget(visitor);
-        }
-      },
-      error: (error: unknown) => console.error('[Visitors] Error al obtener chat del visitante:', error),
-    });
+    this.leadContactService
+      .ensureContacts([visitor.id])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        const enriched = this.withContactName(visitor);
+        this.chatService.getVisitorMyChats(enriched.id).subscribe({
+          next: (response: {
+            chats: Chat[];
+            total: number;
+            totalVisitorChats: number;
+            hasMore: boolean;
+            nextCursor?: string | null;
+          }) => {
+            const chatsToRegister = response.chats.map((c) => ({
+              chatId: c.chatId,
+              visitorId: enriched.id,
+            }));
+            if (chatsToRegister.length) {
+              this.unreadMessagesService.registerChatsVisitors(chatsToRegister);
+            }
+            if (response.chats.length > 1) {
+              this.chatWidgetService.openWithTabs(response.chats, enriched, 0);
+            } else if (response.chats.length === 1) {
+              this.chatWidgetService.openWithChat(
+                response.chats[0].chatId,
+                enriched
+              );
+            } else {
+              this.chatWidgetService.openWidget(enriched);
+            }
+          },
+          error: (error: unknown) =>
+            console.error(
+              '[Visitors] Error al obtener chat del visitante:',
+              error
+            ),
+        });
+      });
   }
 
   /** Handle viewDetails output from VisitorsListComponent */

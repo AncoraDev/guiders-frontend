@@ -1,10 +1,12 @@
-<div
-  class="atencion"
-  data-testid="atencion-workspace"
-  [class.atencion--panel-open]="showVisitorPanel()"
->
+<div class="atencion-root" data-testid="atencion-workspace">
+  <guiders-toast-host />
+
+  <div
+    class="atencion"
+    [class.atencion--panel-open]="showVisitorPanel()"
+  >
   <!-- Colas -->
-  <aside class="atencion__queues" aria-label="Colas de atención" data-tour="atencion-queues">
+  <aside class="atencion__queues" aria-label="Colas de atención" data-testid="atencion-queues">
     <header class="atencion__queues-header">
       <h1>Atención</h1>
       <button
@@ -17,6 +19,10 @@
         Actualizar
       </button>
     </header>
+
+    <div class="atencion__presence" data-testid="atencion-presence">
+      <guiders-status-selector />
+    </div>
 
     <nav class="atencion__queue-nav">
       <button
@@ -101,14 +107,17 @@
       <ul class="atencion__items">
         @for (item of listItems(); track item.id) {
           <li>
-            <button
-              type="button"
+            <div
               class="atencion__item"
+              role="button"
+              tabindex="0"
               [class.atencion__item--selected]="selectedItemId() === item.id"
               [class.atencion__item--unread]="item.unreadCount > 0"
               [class.atencion__item--offline]="item.presence === 'offline'"
-              [disabled]="isClaiming()"
-              (click)="onSelectItem(item)"
+              [attr.aria-disabled]="isClaiming() || null"
+              (click)="!isClaiming() && onSelectItem(item)"
+              (keydown.enter)="!isClaiming() && onSelectItem(item)"
+              (keydown.space)="$event.preventDefault(); !isClaiming() && onSelectItem(item)"
             >
               <div class="atencion__item-main">
                 <span class="atencion__item-title">
@@ -119,7 +128,21 @@
                   ></span>
                   {{ item.title }}
                 </span>
-                <span class="atencion__item-sub">{{ item.subtitle }}</span>
+                @if (item.preview) {
+                  <span class="atencion__item-preview">{{ item.preview }}</span>
+                } @else if (item.subtitle && item.kind !== 'web') {
+                  <span class="atencion__item-preview">{{ item.subtitle }}</span>
+                }
+                @if (item.isLead || item.pageLabel) {
+                  <div class="atencion__item-chips">
+                    @if (item.isLead) {
+                      <span class="atencion__chip atencion__chip--lead">Lead</span>
+                    }
+                    @if (item.pageLabel) {
+                      <span class="atencion__chip" [title]="item.pageLabel">{{ item.pageLabel }}</span>
+                    }
+                  </div>
+                }
               </div>
               <div class="atencion__item-meta">
                 <span
@@ -131,8 +154,18 @@
                 @if (item.unreadCount > 0) {
                   <span class="atencion__unread">{{ item.unreadCount }}</span>
                 }
+                @if (item.kind === 'web') {
+                  <button
+                    type="button"
+                    class="atencion__saludar"
+                    [disabled]="isClaiming()"
+                    (click)="onSaludar($event, item)"
+                  >
+                    Saludar
+                  </button>
+                }
               </div>
-            </button>
+            </div>
           </li>
         }
       </ul>
@@ -154,7 +187,7 @@
   </section>
 
   <!-- Panel chat -->
-  <main class="atencion__chat" data-tour="atencion-main">
+  <main class="atencion__chat" data-testid="atencion-main">
     @if (selectedChat(); as chat) {
       <guiders-chat-placeholder
         [selectedChat]="chat"
@@ -198,4 +231,5 @@
       />
     </aside>
   }
+  </div>
 </div>

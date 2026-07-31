@@ -289,15 +289,32 @@ export class WebSocketService {
       return;
     }
 
-    const roomId = `chat:${chatId}`;
+    // Acepta "uuid" o "chat:uuid"
+    const bareId = chatId.startsWith('chat:') ? chatId.slice(5) : chatId;
+    const roomId = `chat:${bareId}`;
     console.log('[WebSocket] Saliendo de sala:', roomId);
 
-    this.socket.emit('chat:leave', { chatId });
+    this.socket.emit('chat:leave', { chatId: bareId });
 
     // Actualizar estado local
     const rooms = new Set(this.currentRooms());
     rooms.delete(roomId);
     this.currentRooms.set(rooms);
+  }
+
+  /**
+   * Salir de todas las salas de chat (p.ej. al pasar a Desconectado).
+   * Mantiene el socket y rooms de tenant/presencia.
+   */
+  leaveAllChatRooms(): void {
+    const chatIds = this.getActiveChats();
+    if (chatIds.length === 0) {
+      return;
+    }
+    console.log(
+      `[WebSocket] Saliendo de ${chatIds.length} salas de chat (presencia offline)`,
+    );
+    chatIds.forEach((id) => this.leaveRoom(id));
   }
 
   /**

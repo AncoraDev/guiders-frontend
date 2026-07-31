@@ -6,15 +6,19 @@ import {
   ElementRef,
   AfterViewInit,
   signal,
+  computed,
   ChangeDetectionStrategy,
   input,
   inject,
   OnDestroy,
   HostListener,
+  DestroyRef,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PresenceService } from '@guiders-frontend/presence-service';
+import { CommercialPresenceService } from '@guiders-frontend/commercial-presence';
 
 /** Emojis frecuentes para chat comercial — panel ligero, sin categorías. */
 const QUICK_EMOJIS = [
@@ -93,18 +97,45 @@ export class MessageInput implements AfterViewInit, OnDestroy {
 
   readonly chatId = input<string | null>(null);
   readonly mode = input<'inbox' | 'widget'>('inbox');
+  /** Si es true, exige presencia Conectado para escribir/enviar. */
+  readonly requireOnline = input(true);
 
   readonly messageText = signal('');
   readonly isSending = signal(false);
   readonly showEmojiPicker = signal(false);
+  readonly isCommercialOnline = signal(false);
   readonly emojis = QUICK_EMOJIS;
+
+  readonly isComposerLocked = computed(
+    () => this.requireOnline() && !this.isCommercialOnline(),
+  );
 
   private sendingTimestamp = 0;
   private readonly SEND_DEBOUNCE_MS = 500;
   private caretPosition = 0;
 
   private readonly presenceService = inject(PresenceService);
+  private readonly commercialPresence = inject(CommercialPresenceService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly hostRef = inject(ElementRef<HTMLElement>);
+
+  constructor() {
+    const initial = this.commercialPresence.getCurrentStatus();
+    this.isCommercialOnline.set(initial.isConnected);
+
+    this.commercialPresence.isConnected$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((connected) => {
+        this.isCommercialOnline.set(connected);
+        if (!connected) {
+          this.showEmojiPicker.set(false);
+          const chatId = this.chatId();
+          if (chatId) {
+            this.presenceService.stopTyping(chatId);
+          }
+        }
+      });
+  }
 
   @HostListener('document:pointerdown', ['$event'])
   onDocumentPointerDown(event: PointerEvent): void {
@@ -124,7 +155,9 @@ export class MessageInput implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.adjustTextareaHeight();
-    setTimeout(() => this.textareaRef?.nativeElement.focus(), 100);
+    if (!this.isComposerLocked()) {
+      setTimeout(() => this.textareaRef?.nativeElement.focus(), 100);
+    }
   }
 
   ngOnDestroy(): void {
@@ -135,6 +168,7 @@ export class MessageInput implements AfterViewInit, OnDestroy {
   }
 
   toggleEmojiPicker(event: Event): void {
+    if (this.isComposerLocked()) return;
     event.preventDefault();
     event.stopPropagation();
     this.rememberCaret();
@@ -143,12 +177,15 @@ export class MessageInput implements AfterViewInit, OnDestroy {
 
   /** mousedown: inserta sin perder el foco del textarea. */
   onEmojiPointerDown(event: Event, emoji: string): void {
+    if (this.isComposerLocked()) return;
     event.preventDefault();
     event.stopPropagation();
     this.insertEmoji(emoji);
   }
 
   insertEmoji(emoji: string): void {
+    if (this.isComposerLocked()) return;
+
     const textarea = this.textareaRef?.nativeElement;
     const text = this.messageText();
     const start = textarea
@@ -173,6 +210,7 @@ export class MessageInput implements AfterViewInit, OnDestroy {
   }
 
   onInput(): void {
+    if (this.isComposerLocked()) return;
     this.rememberCaret();
     this.adjustTextareaHeight();
     this.syncTyping();
@@ -187,6 +225,10 @@ export class MessageInput implements AfterViewInit, OnDestroy {
   }
 
   onKeyDown(event: KeyboardEvent): void {
+    if (this.isComposerLocked()) {
+      event.preventDefault();
+      return;
+    }
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       this.sendMessage();
@@ -194,6 +236,10 @@ export class MessageInput implements AfterViewInit, OnDestroy {
   }
 
   sendMessage(): void {
+    if (this.isComposerLocked()) {
+      return;
+    }
+
     const text = this.messageText().trim();
     if (!text || this.isSending()) {
       return;
@@ -233,7 +279,7 @@ export class MessageInput implements AfterViewInit, OnDestroy {
 
   private syncTyping(): void {
     const chatId = this.chatId();
-    if (!chatId) return;
+    if (!chatId || this.isComposerLocked()) return;
 
     if (this.messageText().trim().length > 0) {
       this.presenceService.startTyping(chatId);

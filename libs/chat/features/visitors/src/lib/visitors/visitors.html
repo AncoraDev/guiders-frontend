@@ -32,22 +32,37 @@
       <div class="bento-card-content visitors-panel__content">
         <!-- Filtros rápidos y activos -->
         <div class="visitors-panel__filters" data-tour="visitors-filters">
-          <div data-tour="visitors-quick-filters">
-            <guiders-visitors-quick-filters
-              [filters]="quickFilters()"
-              [activeFilterId]="selectedFilterId()"
-              [loading]="state().loading"
-              [savedFilters]="savedFilters()"
-              [selectedSavedFilterId]="selectedSavedFilterId()"
-              (filterSelect)="onQuickFilterSelect($event)"
-              (savedFilterSelect)="onSavedFilterSelect($event)"
-              (savedFilterDelete)="onSavedFilterDelete($event)"
-            />
+          <div class="visitors-panel__filters-toolbar">
+            <div data-tour="visitors-quick-filters">
+              <guiders-visitors-quick-filters
+                [filters]="quickFilters()"
+                [activeFilterId]="selectedFilterId()"
+                [loading]="state().loading"
+                [savedFilters]="savedFilters()"
+                [selectedSavedFilterId]="selectedSavedFilterId()"
+                (filterSelect)="onQuickFilterSelect($event)"
+                (savedFilterSelect)="onSavedFilterSelect($event)"
+                (savedFilterDelete)="onSavedFilterDelete($event)"
+              />
+            </div>
+
+            <button
+              type="button"
+              class="visitors-panel__advanced-btn"
+              data-tour="visitors-advanced-btn"
+              (click)="onOpenAdvancedFilters()"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              Filtros avanzados
+            </button>
           </div>
 
           <div data-tour="visitors-active-filters">
             <guiders-visitors-active-filters
               [filters]="activeSearchFilters()"
+              [showAdvancedButton]="false"
               (removeFilter)="onFilterRemove($event)"
               (clearAll)="onFiltersClearAll()"
               (openAdvanced)="onOpenAdvancedFilters()"

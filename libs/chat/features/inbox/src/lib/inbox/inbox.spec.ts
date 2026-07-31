@@ -6,6 +6,7 @@ import { Inbox } from './inbox';
 import { ENVIRONMENT_TOKEN } from '@guiders-frontend/auth/data-access/session';
 import { Environment } from '@guiders-frontend/shared/types';
 import { ChatService } from '@guiders-frontend/chat-service';
+import { CommercialPresenceService } from '@guiders-frontend/commercial-presence';
 
 describe('Inbox', () => {
   let component: Inbox;
@@ -24,6 +25,16 @@ describe('Inbox', () => {
     },
   };
 
+  const mockCommercialPresence = {
+    isConnected$: of(true),
+    connectionStatus$: of('online'),
+    getCurrentStatus: () => ({
+      isConnected: true,
+      status: 'online' as const,
+      lastActivity: null,
+    }),
+  };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Inbox],
@@ -31,6 +42,7 @@ describe('Inbox', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ENVIRONMENT_TOKEN, useValue: mockEnvironment },
+        { provide: CommercialPresenceService, useValue: mockCommercialPresence },
       ],
     }).compileComponents();
 

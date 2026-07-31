@@ -229,6 +229,8 @@ Each feature has its own `AGENTS.md` with specific guidelines. Use these as your
 
 - **[Login Feature](libs/auth/features/login/AGENTS.md)** - OAuth 2.0 authentication, PKCE flow, session management
 
+**Commercial presence (Console):** Login leaves the agent **Desconectado**. Toggle Conectado/Desconectado lives in **Atención** (between title and queue menu) via `guiders-status-selector` (`CommercialPresenceService`). No auto-connect / auto-reconnect. Logout and `beforeunload` call `disconnect({ reason })`. Tenant availability for the web is `onlineCount ≥ 1` (SDK `commercialAvailability`).
+
 ### Chat Domain
 
 - **[Inbox Feature](libs/chat/features/inbox/AGENTS.md)** - Main messaging interface, conversation management, message handling

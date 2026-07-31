@@ -151,9 +151,9 @@ export class App {
   }
 
   onLogout(): void {
-    console.log('Cerrando sesion...');
-    this.userService.clearUser();
-    this.router.navigate(['/login']);
+    // Logout real via BFF (limpia cookies + SSO). No navegar a /login en SPA:
+    // eso dejaba las cookies intactas y la sesión seguía activa.
+    this.userService.logout();
   }
 
   onConfigureAccount(): void {

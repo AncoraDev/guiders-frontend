@@ -17,6 +17,9 @@ export class VisitorsActiveFilters {
   /** Filtros activos */
   filters = input.required<VisitorSearchFilters>();
 
+  /** Si false, oculta el botón (p. ej. cuando el padre lo coloca en la toolbar) */
+  showAdvancedButton = input(true);
+
   /** Emite cuando se elimina un filtro específico */
   removeFilter = output<string>();
 

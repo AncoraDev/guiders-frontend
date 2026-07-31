@@ -33,6 +33,7 @@ import { ChatWidgetTabs } from '@guiders-frontend/chat-widget-tabs';
 import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service';
 import { VisitorsDataService } from '@guiders-frontend/visitors-data-service';
 import { Avatar } from '@guiders-frontend/avatar';
+import { CommercialPresenceService } from '@guiders-frontend/commercial-presence';
 
 @Component({
   selector: 'guiders-chat-widget',
@@ -56,6 +57,7 @@ export class ChatWidgetComponent
   private readonly presenceService = inject(PresenceService);
   private readonly unreadMessagesService = inject(UnreadMessagesService);
   private readonly visitorsService = inject(VisitorsDataService);
+  private readonly commercialPresence = inject(CommercialPresenceService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
 
@@ -123,11 +125,6 @@ export class ChatWidgetComponent
   readonly visitorId = computed(() => {
     const visitor = this.currentVisitor();
     return visitor?.id || 'anonymous';
-  });
-
-  readonly visitorDisplayName = computed(() => {
-    const visitor = this.currentVisitor();
-    return visitor?.name;
   });
 
   readonly visitorEmail = computed(() => {
@@ -596,6 +593,11 @@ export class ChatWidgetComponent
    * Enviar mensaje
    */
   onSendMessage(content: string): void {
+    if (!this.commercialPresence.getCurrentStatus().isConnected) {
+      this.error.set('Conéctate para poder enviar mensajes');
+      return;
+    }
+
     const chatId = this.currentChatId();
     const visitor = this.currentVisitor();
 
@@ -917,12 +919,18 @@ export class ChatWidgetComponent
     const visitor = this.currentVisitor();
     if (!visitor) return 'Chat';
 
-    if (visitor.name && visitor.name.trim()) {
-      return visitor.name;
+    // El nombre debe venir enriquecido desde la feature (Visitors / Atención)
+    if (
+      visitor.name &&
+      visitor.name.trim() &&
+      visitor.name.trim().toLowerCase() !== 'visitante anónimo' &&
+      visitor.name.trim().toLowerCase() !== 'visitante'
+    ) {
+      return visitor.name.trim();
     }
 
     if (visitor.email && visitor.email.trim()) {
-      return visitor.email;
+      return visitor.email.trim();
     }
 
     return 'Visitante anónimo';

@@ -1,0 +1,312 @@
+<div class="conexiones-page" data-testid="conexiones-page">
+  <div class="conexiones-grid bento-grid bento-grid--4-cols bento-grid--comfortable">
+    <div class="bento-card bento-card--4x3 conexiones-panel" data-tour="conexiones-panel">
+      <div class="bento-card-header">
+        <h3 class="bento-card-title">Lista de Conexiones</h3>
+        <div class="header-actions" data-tour="conexiones-refresh-controls">
+          @if (lastRefreshTime()) {
+            <span class="last-refresh-indicator">
+              Actualizado {{ timeSinceLastRefresh() }}
+            </span>
+          }
+          <button
+            type="button"
+            class="refresh-button"
+            (click)="onRefresh()"
+            [disabled]="loading() || refreshing()"
+            [class.refresh-button--loading]="refreshing()"
+            title="Refrescar lista de conexiones"
+          >
+            <svg width="18" height="18" stroke-width="1.8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21.8883 13.5C21.1645 18.3113 17.013 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C16.1006 2 19.6248 4.46819 21.1679 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path d="M17 8H21.4C21.7314 8 22 7.73137 22 7.4V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="bento-card-content conexiones-panel__content">
+        <div class="conexiones-panel__filters" data-tour="conexiones-filters">
+          <div class="conexiones-panel__filters-toolbar">
+            <div class="quick-filters" data-tour="conexiones-quick-filters">
+              <div class="quick-filters__list">
+                @for (f of quickFilters; track f.id) {
+                  <button
+                    type="button"
+                    class="quick-filters__chip"
+                    [class.quick-filters__chip--active]="selectedQuickFilter() === f.id"
+                    (click)="onQuickFilterSelect(f.id)"
+                    [disabled]="loading()"
+                    [attr.aria-pressed]="selectedQuickFilter() === f.id"
+                  >
+                    <span class="quick-filters__label">{{ f.label }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="active-filters__advanced-btn"
+              data-tour="conexiones-advanced-btn"
+              (click)="toggleAdvanced()"
+              [attr.aria-expanded]="showAdvanced()"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              Filtros avanzados
+            </button>
+          </div>
+
+          @if (activeFilterChips().length > 0) {
+            <div class="active-filters active-filters--chips-only">
+              <div class="active-filters__chips">
+                @for (chip of activeFilterChips(); track chip.key) {
+                  <div class="active-filters__chip">
+                    <span class="active-filters__chip-label">{{ chip.label }}:</span>
+                    <span class="active-filters__chip-value">{{ chip.value }}</span>
+                    <button
+                      type="button"
+                      class="active-filters__chip-remove"
+                      (click)="onRemoveFilterChip(chip.key)"
+                      [attr.aria-label]="'Eliminar filtro ' + chip.label"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 3L3 9M3 3l6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                }
+                <button
+                  type="button"
+                  class="active-filters__clear-all"
+                  (click)="clearAdvancedFilters()"
+                >
+                  Limpiar todo
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (error()) {
+          <div class="error-content">
+            <span class="error-text">{{ error() }}</span>
+            <button type="button" class="retry-button" (click)="onRefresh()">Reintentar</button>
+          </div>
+        } @else {
+          <div class="conexiones-panel__list-container">
+            <div class="conexiones-list">
+              <div class="conexiones-list__table-container">
+                @if (loading() && sessions().length === 0) {
+                  <div class="conexiones-list__loading">
+                    <div class="loading-spinner"></div>
+                    <p>Cargando conexiones...</p>
+                  </div>
+                } @else if (sessions().length === 0) {
+                  <div class="conexiones-list__empty">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                      <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                      <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                      <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                      <circle cx="12" cy="20" r="1"/>
+                    </svg>
+                    <p>No hay conexiones</p>
+                  </div>
+                } @else {
+                  <table class="conexiones-table" data-testid="conexiones-table">
+                    <thead>
+                      <tr>
+                        @if (isAdminView()) {
+                          <th class="conexiones-table__header">
+                            <div class="header-content">Agente</div>
+                          </th>
+                        }
+                        <th class="conexiones-table__header">
+                          <div class="header-content">Estado</div>
+                        </th>
+                        <th class="conexiones-table__header">
+                          <div class="header-content">Conexión</div>
+                        </th>
+                        <th class="conexiones-table__header">
+                          <div class="header-content">Desconexión</div>
+                        </th>
+                        <th class="conexiones-table__header">
+                          <div class="header-content">Duración</div>
+                        </th>
+                        <th class="conexiones-table__header">
+                          <div class="header-content">Motivo</div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (session of sessions(); track session.id) {
+                        <tr class="conexiones-table__row">
+                          @if (isAdminView()) {
+                            <td class="conexiones-table__cell conexiones-table__cell--agent">
+                              <div class="agent-cell">
+                                <guiders-avatar
+                                  [userId]="session.commercialId"
+                                  [name]="agentLabel(session)"
+                                  size="small"
+                                />
+                                <div class="agent-cell__text">
+                                  <span class="agent-cell__name">{{ agentLabel(session) }}</span>
+                                  <span class="agent-cell__id">{{ session.commercialId }}</span>
+                                </div>
+                              </div>
+                            </td>
+                          }
+                          <td class="conexiones-table__cell">
+                            <span
+                              class="status-badge"
+                              [class.status-badge--online]="isOpen(session)"
+                              [class.status-badge--offline]="!isOpen(session)"
+                            >
+                              <span class="status-dot"></span>
+                              {{ isOpen(session) ? 'Activa' : 'Cerrada' }}
+                            </span>
+                          </td>
+                          <td class="conexiones-table__cell">{{ formatDateTime(session.startedAt) }}</td>
+                          <td class="conexiones-table__cell">{{ formatDateTime(session.endedAt) }}</td>
+                          <td class="conexiones-table__cell">{{ formatDuration(session.durationMs, session.endedAt) }}</td>
+                          <td class="conexiones-table__cell">
+                            @if (session.endReason) {
+                              <span class="tag tag--gray">{{ reasonLabel(session.endReason) }}</span>
+                            } @else {
+                              <span class="muted">—</span>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="conexiones-panel__pagination">
+            <guiders-pagination
+              [config]="paginationConfig()"
+              [disabled]="loading()"
+              (pageChange)="onPageChange($event)"
+              (pageSizeChange)="onPageSizeChange($event)"
+            />
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (showAdvanced()) {
+    <div
+      class="advanced-filters__backdrop"
+      (click)="onAdvancedBackdropClick($event)"
+      (keydown.escape)="closeAdvanced()"
+      tabindex="-1"
+      role="presentation"
+      data-testid="conexiones-advanced-filters"
+    >
+      <div
+        class="advanced-filters__panel"
+        role="dialog"
+        aria-labelledby="conexiones-advanced-filters-title"
+        (click)="$event.stopPropagation()"
+      >
+        <header class="advanced-filters__header">
+          <h2 id="conexiones-advanced-filters-title" class="advanced-filters__title">
+            Filtros avanzados
+          </h2>
+          <button
+            type="button"
+            class="advanced-filters__close"
+            (click)="closeAdvanced()"
+            aria-label="Cerrar"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15 5L5 15M5 5l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </header>
+
+        <div class="advanced-filters__content">
+          <section class="advanced-filters__section">
+            <h3 class="advanced-filters__section-title">Fecha de conexión</h3>
+            <div class="advanced-filters__date-range">
+              <div class="advanced-filters__field">
+                <label class="advanced-filters__label" for="conexiones-from">Desde</label>
+                <input
+                  id="conexiones-from"
+                  type="date"
+                  class="advanced-filters__input"
+                  [ngModel]="filterFrom()"
+                  (ngModelChange)="filterFrom.set($event)"
+                />
+              </div>
+              <div class="advanced-filters__field">
+                <label class="advanced-filters__label" for="conexiones-to">Hasta</label>
+                <input
+                  id="conexiones-to"
+                  type="date"
+                  class="advanced-filters__input"
+                  [ngModel]="filterTo()"
+                  (ngModelChange)="filterTo.set($event)"
+                />
+              </div>
+            </div>
+          </section>
+
+          <section class="advanced-filters__section">
+            <h3 class="advanced-filters__section-title">Motivo de desconexión</h3>
+            <select
+              class="advanced-filters__select"
+              [ngModel]="filterEndReason()"
+              (ngModelChange)="filterEndReason.set($event)"
+            >
+              <option value="">Cualquiera</option>
+              <option value="manual">Manual</option>
+              <option value="logout">Logout</option>
+              <option value="browser_close">Cierre navegador</option>
+              <option value="unknown">Desconocido</option>
+            </select>
+          </section>
+
+          @if (isAdminView()) {
+            <section class="advanced-filters__section">
+              <h3 class="advanced-filters__section-title">Agente</h3>
+              <select
+                class="advanced-filters__select"
+                [ngModel]="filterCommercialId()"
+                (ngModelChange)="filterCommercialId.set($event)"
+              >
+                <option value="">Todos</option>
+                @for (agent of agentOptions(); track agent.id) {
+                  <option [value]="agent.id">{{ agent.name }}</option>
+                }
+              </select>
+            </section>
+          }
+        </div>
+
+        <footer class="advanced-filters__footer">
+          <button
+            type="button"
+            class="advanced-filters__btn advanced-filters__btn--secondary"
+            (click)="clearAdvancedFilters()"
+          >
+            Limpiar
+          </button>
+          <button
+            type="button"
+            class="advanced-filters__btn advanced-filters__btn--primary"
+            (click)="applyAdvancedFilters()"
+          >
+            Aplicar
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+</div>

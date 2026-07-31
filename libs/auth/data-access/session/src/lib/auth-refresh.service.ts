@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, BehaviorSubject, EMPTY, throwError } from 'rxjs';
 import { switchMap, catchError, tap, take, shareReplay, filter } from 'rxjs/operators';
 import { ENVIRONMENT_TOKEN } from './environment.token';
+import { resolveAuthApp, resolveAuthReturnUrl } from './resolve-auth-app';
 
 /**
  * Servicio que maneja el refresh automático de la sesión del BFF
@@ -141,16 +142,7 @@ export class AuthRefreshService implements OnDestroy {
    * Determina la app actual basándose en la URL o configuración
    */
   private getCurrentApp(): string {
-    // Intentar determinar la app desde la URL
-    const pathname = window.location.pathname;
-    
-    // Si estamos en una ruta que incluye '/admin', es admin
-    if (pathname.includes('/admin') || window.location.hostname.includes('admin')) {
-      return 'admin';
-    }
-    
-    // Por defecto, asumir console
-    return 'console';
+    return resolveAuthApp(this.environment);
   }
 
   /**
@@ -158,7 +150,7 @@ export class AuthRefreshService implements OnDestroy {
    */
   private redirectToLogin(): void {
     const currentApp = this.getCurrentApp();
-    const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+    const returnUrl = encodeURIComponent(resolveAuthReturnUrl());
     const bffBase = this.environment.api.baseUrl.startsWith('/')
       ? window.location.origin + this.environment.api.baseUrl
       : this.environment.api.baseUrl;

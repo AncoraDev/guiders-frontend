@@ -56,7 +56,7 @@ function initializeSessionGuardian() {
     sessionGuardian.initialize({
       inactivityRefreshMinutes: 5,
       inactivityExpiredMinutes: 30,
-      heartbeatIntervalMs: 0,
+      heartbeatIntervalMinutes: 0,
       debug: !environment.production,
     });
   };

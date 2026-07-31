@@ -19,7 +19,6 @@ import {
 } from '@guiders-frontend/auth/data-access/session';
 import { SETTINGS_CLOSE_ROUTE } from '@guiders-frontend/auth/data-access/session';
 import { CommercialPresenceService } from '@guiders-frontend/commercial-presence';
-import { CommercialStatusService } from '@guiders-frontend/commercial-status';
 import { WebSocketService } from '@guiders-frontend/chat/data-access/websocket-service';
 import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service';
 import { ChatService } from '@guiders-frontend/chat-service';
@@ -34,7 +33,6 @@ import { firstValueFrom } from 'rxjs';
 function initializeApp() {
   const sessionService = inject(SessionService);
   const presenceService = inject(CommercialPresenceService);
-  const statusService = inject(CommercialStatusService);
   const webSocketService = inject(WebSocketService);
   const unreadMessagesService = inject(UnreadMessagesService);
   const chatService = inject(ChatService);
@@ -74,25 +72,22 @@ function initializeApp() {
           webSocketService.joinTenantPresenceRoom(user.companyId);
         }
 
-        console.log('[AppInitializer] 🔌 Conectando comercial...');
+        // Presencia manual: login queda Desconectado hasta que el comercial active el toggle.
+        // Limpiar residual Redis de sesiones anteriores y NO auto-connect / auto-reconnect.
+        console.log(
+          '[AppInitializer] ⚫ Presencia manual — asegurando offline al arrancar...'
+        );
         try {
-          const commercial = await firstValueFrom(presenceService.connect());
-          console.log(
-            '[AppInitializer] ✅ Comercial conectado:',
-            commercial.id
+          await firstValueFrom(presenceService.ensureOfflineOnBoot());
+        } catch (offlineErr: unknown) {
+          console.warn(
+            '[AppInitializer] ⚠️ No se pudo forzar offline al arrancar:',
+            offlineErr instanceof Error ? offlineErr.message : offlineErr
           );
+        }
 
-          // 3. Iniciar polling del estado del comercial
-          console.log('[AppInitializer] 📊 Iniciando polling de estado...');
-          statusService.startPolling(commercial.id);
-
-          // 4. Habilitar reconexión automática por actividad del usuario
-          console.log(
-            '[AppInitializer] 🔄 Habilitando reconexión automática...'
-          );
-          presenceService.enableAutoReconnectOnActivity();
-
-          // 5. Conectar WebSocket y unirse a salas de presencia
+        try {
+          // Conectar WebSocket (chats/unread); presencia online solo vía toggle
           console.log('[AppInitializer] 🌐 Conectando WebSocket...');
           webSocketService.connect();
 
@@ -258,7 +253,7 @@ function initializeApp() {
           const errorMessage =
             error instanceof Error ? error.message : 'Error desconocido';
           console.warn(
-            '[AppInitializer] ⚠️ Error al conectar comercial:',
+            '[AppInitializer] ⚠️ Error al inicializar WebSocket/chats:',
             errorMessage
           );
           // No lanzar error para permitir que la app continúe

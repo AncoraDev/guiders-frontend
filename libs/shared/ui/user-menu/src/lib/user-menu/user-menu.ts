@@ -10,7 +10,6 @@ import {
   inject,
 } from '@angular/core';
 import { getAvatarColor } from '@guiders-frontend/avatar-colors';
-import { UserService } from '@guiders-frontend/auth/data-access/session';
 import { CommercialStatusService } from '@guiders-frontend/commercial-status';
 import { ThemeService } from '@guiders-frontend/shared/data-access/theme';
 
@@ -22,7 +21,6 @@ import { ThemeService } from '@guiders-frontend/shared/data-access/theme';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserMenu {
-  private readonly userService = inject(UserService);
   private readonly themeService = inject(ThemeService);
   readonly statusService = inject(CommercialStatusService);
 
@@ -95,13 +93,8 @@ export class UserMenu {
 
   onLogout(): void {
     this.closeDropdown();
-
-    // Emitir evento antes de redirigir
+    // El padre (console/admin) ejecuta el logout BFF vía (userLogout)
     this.logout.emit();
-
-    // Redirigir al endpoint de logout del BFF
-    // El navegador seguirá automáticamente el redirect 302 al login
-    this.userService.logout('console');
   }
 
   onConfigureAccount(): void {

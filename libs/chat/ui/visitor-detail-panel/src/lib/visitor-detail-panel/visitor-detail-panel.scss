@@ -402,6 +402,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  &--mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: tokens.$font-size-xs;
+    color: var(--color-text-secondary);
+  }
 }
 
 // === EMPTY CONTACT STATE ===

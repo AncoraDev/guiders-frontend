@@ -38,6 +38,8 @@ export interface ConnectCommercialRequest {
  */
 export interface DisconnectCommercialRequest {
   id: string;
+  /** Motivo de cierre de sesión (persistencia en backend). */
+  reason?: 'manual' | 'logout' | 'browser_close' | 'unknown';
 }
 
 /**

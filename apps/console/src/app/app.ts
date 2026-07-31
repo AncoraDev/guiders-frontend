@@ -1,7 +1,9 @@
 import { Component, signal, inject, computed, effect } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { Sidebar, SidebarItem, SidebarConfig } from '@guiders-frontend/sidebar';
 import { UserService, ENVIRONMENT_TOKEN } from '@guiders-frontend/auth/data-access/session';
+import { CommercialPresenceService } from '@guiders-frontend/commercial-presence';
 import { ChatWidgetComponent } from '@guiders-frontend/chat/ui/chat-widget';
 import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service';
 import { EscalationService } from '@guiders-frontend/escalation-service';
@@ -16,6 +18,7 @@ import { TourId } from '@guiders-frontend/shared/util/tour';
 })
 export class App {
   private readonly userService = inject(UserService);
+  private readonly presenceService = inject(CommercialPresenceService);
   private readonly router = inject(Router);
   private readonly unreadMessagesService = inject(UnreadMessagesService);
   private readonly environment = inject(ENVIRONMENT_TOKEN);
@@ -87,6 +90,12 @@ export class App {
         },
       },
       {
+        id: 'conexiones',
+        label: 'Conexiones',
+        icon: 'wifi',
+        route: '/conexiones',
+      },
+      {
         id: 'escalations',
         label: 'Escalaciones',
         icon: 'alert-triangle',
@@ -119,9 +128,16 @@ export class App {
   }
 
   onLogout(): void {
-    console.log('Cerrando sesión...');
-    this.userService.clearUser();
-    this.router.navigate(['/login']);
+    // Desconectar presencia antes del redirect BFF (fire-and-forget con timeout).
+    const disconnect$ = firstValueFrom(
+      this.presenceService.disconnect({ reason: 'logout' })
+    );
+    const timeout = new Promise<void>((resolve) => setTimeout(resolve, 800));
+    void Promise.race([disconnect$.then(() => undefined), timeout]).finally(
+      () => {
+        this.userService.logout();
+      }
+    );
   }
 
   onConfigureAccount(): void {

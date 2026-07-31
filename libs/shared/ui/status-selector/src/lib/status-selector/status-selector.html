@@ -1,82 +1,30 @@
-<button
-  #triggerButton
-  class="status-selector__trigger"
-  data-tour="status-trigger"
-  (click)="toggleDropdown()"
-  [attr.aria-expanded]="isDropdownOpen()"
-  [disabled]="isUpdating()"
-  aria-haspopup="true"
-  aria-label="Cambiar estado de presencia"
-  type="button">
-  <span class="status-selector__current">
-    <span class="status-selector__icon">{{ currentOption().icon }}</span>
-    <span class="status-selector__label">{{ currentOption().label }}</span>
-  </span>
-  <span class="status-selector__arrow" [class.status-selector__arrow--open]="isDropdownOpen()">▼</span>
-</button>
+<div class="status-selector" data-testid="status-selector">
+  <button
+    type="button"
+    class="status-selector__toggle"
+    [class.status-selector__toggle--online]="isOnline()"
+    [class.status-selector__toggle--offline]="!isOnline()"
+    [disabled]="isUpdating()"
+    (click)="togglePresence()"
+    [attr.aria-pressed]="isOnline()"
+    [attr.aria-label]="
+      isOnline()
+        ? 'Desconectar: actualmente conectado'
+        : 'Conectar: actualmente desconectado'
+    "
+  >
+    <span
+      class="status-selector__dot"
+      [attr.data-status]="isOnline() ? 'online' : 'offline'"
+      aria-hidden="true"
+    ></span>
+    <span class="status-selector__label">{{ label() }}</span>
+    @if (isUpdating()) {
+      <span class="status-selector__busy">…</span>
+    }
+  </button>
 
-<!-- Dropdown flotante -->
-@if (isDropdownOpen() && dropdownPosition()) {
-  <div
-    class="status-selector__overlay"
-    (click)="closeDropdown()"
-    (keydown)="closeDropdown()"
-    (keyup.escape)="closeDropdown()"
-    tabindex="0"
-    aria-label="Cerrar selector de estado">
-    <div
-      class="status-selector__dropdown"
-      (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()"
-      [style.top.px]="dropdownPosition()!.top"
-      [style.left.px]="dropdownPosition()!.left"
-      role="menu"
-      tabindex="-1"
-      aria-orientation="vertical">
-
-      <!-- Título del dropdown -->
-      <div class="status-selector__dropdown-header">
-        Cambiar estado
-      </div>
-
-      <!-- Lista de opciones -->
-      <ul class="status-selector__options">
-        @for (option of statusOptions; track option.value) {
-          <li class="status-selector__option-item">
-            <button
-              class="status-selector__option"
-              [class]="getStatusColorClass(option.color)"
-              [class.status-selector__option--active]="option.value === currentStatus()"
-              (click)="selectStatus(option.value)"
-              [disabled]="isUpdating()"
-              role="menuitem"
-              type="button">
-              <span class="status-selector__option-icon">{{ option.icon }}</span>
-              <span class="status-selector__option-content">
-                <span class="status-selector__option-label">{{ option.label }}</span>
-                <span class="status-selector__option-description">{{ option.description }}</span>
-              </span>
-              @if (option.value === currentStatus()) {
-                <span class="status-selector__option-check">✓</span>
-              }
-            </button>
-          </li>
-        }
-      </ul>
-
-      <!-- Mensaje de error -->
-      @if (error()) {
-        <div class="status-selector__error">
-          {{ error() }}
-        </div>
-      }
-
-      <!-- Indicador de carga -->
-      @if (isUpdating()) {
-        <div class="status-selector__loading">
-          Actualizando estado...
-        </div>
-      }
-    </div>
-  </div>
-}
+  @if (error()) {
+    <p class="status-selector__error" role="alert">{{ error() }}</p>
+  }
+</div>

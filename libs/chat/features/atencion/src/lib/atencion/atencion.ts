@@ -27,7 +27,16 @@ import type { VisitorChatProfile } from '@guiders-frontend/chat/ui/chat-placehol
 import { GuidersChatWelcomeStateComponent } from '@guiders-frontend/chat/ui/chat-welcome-state';
 import { VisitorDetailPanel } from '@guiders-frontend/visitor-detail-panel';
 import { LeadContactService } from '@guiders-frontend/lead-contact-service';
-import { getVisitorDisplayName } from '@guiders-frontend/visitor-display-name';
+import {
+  getContactDisplayName,
+  getVisitorDisplayName,
+} from '@guiders-frontend/visitor-display-name';
+import {
+  ToastHostComponent,
+  ToastService,
+} from '@guiders-frontend/shared/ui/toast';
+import { StatusSelector } from '@guiders-frontend/status-selector';
+import { CommercialPresenceService } from '@guiders-frontend/commercial-presence';
 import {
   Chat,
   LeadContactData,
@@ -45,6 +54,9 @@ const WEB_FRESHNESS_MS = 2 * 60 * 1000;
 const MINE_ACTIVE_MS = 48 * 60 * 60 * 1000;
 /** Polling silencioso para colas (presencia/unread van por WebSocket). */
 const POLL_MS = 4000;
+/** Saludo por defecto al CTA "Saludar" (En la web). */
+const DEFAULT_GREETING = '¡Hola! ¿En qué puedo ayudarte?';
+const PREVIEW_MAX_CHARS = 80;
 
 export type AtencionCola = 'pendientes' | 'mios' | 'en-web';
 
@@ -53,6 +65,12 @@ export interface AtencionListItem {
   kind: 'pending' | 'mine' | 'web';
   title: string;
   subtitle: string;
+  /** Preview truncado del último mensaje (Pendientes / Míos). */
+  preview?: string;
+  /** Página / URL corta cuando está disponible. */
+  pageLabel?: string;
+  /** Lead = nombre + (email|tel) o lifecycle LEAD/CONVERTED. */
+  isLead?: boolean;
   chatId?: string;
   visitorId: string;
   unreadCount: number;
@@ -75,6 +93,8 @@ export interface AtencionListItem {
     GuidersChatPlaceholderComponent,
     GuidersChatWelcomeStateComponent,
     VisitorDetailPanel,
+    ToastHostComponent,
+    StatusSelector,
   ],
   templateUrl: './atencion.html',
   styleUrl: './atencion.scss',
@@ -89,7 +109,39 @@ export class Atencion implements OnInit, OnDestroy {
   private readonly presenceService = inject(PresenceService);
   private readonly visitorsService = inject(VisitorsDataService);
   private readonly leadContactService = inject(LeadContactService);
+  private readonly toastService = inject(ToastService);
+  private readonly commercialPresence = inject(CommercialPresenceService);
   private readonly route = inject(ActivatedRoute);
+
+  /** Chats PENDING ya notificados (WS + poll) para no duplicar toasts. */
+  private readonly notifiedPendingChatIds = new Set<string>();
+  /** Tras el primer refresh, el poll puede emitir toasts por deltas. */
+  private pendingToastBaselineReady = false;
+  private readonly onChatCreated = (data: unknown): void => {
+    const payload = data as {
+      chatId?: string;
+      visitorId?: string;
+      status?: string;
+      commercialId?: string;
+      visitorInfo?: { name?: string; email?: string };
+    };
+    if (!payload?.chatId) return;
+
+    const status = String(payload.status ?? '').toUpperCase();
+    const isPending =
+      status === 'PENDING' || (!payload.commercialId && status !== 'ASSIGNED');
+    if (!isPending) return;
+
+    const name =
+      payload.visitorInfo?.name ||
+      payload.visitorInfo?.email ||
+      'un visitante';
+
+    this.ngZone.run(() => {
+      this.notifyNewPendingChat(payload.chatId!, name);
+      this.refreshAll(true);
+    });
+  };
 
   readonly activeCola = signal<AtencionCola>('pendientes');
   readonly isLoading = signal(false);
@@ -222,16 +274,22 @@ export class Atencion implements OnInit, OnDestroy {
     }
 
     const contact = this.visitorContactData();
-    const contactName = [contact?.nombre, contact?.apellidos]
+    const contactName = getContactDisplayName(contact);
+    const personName = [contact?.nombre, contact?.apellidos]
+      .map((part) => part?.trim())
       .filter(Boolean)
       .join(' ')
       .trim();
 
-    const displayName = getVisitorDisplayName({
-      id: visitorId,
-      name: contactName || participant?.name,
-      email: contact?.email || participant?.email,
-    });
+    // contactName ya incluye "Alias (Nombre Apellidos)" cuando hay alias
+    const displayName =
+      contactName ||
+      getVisitorDisplayName({
+        id: visitorId,
+        alias: contact?.alias,
+        name: personName || participant?.name,
+        email: contact?.email || participant?.email,
+      });
 
     return {
       id: visitorId,
@@ -303,7 +361,8 @@ export class Atencion implements OnInit, OnDestroy {
                 item.chatId === chatId
                   ? {
                       ...item,
-                      subtitle: String(last.content).slice(0, 80),
+                      preview: this.truncatePreview(String(last.content)),
+                      subtitle: this.truncatePreview(String(last.content)),
                       updatedAtMs: Date.now(),
                     }
                   : item
@@ -322,6 +381,7 @@ export class Atencion implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.chatService.webSocketService.off('chat:created', this.onChatCreated);
     this.unreadMessagesService.setActiveChat(null);
     this.chatService.selectChat(null);
   }
@@ -369,6 +429,7 @@ export class Atencion implements OnInit, OnDestroy {
               this.visitorContactData()?.companyId ||
               this.companyId() ||
               'unknown',
+            alias: request.alias,
             nombre: request.nombre,
             apellidos: request.apellidos,
             email: request.email,
@@ -380,28 +441,21 @@ export class Atencion implements OnInit, OnDestroy {
             updatedAt: now,
           };
           this.visitorContactData.set(updated);
+          this.leadContactService.putCache(updated);
           this.applyContactDisplayName(visitorId, updated);
         },
         error: () => this.error.set('No se pudieron guardar los datos de contacto'),
       });
   }
 
-  /** Actualiza título del chat abierto y de las listas con nombre real del contacto. */
+  /** Actualiza título del chat abierto y de las listas (alias / nombre del contacto). */
   private applyContactDisplayName(
     visitorId: string,
     contact: LeadContactData | null
   ): void {
     if (!contact) return;
 
-    const personName = [contact.nombre, contact.apellidos]
-      .filter(Boolean)
-      .join(' ')
-      .trim();
-    const displayName =
-      personName ||
-      contact.email ||
-      contact.telefono ||
-      null;
+    const displayName = getContactDisplayName(contact);
     if (!displayName) return;
 
     const chat = this.selectedChat();
@@ -421,9 +475,16 @@ export class Atencion implements OnInit, OnDestroy {
       });
     }
 
+    const isLead = this.contactMeetsLeadCriteria(contact);
     const rename = (items: AtencionListItem[]): AtencionListItem[] =>
       items.map((item) =>
-        item.visitorId === visitorId ? { ...item, title: displayName } : item
+        item.visitorId === visitorId
+          ? {
+              ...item,
+              title: displayName,
+              isLead: item.isLead || isLead,
+            }
+          : item
       );
 
     this.pendingItems.update(rename);
@@ -517,20 +578,24 @@ export class Atencion implements OnInit, OnDestroy {
       )
       .subscribe({
         next: ({ pending, mine, web }) => {
+          this.notifyPendingDeltas(pending);
+
           this.pendingItems.set(pending);
           this.mineItems.set(mine);
           const mineVisitorIds = new Set(mine.map((m) => m.visitorId));
           const pendingVisitorIds = new Set(pending.map((p) => p.visitorId));
-          this.webItems.set(
-            web
-              .filter((v) =>
-                this.isEligibleForWebQueue(v, mineVisitorIds, pendingVisitorIds)
-              )
-              .map((v) => this.mapWebVisitor(v))
-          );
+          const webItems = web
+            .filter((v) =>
+              this.isEligibleForWebQueue(v, mineVisitorIds, pendingVisitorIds)
+            )
+            .map((v) => this.mapWebVisitor(v));
+          this.webItems.set(webItems);
 
           this.wireMineRealtime(mine);
           this.preserveSelection(pending, mine);
+          this.enrichRowsWithContacts(
+            [...pending, ...mine, ...webItems].map((i) => i.visitorId)
+          );
 
           const contact = this.visitorContactData();
           const visitorId = this.selectedChat()?.visitorId;
@@ -597,10 +662,23 @@ export class Atencion implements OnInit, OnDestroy {
     }
   }
 
+  /** CTA En la web: inicia chat con mensaje de saludo → Míos. */
+  onSaludar(event: Event, item: AtencionListItem): void {
+    event.stopPropagation();
+    event.preventDefault();
+    if (this.isClaiming() || item.kind !== 'web') return;
+    this.startChatWithVisitor(item, { withGreeting: true });
+  }
+
   onSendMessage(content: string): void {
     const chat = this.selectedChat();
     const userId = this.currentUserId();
     if (!chat || !userId || !content.trim()) return;
+
+    if (!this.commercialPresence.getCurrentStatus().isConnected) {
+      this.toastService.info('Conéctate para poder enviar mensajes');
+      return;
+    }
 
     this.chatService
       .sendMessage({
@@ -662,6 +740,9 @@ export class Atencion implements OnInit, OnDestroy {
           this.wireMineRealtime(this.mineItems());
         }
       });
+
+    // Nuevo chat PENDING en el tenant → toast + refresh Pendientes
+    this.chatService.webSocketService.on('chat:created', this.onChatCreated);
   }
 
   private wireMineRealtime(mine: AtencionListItem[]): void {
@@ -745,7 +826,10 @@ export class Atencion implements OnInit, OnDestroy {
       });
   }
 
-  private startChatWithVisitor(item: AtencionListItem): void {
+  private startChatWithVisitor(
+    item: AtencionListItem,
+    options?: { withGreeting?: boolean }
+  ): void {
     const userId = this.currentUserId();
     if (!userId) return;
 
@@ -763,7 +847,20 @@ export class Atencion implements OnInit, OnDestroy {
           phone?: string;
           visitorId?: string;
         },
-        metadata: { source: 'atencion-en-web', department: 'general' },
+        metadata: {
+          source: options?.withGreeting
+            ? 'atencion-saludar'
+            : 'atencion-en-web',
+          department: 'general',
+        },
+        ...(options?.withGreeting
+          ? {
+              firstMessage: {
+                content: DEFAULT_GREETING,
+                type: 'TEXT' as const,
+              },
+            }
+          : {}),
       })
       .pipe(
         switchMap((res) =>
@@ -784,7 +881,14 @@ export class Atencion implements OnInit, OnDestroy {
             id: `mine-${chatId}`,
             kind: 'mine',
             title: item.title,
-            subtitle: 'Conversación iniciada',
+            subtitle: options?.withGreeting
+              ? this.truncatePreview(DEFAULT_GREETING)
+              : 'Conversación iniciada',
+            preview: options?.withGreeting
+              ? this.truncatePreview(DEFAULT_GREETING)
+              : undefined,
+            pageLabel: item.pageLabel,
+            isLead: item.isLead,
             chatId,
             visitorId: item.visitorId,
             unreadCount: 0,
@@ -926,6 +1030,7 @@ export class Atencion implements OnInit, OnDestroy {
       .subscribe((contactData) => {
         if (this.selectedChat()?.visitorId !== visitorId) return;
         this.visitorContactData.set(contactData);
+        this.leadContactService.putCache(contactData);
         this.applyContactDisplayName(visitorId, contactData);
       });
   }
@@ -1055,20 +1160,30 @@ export class Atencion implements OnInit, OnDestroy {
       const row = raw as Record<string, unknown>;
       const chatId = String(row['id'] ?? row['chatId'] ?? '');
       const visitorInfo = (row['visitorInfo'] ?? {}) as Record<string, unknown>;
+      const metadata = (row['metadata'] ?? {}) as Record<string, unknown>;
       const visitorId = String(
         visitorInfo['id'] ?? row['visitorId'] ?? 'unknown'
       );
       const name =
         String(visitorInfo['name'] ?? visitorInfo['email'] ?? '') ||
         `Visitante ${visitorId.slice(0, 8)}`;
-      const preview = String(
+      const previewRaw = String(
         row['lastMessagePreview'] ?? row['lastMessageContent'] ?? ''
+      ).trim();
+      const preview =
+        this.truncatePreview(previewRaw) || 'Esperando atención';
+      const pageLabel = this.formatPageLabel(
+        String(metadata['initialUrl'] ?? metadata['currentUrl'] ?? '')
       );
+      const cached = this.leadContactService.peekCache(visitorId);
       return {
         id: `pending-${chatId}`,
         kind: 'pending' as const,
-        title: name,
-        subtitle: preview || 'Esperando atención',
+        title: getContactDisplayName(cached) || name,
+        subtitle: preview,
+        preview,
+        pageLabel,
+        isLead: this.contactMeetsLeadCriteria(cached),
         chatId,
         visitorId,
         unreadCount: Number(
@@ -1086,11 +1201,27 @@ export class Atencion implements OnInit, OnDestroy {
       : chat.createdAt
         ? new Date(chat.createdAt).getTime()
         : 0;
+    const previewRaw = chat.lastMessage?.content ?? '';
+    const preview = this.truncatePreview(previewRaw) || 'Sin mensajes';
+    const meta = (
+      chat as Chat & { metadata?: { initialUrl?: string; currentUrl?: string } }
+    ).metadata;
+    const pageLabel = this.formatPageLabel(
+      meta?.initialUrl ?? meta?.currentUrl
+    );
+    const cached = this.leadContactService.peekCache(chat.visitorId);
     return {
       id: `mine-${chat.chatId}`,
       kind: 'mine',
-      title: chat.name || chat.participants?.[0]?.name || 'Visitante',
-      subtitle: chat.lastMessage?.content?.slice(0, 80) || 'Sin mensajes',
+      title:
+        getContactDisplayName(cached) ||
+        chat.name ||
+        chat.participants?.[0]?.name ||
+        'Visitante',
+      subtitle: preview,
+      preview,
+      pageLabel,
+      isLead: this.contactMeetsLeadCriteria(cached),
       chatId: chat.chatId,
       visitorId: chat.visitorId,
       unreadCount: chat.unreadCount ?? 0,
@@ -1103,18 +1234,113 @@ export class Atencion implements OnInit, OnDestroy {
   private mapWebVisitor(v: VisitorSearchResult): AtencionListItem {
     const browser = this.guessBrowser(v.lastUserAgent);
     const shortId = v.id.slice(0, 8);
-    const title = v.name || v.email || `Visitante · ${browser} · ${shortId}`;
-    const page = v.currentUrl || v.domain || 'En el sitio';
+    const cached = this.leadContactService.peekCache(v.id);
+    const title =
+      getContactDisplayName(cached) ||
+      v.name ||
+      v.email ||
+      `Visitante · ${browser} · ${shortId}`;
+    const pageLabel = this.formatPageLabel(v.currentUrl) ?? v.domain;
+    const isLead =
+      this.contactMeetsLeadCriteria(cached) ||
+      this.isLeadLifecycle(v.lifecycle);
     return {
       id: `web-${v.id}`,
       kind: 'web',
       title,
-      subtitle: page,
+      subtitle: pageLabel || 'En el sitio',
+      pageLabel: pageLabel || undefined,
+      isLead,
       visitorId: v.id,
       unreadCount: 0,
       statusLabel: browser,
       rawVisitor: v,
     };
+  }
+
+  private notifyPendingDeltas(pending: AtencionListItem[]): void {
+    if (!this.pendingToastBaselineReady) {
+      pending.forEach((item) => {
+        if (item.chatId) this.notifiedPendingChatIds.add(item.chatId);
+      });
+      this.pendingToastBaselineReady = true;
+      return;
+    }
+
+    for (const item of pending) {
+      if (!item.chatId) continue;
+      if (this.notifiedPendingChatIds.has(item.chatId)) continue;
+      this.notifyNewPendingChat(item.chatId, item.title);
+    }
+  }
+
+  private notifyNewPendingChat(chatId: string, visitorName: string): void {
+    if (this.notifiedPendingChatIds.has(chatId)) return;
+    this.notifiedPendingChatIds.add(chatId);
+    this.toastService.info(`Nuevo mensaje de ${visitorName}`);
+  }
+
+  private enrichRowsWithContacts(visitorIds: string[]): void {
+    if (visitorIds.length === 0) return;
+
+    this.leadContactService
+      .ensureContacts(visitorIds)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          const patch = (items: AtencionListItem[]): AtencionListItem[] =>
+            items.map((item) => {
+              const contact = this.leadContactService.peekCache(item.visitorId);
+              const displayName = getContactDisplayName(contact);
+              const leadFromContact = this.contactMeetsLeadCriteria(contact);
+              const leadFromLifecycle = this.isLeadLifecycle(
+                item.rawVisitor?.lifecycle
+              );
+              return {
+                ...item,
+                title: displayName || item.title,
+                isLead: item.isLead || leadFromContact || leadFromLifecycle,
+              };
+            });
+
+          this.pendingItems.update(patch);
+          this.mineItems.update(patch);
+          this.webItems.update(patch);
+        },
+      });
+  }
+
+  private contactMeetsLeadCriteria(contact: LeadContactData | null): boolean {
+    if (!contact) return false;
+    const hasName = !!contact.nombre?.trim();
+    const hasContact =
+      !!contact.email?.trim() || !!contact.telefono?.trim();
+    return hasName && hasContact;
+  }
+
+  private isLeadLifecycle(lifecycle?: string | null): boolean {
+    const value = String(lifecycle ?? '').toUpperCase();
+    return value === 'LEAD' || value === 'CONVERTED';
+  }
+
+  private truncatePreview(text: string, max = PREVIEW_MAX_CHARS): string {
+    const normalized = text.trim().replace(/\s+/g, ' ');
+    if (!normalized) return '';
+    return normalized.length > max
+      ? `${normalized.slice(0, max - 1)}…`
+      : normalized;
+  }
+
+  private formatPageLabel(url?: string | null): string | undefined {
+    if (!url?.trim()) return undefined;
+    try {
+      const parsed = new URL(url, 'https://local.invalid');
+      const path = `${parsed.pathname}${parsed.search || ''}`;
+      const label = path === '/' ? parsed.hostname : path;
+      return label.length > 40 ? `${label.slice(0, 37)}…` : label;
+    } catch {
+      return url.length > 40 ? `${url.slice(0, 37)}…` : url;
+    }
   }
 
   private guessBrowser(ua?: string): string {

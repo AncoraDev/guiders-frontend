@@ -53,18 +53,34 @@ export class Avatar {
   });
 
   /**
-   * Get initial from name or email
+   * Get initial from name or email.
+   * Ignora nombres genéricos ("Visitante", etc.) para priorizar alias/nombre real.
    */
   readonly initial = computed(() => {
-    const name = this.name();
-    const email = this.email();
+    const name = this.name()?.trim();
+    const email = this.email()?.trim();
+    const genericNames = new Set([
+      'visitante',
+      'visitante anónimo',
+      'chat sin título',
+      'visitor',
+      'anonymous',
+    ]);
 
-    if (name && name.trim()) {
-      return name.trim().charAt(0).toUpperCase();
+    if (name) {
+      const lower = name.toLowerCase();
+      const isGeneric =
+        genericNames.has(lower) || lower.startsWith('visitante #');
+      if (!isGeneric) {
+        // "WEBER (Sergio)" → W; salta símbolos iniciales
+        const letter = name.match(/[A-Za-zÀ-ÿ0-9]/)?.[0];
+        if (letter) return letter.toUpperCase();
+      }
     }
 
-    if (email && email.trim()) {
-      return email.trim().charAt(0).toUpperCase();
+    if (email) {
+      const letter = email.match(/[A-Za-zÀ-ÿ0-9]/)?.[0];
+      if (letter) return letter.toUpperCase();
     }
 
     return 'V';

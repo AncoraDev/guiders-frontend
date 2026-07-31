@@ -12,6 +12,13 @@
   padding: tokens.$spacing-sm tokens.$spacing-md;
   background: var(--color-surface-primary);
 
+  &--locked {
+    .message-input__input-wrapper {
+      opacity: 0.72;
+      background: var(--color-surface-secondary, #f4f4f5);
+    }
+  }
+
   &__emoji-picker {
     display: flex;
     flex-wrap: wrap;

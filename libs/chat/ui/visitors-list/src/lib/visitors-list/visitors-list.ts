@@ -24,6 +24,7 @@ import {
   CreateChatWithVisitorRequest,
   VisitorSearchSort,
 } from '@guiders-frontend/shared/types';
+import { getVisitorDisplayName } from '@guiders-frontend/visitor-display-name';
 
 export interface VisitorListConfig {
   showSearch: boolean;
@@ -794,5 +795,45 @@ export class VisitorsListComponent implements OnDestroy {
    */
   isDemoVisitor(visitorId: string): boolean {
     return isDemoId(visitorId);
+  }
+
+  /** Nombre a mostrar: contacto enriquecido o fallback por id/email */
+  getDisplayName(visitor: Visitor): string {
+    return getVisitorDisplayName({
+      id: visitor.id,
+      name: visitor.name,
+      email: visitor.email,
+    });
+  }
+
+  /** Inicial del avatar a partir del nombre visible */
+  getInitial(visitor: Visitor): string {
+    const name = this.getDisplayName(visitor).trim();
+    const letter = name.match(/[A-Za-zÀ-ÿ0-9]/)?.[0];
+    return (letter || 'V').toUpperCase();
+  }
+
+  /** UUID completo truncado para la fila (tooltip lleva el completo) */
+  shortId(id: string): string {
+    if (!id) return '—';
+    return id.length > 12 ? `${id.slice(0, 8)}…` : id;
+  }
+
+  /** Título del meta: ID completo (+ email/fp) para comparar entre módulos */
+  visitorMetaTitle(visitor: Visitor): string {
+    const parts = [`ID: ${visitor.id}`];
+    if (visitor.email) parts.push(visitor.email);
+    if (visitor.fingerprint) parts.push(`FP: ${visitor.fingerprint}`);
+    return parts.join(' · ');
+  }
+
+  /** Tono estable del avatar según id */
+  avatarTone(id: string): number {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash << 5) - hash + id.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash) % 6;
   }
 }

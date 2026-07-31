@@ -1,7 +1,7 @@
 import { Injectable, inject, DestroyRef } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
-import { Observable, BehaviorSubject, throwError, EMPTY } from 'rxjs';
-import { catchError, map, tap, retry } from 'rxjs/operators';
+import { Observable, BehaviorSubject, throwError, EMPTY, of } from 'rxjs';
+import { catchError, map, tap, timeout } from 'rxjs/operators';
 import { ENVIRONMENT_TOKEN, UserService } from '@guiders-frontend/auth/data-access/session';
 import { WebSocketService } from '@guiders-frontend/chat/data-access/websocket-service';
 import {
@@ -46,9 +46,6 @@ export class CommercialPresenceService {
   readonly lastActivity$ = this.lastActivitySubject.asObservable();
   readonly error$ = this.errorSubject.asObservable();
 
-  // Configuración de reintentos
-  private readonly MAX_RETRY_ATTEMPTS = 3;
-
   // Información del comercial
   private commercialId: string | null = null;
   private commercialName: string | null = null;
@@ -67,6 +64,9 @@ export class CommercialPresenceService {
   private lastActivityEmissionTime = 0;
   private readonly ACTIVITY_THROTTLE_MS = 30000; // 30 segundos de throttle
   private activityListenersEnabled = false;
+
+  /** Chats abandonados al pasar a offline — se re-unen al conectar */
+  private leftChatIdsOnDisconnect: string[] = [];
 
   constructor() {
     // Manejar cierre de pestaña/navegador
@@ -100,11 +100,7 @@ export class CommercialPresenceService {
     this.commercialId = userId;
     this.commercialName = userName;
 
-    if (this.isConnectedSubject.value) {
-      console.warn('[CommercialPresenceService] ⚠️ Comercial ya está conectado');
-      return this.getStatus(userId);
-    }
-
+    // Siempre POST /connect (no early-return): cada toggle debe refrescar Redis + eventos
     const request: ConnectCommercialRequest = {
       id: userId,
       name: userName,
@@ -125,12 +121,16 @@ export class CommercialPresenceService {
     });
     console.groupEnd();
 
+    // Optimista: UI online al instante; el HTTP confirma
+    this.isConnectedSubject.next(true);
+    this.connectionStatusSubject.next('online');
+
     return this.http.post<ApiResponse<CommercialInfo>>(
       endpoint,
       request,
       this.getHttpOptions()
     ).pipe(
-      retry(this.MAX_RETRY_ATTEMPTS),
+      timeout(10000),
       tap(() => {
         console.log('[CommercialPresenceService] 🔄 Petición enviada, esperando respuesta...');
       }),
@@ -148,17 +148,37 @@ export class CommercialPresenceService {
         this.connectionStartTime = new Date();
         this.reconnectAttempts = 0;
         this.isConnectedSubject.next(true);
-        this.connectionStatusSubject.next(commercial.connectionStatus);
+        // API a veces devuelve CONNECTED; normalizar a ConnectionStatus
+        const status = this.normalizeStatus(commercial.connectionStatus);
+        this.connectionStatusSubject.next(status === 'offline' ? 'online' : status);
         this.lastActivitySubject.next(new Date(commercial.lastActivity));
         this.errorSubject.next(null);
 
-        // Habilitar listeners de actividad para emitir user:activity vía WebSocket
+        // Actividad WS (typing/heartbeat) — sin auto-reconnect de presencia
         this.enableActivityListeners();
+
+        // Recuperar salas de chat abandonadas al desconectar
+        if (this.leftChatIdsOnDisconnect.length > 0) {
+          try {
+            this.webSocketService.joinMultipleRooms(this.leftChatIdsOnDisconnect);
+            console.log(
+              '[CommercialPresenceService] 🔄 Re-unido a',
+              this.leftChatIdsOnDisconnect.length,
+              'chats',
+            );
+          } catch (err) {
+            console.warn(
+              '[CommercialPresenceService] No se pudieron re-unir salas de chat:',
+              err,
+            );
+          }
+          this.leftChatIdsOnDisconnect = [];
+        }
 
         console.group(`[CommercialPresenceService] ✅ CONECTADO EXITOSAMENTE`);
         console.log('🆔 Commercial ID:', commercial.id);
         console.log('👤 Nombre:', commercial.name);
-        console.log('🟢 Estado:', commercial.connectionStatus);
+        console.log('🟢 Estado:', status);
         console.log('⏰ Última actividad:', commercial.lastActivity);
         console.log('📊 Está activo:', commercial.isActive);
         console.log('🕐 Hora de conexión:', this.connectionStartTime.toISOString());
@@ -174,21 +194,68 @@ export class CommercialPresenceService {
   }
 
   /**
-   * Desconectar comercial del sistema
+   * Al arrancar Console: fuerza offline en backend (limpia residual Redis)
+   * y deja el estado local en desconectado. No requiere haber hecho connect() antes.
    */
-  disconnect(): Observable<void> {
-    if (!this.isConnectedSubject.value || !this.commercialId) {
-      console.warn('[CommercialPresenceService] ⚠️ Comercial no está conectado');
+  ensureOfflineOnBoot(): Observable<void> {
+    const userId = this.userService.getUserId();
+    if (!userId) {
+      this.isConnectedSubject.next(false);
+      this.connectionStatusSubject.next('offline');
       return EMPTY;
     }
+
+    this.commercialId = userId;
+    this.disableAutoReconnectOnActivity();
+
+    const request: DisconnectCommercialRequest = { id: userId };
+    return this.http
+      .post<ApiResponse>(`${this.baseUrl}/disconnect`, request, this.getHttpOptions())
+      .pipe(
+        map(() => void 0),
+        tap(() => {
+          this.isConnectedSubject.next(false);
+          this.connectionStatusSubject.next('offline');
+          this.connectionStartTime = null;
+          console.log(
+            '[CommercialPresenceService] ⚫ Offline al arrancar (presencia manual)'
+          );
+        }),
+        catchError(() => {
+          this.isConnectedSubject.next(false);
+          this.connectionStatusSubject.next('offline');
+          return EMPTY;
+        })
+      );
+  }
+
+  /**
+   * Desconectar comercial del sistema.
+   * Actualiza el estado local de inmediato (optimista) para que la UI no se quede colgada
+   * esperando Redis/Mongo/WS; el HTTP sincroniza el backend en segundo plano.
+   */
+  disconnect(options?: { reason?: 'manual' | 'logout' | 'browser_close' }): Observable<void> {
+    const id = this.commercialId || this.userService.getUserId();
+    if (!id) {
+      console.warn('[CommercialPresenceService] ⚠️ Sin commercialId para desconectar');
+      this.applyOfflineLocally();
+      return of(void 0);
+    }
+
+    this.commercialId = id;
+    this.disableAutoReconnectOnActivity();
 
     const timestamp = new Date().toISOString();
     const sessionDuration = this.connectionStartTime
       ? Math.round((new Date().getTime() - this.connectionStartTime.getTime()) / 1000)
       : 0;
 
+    // UI inmediata: no esperar al round-trip del backend
+    this.applyOfflineLocally();
+
     const request: DisconnectCommercialRequest = {
-      id: this.commercialId
+      id,
+      ...(options?.reason ? { reason: options.reason } : {}),
     };
 
     const endpoint = `${this.baseUrl}/disconnect`;
@@ -208,45 +275,56 @@ export class CommercialPresenceService {
       request,
       this.getHttpOptions()
     ).pipe(
+      timeout(10000),
       map(response => {
         console.group(`[CommercialPresenceService] 📥 DISCONNECT Response`);
         console.log('Response:', response);
         console.groupEnd();
 
-        if (!response.success) {
-          console.warn('[CommercialPresenceService] ⚠️ Error al desconectar, pero continuando...');
+        if (!response?.success) {
+          console.warn('[CommercialPresenceService] ⚠️ Error al desconectar, pero UI ya está offline');
         }
+        return void 0;
       }),
       tap(() => {
-        // Deshabilitar listeners de actividad
-        this.disableActivityListeners();
-
-        this.isConnectedSubject.next(false);
-        this.connectionStatusSubject.next('offline');
-        this.lastActivitySubject.next(null);
-
         console.group('[CommercialPresenceService] ✅ DESCONECTADO EXITOSAMENTE');
         console.log('🆔 Commercial ID:', this.commercialId);
         console.log('⏱️ Duración de sesión:', `${sessionDuration}s (${Math.round(sessionDuration / 60)}min)`);
         console.log('🔄 Intentos de reconexión:', this.reconnectAttempts);
         console.groupEnd();
 
-        // Resetear métricas
         this.reconnectAttempts = 0;
         this.connectionStartTime = null;
       }),
       catchError(error => {
-        console.group('[CommercialPresenceService] ❌ DISCONNECT ERROR');
+        console.group('[CommercialPresenceService] ❌ DISCONNECT ERROR / TIMEOUT');
         console.error('Error:', error);
-        console.log('ℹ️ Marcando como desconectado localmente...');
+        console.log('ℹ️ UI ya marcada offline; no bloqueamos el toggle');
         console.groupEnd();
-
-        // No lanzar error porque de todas formas estamos desconectando
-        this.isConnectedSubject.next(false);
-        this.connectionStatusSubject.next('offline');
-        return EMPTY;
+        return of(void 0);
       })
     );
+  }
+
+  /** Estado local offline + cleanup de listeners (sin HTTP). */
+  private applyOfflineLocally(): void {
+    this.disableActivityListeners();
+    this.isConnectedSubject.next(false);
+    this.connectionStatusSubject.next('offline');
+    this.lastActivitySubject.next(null);
+    // Dejar de recibir/emitir en salas de chat mientras está Desconectado
+    try {
+      const active = this.webSocketService.getActiveChats();
+      if (active.length > 0) {
+        this.leftChatIdsOnDisconnect = active;
+        this.webSocketService.leaveAllChatRooms();
+      }
+    } catch (err) {
+      console.warn(
+        '[CommercialPresenceService] No se pudieron abandonar salas de chat:',
+        err,
+      );
+    }
   }
 
   /**
@@ -559,14 +637,16 @@ export class CommercialPresenceService {
    * Manejar cierre de pestaña/navegador
    */
   private handleBeforeUnload(): void {
-    if (this.isConnectedSubject.value && this.commercialId) {
+    const id = this.commercialId || this.userService.getUserId();
+    if (this.isConnectedSubject.value && id) {
       const sessionDuration = this.connectionStartTime
         ? Math.round((new Date().getTime() - this.connectionStartTime.getTime()) / 1000)
         : 0;
 
       // Usar sendBeacon para garantizar que se envíe incluso al cerrar
       const request: DisconnectCommercialRequest = {
-        id: this.commercialId
+        id,
+        reason: 'browser_close',
       };
 
       const blob = new Blob([JSON.stringify(request)], { type: 'application/json' });
@@ -648,6 +728,15 @@ export class CommercialPresenceService {
 
     console.log('[CommercialPresenceService] 📡 user:activity emitido vía WebSocket');
   };
+
+  private normalizeStatus(raw: string | ConnectionStatus | undefined): ConnectionStatus {
+    const value = String(raw ?? 'offline').toLowerCase();
+    if (value === 'connected' || value === 'online') return 'online';
+    if (value === 'away' || value === 'busy' || value === 'chatting') {
+      return value;
+    }
+    return 'offline';
+  }
 
   /**
    * Limpiar recursos

@@ -38,7 +38,7 @@
           <!-- Avatar con componente unificado -->
           <guiders-avatar
             [userId]="visitorId()"
-            [name]="visitorDisplayName()"
+            [name]="getChatDisplayName()"
             [email]="visitorEmail()"
             [presenceStatus]="visitorPresenceStatus()"
             size="medium"
@@ -47,6 +47,9 @@
           <!-- Información del visitante -->
           <div class="chat-widget__info">
             <h3 class="chat-widget__name">{{ getChatDisplayName() }}</h3>
+            @if (visitorId(); as id) {
+              <span class="chat-widget__visitor-id" [title]="id">ID: {{ id }}</span>
+            }
             <span class="chat-widget__status-text" [attr.data-status]="getChatStatusInfo().color">
               {{ getChatStatusInfo().label }}
             </span>

@@ -175,9 +175,17 @@
                 <!-- Visitante -->
                 <td class="visitors-table__cell visitors-table__cell--visitor">
                   <div class="visitor-profile">
+                    <span
+                      class="visitor-avatar"
+                      [attr.aria-hidden]="true"
+                      [attr.data-tone]="avatarTone(visitor.id)">
+                      {{ getInitial(visitor) }}
+                    </span>
                     <div class="visitor-details">
                       <div class="visitor-name">
-                        <span class="name-text">{{ visitor.name || 'Visitante anónimo' }}</span>
+                        <span class="name-text" [title]="getDisplayName(visitor)">
+                          {{ getDisplayName(visitor) }}
+                        </span>
                         @if (isDemoVisitor(visitor.id)) {
                           <guiders-badge
                             data-testid="visitor-demo-badge"
@@ -190,28 +198,18 @@
                           <guiders-badge text="Tú" variant="primary" size="small" />
                         }
                         @if (visitor.isInternal) {
-                          <span class="internal-badge">Interno</span>
+                          <span class="visitor-chip">Interno</span>
                         }
                         @if (visitor.isNewVisitor) {
-                          <span class="new-badge">Nuevo</span>
+                          <span class="visitor-chip visitor-chip--new">Nuevo</span>
                         }
                       </div>
-                      <div class="visitor-metadata">
-                        <div class="visitor-identifier">
-                          @if (visitor.email) {
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                              <polyline points="22,6 12,13 2,6"/>
-                            </svg>
-                            {{ visitor.email }}
-                          } @else {
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                              <path d="M9 12l2 2 4-4"/>
-                              <circle cx="12" cy="12" r="9"/>
-                            </svg>
-                            ID: {{ visitor.fingerprint || visitor.id.slice(0, 8) }}
-                          }
-                        </div>
+                      <div class="visitor-meta" [title]="visitorMetaTitle(visitor)">
+                        <span class="visitor-meta__id">{{ shortId(visitor.id) }}</span>
+                        @if (visitor.email) {
+                          <span class="visitor-meta__sep" aria-hidden="true">·</span>
+                          <span class="visitor-meta__email">{{ visitor.email }}</span>
+                        }
                       </div>
                     </div>
                   </div>

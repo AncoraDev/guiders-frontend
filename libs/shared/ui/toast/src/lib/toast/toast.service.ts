@@ -32,6 +32,10 @@ export class ToastService {
     this.show(text, 'error', durationMs);
   }
 
+  info(text: string, durationMs = 4000): void {
+    this.show(text, 'info', durationMs);
+  }
+
   dismiss(id: number): void {
     this._toasts.update(list => list.filter(t => t.id !== id));
   }

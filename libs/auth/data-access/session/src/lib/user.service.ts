@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap, catchError } from 'rxjs';
 import { User } from './user.interface';
 import { ENVIRONMENT_TOKEN } from './environment.token';
+import { resolveAuthApp } from './resolve-auth-app';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
@@ -31,7 +32,8 @@ export class UserService {
    * Obtiene el usuario actual desde el BFF y lo almacena en el signal
    */
   fetchUser(): Observable<User> {
-    return this.http.get<User>(`${this.environment.api.baseUrl}/bff/auth/me`, {
+    const app = resolveAuthApp(this.environment);
+    return this.http.get<User>(`${this.environment.api.baseUrl}/bff/auth/me/${app}`, {
       withCredentials: true
     }).pipe(
       tap(user => {
@@ -104,8 +106,9 @@ export class UserService {
    * El navegador seguirá automáticamente el redirect 302 al login.
    * @param app - Nombre de la aplicación ('console' o 'admin')
    */
-  logout(app: 'console' | 'admin' = 'console'): void {
-    const logoutUrl = `${this.environment.api.baseUrl}/bff/auth/logout/${app}`;
+  logout(app?: 'console' | 'admin'): void {
+    const targetApp = app ?? resolveAuthApp(this.environment);
+    const logoutUrl = `${this.environment.api.baseUrl}/bff/auth/logout/${targetApp}`;
     
     console.log('[UserService] Redirigiendo a logout:', logoutUrl);
     

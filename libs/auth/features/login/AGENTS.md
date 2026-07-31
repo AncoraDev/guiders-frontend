@@ -120,10 +120,15 @@ describe('LoginComponent', () => {
 - Verify SessionService initialization on app bootstrap
 - Check network tab for failed authentication requests
 
+## Commercial presence (after login)
+
+Console boot does **not** call `presenceService.connect()`. Agents stay offline until they use the Atención toggle (`guiders-status-selector` → `CommercialPresenceService.connect()` / `disconnect()`). See root `AGENTS.md` Auth notes.
+
 ## Related Features
 
 - **Admin Dashboard** (`libs/admin/features/dashboard`) - Admin authentication
 - **Session Management** (`libs/auth/data-access/session`) - Global session service
+- **Commercial Presence** (`libs/auth/data-access/commercial-presence`) - Manual online/offline
 
 ## See Also
 
