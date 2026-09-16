@@ -1,9 +1,10 @@
 import { inject } from '@angular/core';
 import { CanActivateFn } from '@angular/router';
-import { catchError, map, of, from, switchMap } from 'rxjs';
+import { catchError, from, map, of, switchMap, tap } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   SessionService,
+  UserService,
   ENVIRONMENT_TOKEN,
   redirectToBffLogin,
 } from '@guiders-frontend/auth/data-access/session';
@@ -15,6 +16,7 @@ import { RedirectConfirmService } from './redirect-confirm.service';
  */
 export const adminGuard: CanActivateFn = () => {
   const sessionService = inject(SessionService);
+  const userService = inject(UserService);
   const environment = inject(ENVIRONMENT_TOKEN);
   const redirectConfirmService = inject(RedirectConfirmService);
 
@@ -28,13 +30,13 @@ export const adminGuard: CanActivateFn = () => {
         return of(true);
       }
 
+      // Ya hay un diálogo abierto: no reabrir (el ** → clients lo re-disparaba).
+      if (redirectConfirmService.isOpen()) {
+        return of(false);
+      }
+
       // Admin / commercial / supervisor del cliente → Console
-      if (
-        environment.consoleUrl &&
-        user.roles?.some((r) =>
-          ['admin', 'commercial', 'supervisor'].includes(r),
-        )
-      ) {
+      if (environment.consoleUrl) {
         return from(
           redirectConfirmService.show({
             title: 'Acceso restringido',
@@ -44,9 +46,17 @@ export const adminGuard: CanActivateFn = () => {
             cancelText: 'Cerrar sesión',
             redirectUrl: environment.consoleUrl,
           }),
-        ).pipe(map(() => false));
+        ).pipe(
+          tap((confirmed) => {
+            if (!confirmed) {
+              userService.logout('admin');
+            }
+          }),
+          map(() => false),
+        );
       }
 
+      userService.logout('admin');
       return of(false);
     }),
     catchError((error: unknown) => {

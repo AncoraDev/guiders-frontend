@@ -30,4 +30,12 @@ export interface UserProfile {
   avatarUrl?: string;
   /** Saludo al pulsar Saludar. Null = texto por defecto. */
   greetingMessage?: string | null;
+  /** Frases rápidas del comercial (menú /). */
+  cannedReplies?: CannedReply[];
+}
+
+export interface CannedReply {
+  id: string;
+  title: string;
+  body: string;
 }

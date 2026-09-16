@@ -1,14 +1,20 @@
 @use '../../../../../../shared/design-tokens/src/lib/tokens-vars' as tokens;
 
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .settings-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
 
@@ -17,6 +23,7 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
     max-width: 1200px;
     width: 100%;
     margin: 0 auto;
@@ -62,10 +69,11 @@
   &__body {
     display: grid;
     grid-template-columns: 240px 1fr;
+    grid-template-rows: minmax(0, 1fr);
     gap: tokens.$spacing-2xl;
     flex: 1;
     min-height: 0;
-    padding-bottom: tokens.$spacing-xl;
+    overflow: hidden;
   }
 }
 
@@ -130,6 +138,10 @@
   max-width: 720px;
   width: 100%;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: tokens.$spacing-3xl;
+  padding-right: tokens.$spacing-sm;
 }
 
 @media (max-width: 900px) {

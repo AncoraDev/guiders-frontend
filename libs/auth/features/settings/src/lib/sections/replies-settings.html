@@ -1,0 +1,58 @@
+<lib-settings-section-header
+  title="Frases rápidas"
+  description="Saludo al visitar y textos que pegas con / en Atención.">
+</lib-settings-section-header>
+
+<lib-settings-row
+  [stacked]="true"
+  label="Mensaje de saludo"
+  description="Se envía al visitante cuando pulsas Saludar. Si lo dejas vacío, usamos el texto por defecto.">
+  <div class="replies-block">
+    <textarea
+      class="replies-block__textarea"
+      rows="3"
+      [attr.maxlength]="greetingMax"
+      [placeholder]="greetingPlaceholder"
+      [ngModel]="greetingDraft()"
+      (ngModelChange)="onGreetingInput($event)"
+      [disabled]="isSavingGreeting()"
+    ></textarea>
+    <div class="replies-block__footer">
+      <span class="replies-block__count">{{ greetingCount() }}/{{ greetingMax }}</span>
+      <button
+        type="button"
+        class="replies-block__save"
+        [disabled]="isSavingGreeting() || !greetingDirty()"
+        (click)="saveGreeting()">
+        {{ isSavingGreeting() ? 'Guardando...' : 'Guardar saludo' }}
+      </button>
+    </div>
+  </div>
+</lib-settings-row>
+
+<lib-settings-row
+  [stacked]="true"
+  label="Mis frases"
+  description="Solo las ves tú en el menú /. El título es lo que aparece; el texto se pega en el mensaje.">
+  <lib-canned-replies-editor
+    [(items)]="personalDraft"
+    [maxItems]="personalMax"
+    [saving]="isSavingPersonal()"
+    (commit)="savePersonal($event)"
+  />
+</lib-settings-row>
+
+<lib-settings-row
+  [stacked]="true"
+  label="Frases del equipo"
+  [description]="isAdmin()
+    ? 'Las ven todos los comerciales. Solo un administrador puede editarlas.'
+    : 'Las ves en el menú /. Solo un administrador puede editarlas.'">
+  <lib-canned-replies-editor
+    [(items)]="teamDraft"
+    [maxItems]="teamMax"
+    [readonly]="!isAdmin()"
+    [saving]="isSavingTeam()"
+    (commit)="saveTeam($event)"
+  />
+</lib-settings-row>

@@ -91,32 +91,53 @@
 
     @if (showSlashPicker()) {
       <div
-        class="message-input__mention-picker"
+        class="message-input__mention-picker message-input__mention-picker--slash"
+        [class.message-input__mention-picker--phrases]="slashView() === 'phrases'"
         role="listbox"
-        aria-label="Acciones"
+        [attr.aria-label]="slashView() === 'phrases' ? 'Frases rápidas' : 'Acciones'"
       >
-        @if (filteredSlashCommands().length === 0) {
-          <p class="message-input__mention-empty">
-            Sin acciones para “{{ slashQuery() }}”
-          </p>
-        } @else {
-          @for (command of filteredSlashCommands(); track command.id; let i = $index) {
-            <button
-              type="button"
-              class="message-input__mention-option"
-              [class.message-input__mention-option--active]="i === slashHighlightIndex()"
-              role="option"
-              [attr.aria-selected]="i === slashHighlightIndex()"
-              (pointerdown)="onSlashPointerDown($event, command)"
-            >
-              <span class="message-input__slash-icon" aria-hidden="true">/</span>
-              <span class="message-input__mention-meta">
-                <span class="message-input__mention-name">{{ command.label }}</span>
-                <span class="message-input__slash-hint">{{ command.hint }}</span>
-              </span>
-            </button>
-          }
+        @if (slashView() === 'phrases') {
+          <button
+            type="button"
+            class="message-input__slash-back"
+            (pointerdown)="onSlashBackPointerDown($event)"
+          >
+            <span class="message-input__slash-icon" aria-hidden="true">←</span>
+            <span class="message-input__mention-meta">
+              <span class="message-input__mention-name">Volver</span>
+              <span class="message-input__slash-hint">Acciones</span>
+            </span>
+          </button>
         }
+        <div class="message-input__slash-list">
+          @if (filteredSlashCommands().length === 0) {
+            <p class="message-input__mention-empty">
+              {{ slashView() === 'phrases'
+                ? 'Sin frases para “' + slashQuery() + '”'
+                : 'Sin acciones para “' + slashQuery() + '”' }}
+            </p>
+          } @else {
+            @for (command of filteredSlashCommands(); track command.id; let i = $index) {
+              @if (slashGroupLabel(i); as groupLabel) {
+                <p class="message-input__slash-group">{{ groupLabel }}</p>
+              }
+              <button
+                type="button"
+                class="message-input__mention-option"
+                [class.message-input__mention-option--active]="i === slashHighlightIndex()"
+                role="option"
+                [attr.aria-selected]="i === slashHighlightIndex()"
+                (pointerdown)="onSlashPointerDown($event, command)"
+              >
+                <span class="message-input__slash-icon" aria-hidden="true">{{ slashItemIcon(command) }}</span>
+                <span class="message-input__mention-meta">
+                  <span class="message-input__mention-name">{{ command.label }}</span>
+                  <span class="message-input__slash-hint">{{ command.hint }}</span>
+                </span>
+              </button>
+            }
+          }
+        </div>
       </div>
     }
 

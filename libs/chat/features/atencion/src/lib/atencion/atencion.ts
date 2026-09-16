@@ -23,6 +23,7 @@ import {
 } from 'rxjs/operators';
 import { ChatService } from '@guiders-frontend/chat-service';
 import { SessionService } from '@guiders-frontend/auth/data-access/session';
+import type { CannedReply } from '@guiders-frontend/auth/data-access/session';
 import { ProfileService } from '@guiders-frontend/profile-service';
 import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service';
 import { PresenceService } from '@guiders-frontend/presence-service';
@@ -197,6 +198,8 @@ export class Atencion implements OnInit, OnDestroy {
   readonly isPresenceConnected = signal(false);
   /** Saludo del perfil; vacío = DEFAULT_GREETING. */
   private readonly greetingMessage = signal<string | null>(null);
+  private readonly mineCannedReplies = signal<CannedReply[]>([]);
+  private readonly teamCannedReplies = signal<CannedReply[]>([]);
   readonly isLoading = signal(false);
   readonly isClaiming = signal(false);
   /** Solo estado de carga/sesión: el poll lo limpia cada 4s. Los errores de
@@ -424,6 +427,40 @@ export class Atencion implements OnInit, OnDestroy {
     return !hasOpenRequest;
   });
 
+  readonly slashCommands = computed<SlashCommand[]>(() => {
+    const commands: SlashCommand[] = [];
+    if (this.canRequestContactData()) {
+      commands.push({
+        id: 'request-contact',
+        label: 'Solicitar datos',
+        hint: 'Pide nombre, email y teléfono',
+        kind: 'action',
+        group: 'action',
+      });
+    }
+    for (const item of this.teamCannedReplies()) {
+      commands.push({
+        id: `team:${item.id}`,
+        label: item.title,
+        hint: item.body,
+        kind: 'snippet',
+        group: 'team',
+        body: item.body,
+      });
+    }
+    for (const item of this.mineCannedReplies()) {
+      commands.push({
+        id: `mine:${item.id}`,
+        label: item.title,
+        hint: item.body,
+        kind: 'snippet',
+        group: 'mine',
+        body: item.body,
+      });
+    }
+    return commands;
+  });
+
   ngOnInit(): void {
     const userId = this.currentUserId();
     if (userId) {
@@ -434,9 +471,19 @@ export class Atencion implements OnInit, OnDestroy {
       .getUserProfile()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (profile) =>
-          this.greetingMessage.set(profile.greetingMessage ?? null),
+        next: (profile) => {
+          this.greetingMessage.set(profile.greetingMessage ?? null);
+          this.mineCannedReplies.set(profile.cannedReplies ?? []);
+        },
         error: () => this.greetingMessage.set(null),
+      });
+
+    this.profileService
+      .getTeamCannedReplies()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (items) => this.teamCannedReplies.set(items),
+        error: () => this.teamCannedReplies.set([]),
       });
 
     const colaParam = this.route.snapshot.queryParamMap.get('cola');

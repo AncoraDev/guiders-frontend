@@ -46,31 +46,4 @@
     description="No se puede modificar">
     <span class="readonly-value">{{ p.email }}</span>
   </lib-settings-row>
-
-  <lib-settings-row
-    [stacked]="true"
-    label="Mensaje de saludo"
-    description="Se envía al visitante cuando pulsas Saludar en Atención. Si lo dejas vacío, usamos el texto por defecto.">
-    <div class="greeting-control">
-      <textarea
-        class="greeting-input"
-        rows="3"
-        [attr.maxlength]="greetingMax"
-        [placeholder]="greetingPlaceholder"
-        [ngModel]="greetingDraft()"
-        (ngModelChange)="onGreetingInput($event)"
-        [disabled]="isSavingGreeting()"
-      ></textarea>
-      <div class="greeting-footer">
-        <span class="greeting-count">{{ greetingCount() }}/{{ greetingMax }}</span>
-        <button
-          type="button"
-          class="avatar-button"
-          [disabled]="isSavingGreeting() || !greetingDirty()"
-          (click)="saveGreeting()">
-          {{ isSavingGreeting() ? 'Guardando...' : 'Guardar' }}
-        </button>
-      </div>
-    </div>
-  </lib-settings-row>
 }

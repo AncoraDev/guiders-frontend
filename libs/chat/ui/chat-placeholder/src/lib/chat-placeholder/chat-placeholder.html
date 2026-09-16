@@ -210,6 +210,7 @@
     [enableMentions]="enableMentions"
     [mentionCandidates]="mentionCandidates"
     [enableSlashCommands]="enableSlashCommands"
+    [slashCommands]="slashCommands ?? []"
     (messageSent)="onMessageSent($event)"
     (slashCommand)="onSlashCommand($event)"
   />

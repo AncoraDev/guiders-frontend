@@ -23,10 +23,12 @@ export const settingsRoutes: Route[] = [
         title: 'Apariencia · Configuración',
       },
       {
-        path: 'chat',
-        loadComponent: () => import('./sections/chat-settings').then(m => m.ChatSettingsComponent),
-        title: 'Chat · Configuración',
+        path: 'replies',
+        loadComponent: () =>
+          import('./sections/replies-settings').then((m) => m.RepliesSettingsComponent),
+        title: 'Frases rápidas · Configuración',
       },
+      { path: 'chat', redirectTo: 'replies', pathMatch: 'full' },
       {
         path: 'privacy',
         loadComponent: () => import('./sections/privacy-settings').then(m => m.PrivacySettingsComponent),

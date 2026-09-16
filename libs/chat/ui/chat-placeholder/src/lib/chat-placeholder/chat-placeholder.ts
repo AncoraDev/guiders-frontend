@@ -75,6 +75,7 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
   @Input() mentionCandidates: MessageMentionCandidate[] = [];
   @Input() enableMentions = false;
   @Input() enableSlashCommands = false;
+  @Input() slashCommands: SlashCommand[] | null = null;
   @Input() savingContactData = false;
   @Input() confirmedContactRequestIds: string[] = [];
 

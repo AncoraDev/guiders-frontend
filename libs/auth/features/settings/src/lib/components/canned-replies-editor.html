@@ -1,0 +1,96 @@
+<div class="canned">
+  @if (form(); as form) {
+    <div class="canned__form">
+      <p class="canned__form-title">{{ formTitle() }}</p>
+      <input
+        class="canned__input"
+        type="text"
+        [attr.maxlength]="titleMax"
+        [ngModel]="form.title"
+        (ngModelChange)="patchForm('title', $event)"
+        [disabled]="saving()"
+        placeholder="Título (ej. Horario)"
+      />
+      <textarea
+        class="canned__textarea"
+        rows="4"
+        [attr.maxlength]="bodyMax"
+        [ngModel]="form.body"
+        (ngModelChange)="patchForm('body', $event)"
+        [disabled]="saving()"
+        placeholder="Texto que se pega en el chat"
+      ></textarea>
+      <div class="canned__form-footer">
+        <span class="canned__count">{{ formCount() }}/{{ bodyMax }}</span>
+        <div class="canned__form-actions">
+          <button
+            type="button"
+            class="canned__btn"
+            [disabled]="saving()"
+            (click)="cancelForm()">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="canned__btn canned__btn--primary"
+            [disabled]="saving() || !canSubmit()"
+            (click)="submitForm()">
+            {{ saving() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div class="canned__toolbar">
+      @if (!readonly()) {
+        <button
+          type="button"
+          class="canned__btn canned__btn--primary"
+          [disabled]="saving() || !canAdd()"
+          (click)="startCreate()">
+          Añadir frase
+        </button>
+      }
+      @if (!readonly() && !canAdd()) {
+        <span class="canned__limit">Máximo {{ maxItems() }} frases</span>
+      }
+    </div>
+
+    @if (items().length === 0) {
+      <p class="canned__empty">
+        {{ readonly()
+          ? 'Aún no hay frases del equipo.'
+          : 'Aún no hay frases. Añade una para usarla con / en Atención.' }}
+      </p>
+    } @else {
+      <ul class="canned__list">
+        @for (item of items(); track item.id) {
+          <li class="canned__row">
+            <div class="canned__copy">
+              <p class="canned__name">{{ item.title }}</p>
+              <p class="canned__preview">{{ preview(item.body) }}</p>
+            </div>
+            @if (!readonly()) {
+              <div class="canned__row-actions">
+                <button
+                  type="button"
+                  class="canned__btn"
+                  [disabled]="saving()"
+                  (click)="startEdit(item)">
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  class="canned__btn canned__btn--danger"
+                  [disabled]="saving()"
+                  (click)="remove(item)">
+                  Eliminar
+                </button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+</div>

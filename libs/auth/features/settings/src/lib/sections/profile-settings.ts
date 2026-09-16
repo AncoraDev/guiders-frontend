@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { EMPTY, Subject, catchError, switchMap } from 'rxjs';
 import { ProfileService } from '@guiders-frontend/profile-service';
 import { UserProfile } from '@guiders-frontend/auth/data-access/session';
@@ -10,13 +9,10 @@ import { getAvatarColor } from '@guiders-frontend/avatar-colors';
 import { SettingsRowComponent } from '../components/settings-row';
 import { SettingsSectionHeaderComponent } from '../components/settings-section-header';
 
-const DEFAULT_GREETING = '¡Hola! ¿En qué puedo ayudarte?';
-const GREETING_MAX = 500;
-
 @Component({
   selector: 'lib-profile-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, SettingsRowComponent, SettingsSectionHeaderComponent],
+  imports: [CommonModule, SettingsRowComponent, SettingsSectionHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile-settings.html',
   styleUrl: './profile-settings.scss',
@@ -31,16 +27,7 @@ export class ProfileSettingsComponent {
 
   readonly profile = signal<UserProfile | null>(null);
   readonly isUploading = signal<boolean>(false);
-  readonly isSavingGreeting = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
-  readonly greetingDraft = signal('');
-  readonly greetingMax = GREETING_MAX;
-  readonly greetingPlaceholder = DEFAULT_GREETING;
-  readonly greetingDirty = computed(() => {
-    const saved = this.profile()?.greetingMessage ?? '';
-    return this.greetingDraft().trim() !== saved.trim();
-  });
-  readonly greetingCount = computed(() => this.greetingDraft().length);
 
   readonly userName = computed(() => {
     const p = this.profile();
@@ -70,7 +57,6 @@ export class ProfileSettingsComponent {
       .subscribe({
         next: profile => {
           this.profile.set(profile);
-          this.greetingDraft.set(profile.greetingMessage ?? '');
         },
         error: err => {
           console.error('[ProfileSettings] load error', err);
@@ -127,33 +113,6 @@ export class ProfileSettingsComponent {
 
     this.uploadTrigger$.next(file);
     input.value = '';
-  }
-
-  onGreetingInput(value: string): void {
-    this.greetingDraft.set(value.slice(0, GREETING_MAX));
-  }
-
-  saveGreeting(): void {
-    if (this.isSavingGreeting()) return;
-    const message = this.greetingDraft().trim() || null;
-    this.isSavingGreeting.set(true);
-    this.profileService
-      .updateGreetingMessage(message)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          this.profile.update((p) =>
-            p ? { ...p, greetingMessage: res.greetingMessage } : p
-          );
-          this.greetingDraft.set(res.greetingMessage ?? '');
-          this.isSavingGreeting.set(false);
-          this.toast.success('Mensaje de saludo guardado');
-        },
-        error: (err) => {
-          this.isSavingGreeting.set(false);
-          this.toast.error(err?.message ?? 'No se pudo guardar el saludo');
-        },
-      });
   }
 }
 

@@ -7,6 +7,7 @@ import {
   AfterViewInit,
   signal,
   computed,
+  effect,
   ChangeDetectionStrategy,
   input,
   inject,
@@ -98,20 +99,44 @@ export interface MessageSendPayload {
   transferToDisplayName?: string;
 }
 
-/** Acción del menú `/` (Atención). */
+/** Acción o frase del menú `/` (Atención). */
+export type SlashCommandKind = 'action' | 'snippet';
+export type SlashCommandGroup = 'action' | 'team' | 'mine';
+
 export interface SlashCommand {
   id: string;
   label: string;
   hint: string;
+  kind?: SlashCommandKind;
+  group?: SlashCommandGroup;
+  body?: string;
 }
 
-const SLASH_COMMANDS: SlashCommand[] = [
+const DEFAULT_SLASH_COMMANDS: SlashCommand[] = [
   {
     id: 'request-contact',
     label: 'Solicitar datos',
     hint: 'Pide nombre, email y teléfono',
+    kind: 'action',
+    group: 'action',
   },
 ];
+
+const SLASH_GROUP_LABEL: Record<SlashCommandGroup, string> = {
+  action: 'Acciones',
+  team: 'Equipo',
+  mine: 'Mías',
+};
+
+const OPEN_PHRASES_COMMAND: SlashCommand = {
+  id: 'open-phrases',
+  label: 'Frase rápida',
+  hint: 'Elige una del equipo o tuya',
+  kind: 'action',
+  group: 'action',
+};
+
+type SlashView = 'actions' | 'phrases';
 
 @Component({
   selector: 'guiders-message-input',
@@ -145,9 +170,10 @@ export class MessageInput implements AfterViewInit, OnDestroy {
   readonly mentionHighlightIndex = signal(0);
   readonly slashQuery = signal<string | null>(null);
   readonly slashHighlightIndex = signal(0);
+  readonly slashView = signal<SlashView>('actions');
   readonly pendingTransfer = signal<MessageMentionCandidate | null>(null);
   readonly emojis = QUICK_EMOJIS;
-  readonly slashCommands = SLASH_COMMANDS;
+  readonly slashCommands = input<SlashCommand[] | undefined>(undefined);
 
   readonly isComposerLocked = computed(
     () => this.requireOnline() && !this.isCommercialOnline(),
@@ -179,14 +205,47 @@ export class MessageInput implements AfterViewInit, OnDestroy {
     const query = this.slashQuery();
     if (query === null) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return SLASH_COMMANDS;
-    return SLASH_COMMANDS.filter(
+    const all = this.slashCommands() ?? DEFAULT_SLASH_COMMANDS;
+    const snippets = all.filter((cmd) => cmd.kind === 'snippet');
+    const actions = all.filter((cmd) => cmd.kind !== 'snippet');
+
+    if (this.slashView() === 'phrases') {
+      if (!q) return snippets;
+      return snippets.filter(
+        (cmd) =>
+          cmd.label.toLowerCase().includes(q) ||
+          cmd.hint.toLowerCase().includes(q) ||
+          (cmd.body ?? '').toLowerCase().includes(q),
+      );
+    }
+
+    const root = snippets.length ? [...actions, OPEN_PHRASES_COMMAND] : actions;
+    if (!q) return root;
+    return root.filter(
       (cmd) =>
         cmd.label.toLowerCase().includes(q) ||
         cmd.id.toLowerCase().includes(q) ||
         cmd.hint.toLowerCase().includes(q),
     );
   });
+
+  slashGroupLabel(index: number): string | null {
+    const items = this.filteredSlashCommands();
+    const current = items[index];
+    if (!current) return null;
+    if (current.id === 'open-phrases') {
+      return null;
+    }
+    const group = current.group ?? 'action';
+    const prev = items[index - 1];
+    if (prev && (prev.group ?? 'action') === group) return null;
+    return SLASH_GROUP_LABEL[group];
+  }
+
+  slashItemIcon(command: SlashCommand): string {
+    if (command.id === 'open-phrases') return '“';
+    return '/';
+  }
 
   readonly showSlashPicker = computed(
     () =>
@@ -210,7 +269,7 @@ export class MessageInput implements AfterViewInit, OnDestroy {
     const initial = this.commercialPresence.getCurrentStatus();
     this.isCommercialOnline.set(initial.isConnected);
 
-    this.commercialPresence.isConnected$
+      this.commercialPresence.isConnected$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((connected) => {
         this.isCommercialOnline.set(connected);
@@ -224,6 +283,13 @@ export class MessageInput implements AfterViewInit, OnDestroy {
           }
         }
       });
+
+    effect(() => {
+      if (!this.showSlashPicker()) return;
+      this.slashHighlightIndex();
+      this.filteredSlashCommands();
+      this.scrollActiveSlashIntoView();
+    });
   }
 
   @HostListener('document:pointerdown', ['$event'])
@@ -247,6 +313,10 @@ export class MessageInput implements AfterViewInit, OnDestroy {
   onEscape(): void {
     this.showEmojiPicker.set(false);
     this.closeMentionPicker();
+    if (this.slashView() === 'phrases' && this.showSlashPicker()) {
+      this.goBackToActions();
+      return;
+    }
     this.closeSlashPicker();
   }
 
@@ -335,6 +405,15 @@ export class MessageInput implements AfterViewInit, OnDestroy {
 
     if (this.showSlashPicker()) {
       const items = this.filteredSlashCommands();
+      if (
+        event.key === 'Backspace' &&
+        this.slashView() === 'phrases' &&
+        !(this.slashQuery() ?? '').length
+      ) {
+        event.preventDefault();
+        this.goBackToActions();
+        return;
+      }
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         this.slashHighlightIndex.update((i) =>
@@ -395,15 +474,53 @@ export class MessageInput implements AfterViewInit, OnDestroy {
     this.selectSlashCommand(command);
   }
 
+  onSlashBackPointerDown(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.goBackToActions();
+  }
+
   selectSlashCommand(command: SlashCommand): void {
-    this.messageText.set('');
-    this.caretPosition = 0;
+    if (command.id === 'open-phrases') {
+      this.openPhrasesView();
+      return;
+    }
+
     this.closeSlashPicker();
     this.closeMentionPicker();
     this.showEmojiPicker.set(false);
+
+    if (command.kind === 'snippet' && command.body) {
+      this.insertSnippet(command.body);
+      return;
+    }
+
+    this.messageText.set('');
+    this.caretPosition = 0;
     this.adjustTextareaHeight();
     this.slashCommand.emit(command);
     setTimeout(() => this.textareaRef?.nativeElement.focus(), 0);
+  }
+
+  private insertSnippet(body: string): void {
+    const text = this.messageText();
+    const caret = this.caretPosition;
+    const beforeCaret = text.slice(0, caret);
+    const slashIndex = beforeCaret.lastIndexOf('/');
+    const next =
+      slashIndex >= 0
+        ? `${text.slice(0, slashIndex)}${body}${text.slice(caret)}`
+        : body;
+    this.messageText.set(next);
+    this.caretPosition = slashIndex >= 0 ? slashIndex + body.length : body.length;
+    this.syncTyping();
+    this.adjustTextareaHeight();
+    setTimeout(() => {
+      const el = this.textareaRef?.nativeElement;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(this.caretPosition, this.caretPosition);
+    }, 0);
   }
 
   selectMention(candidate: MessageMentionCandidate): void {
@@ -520,8 +637,11 @@ export class MessageInput implements AfterViewInit, OnDestroy {
       return;
     }
 
-    this.slashQuery.set(match[1]);
-    this.slashHighlightIndex.set(0);
+    const nextQuery = match[1];
+    if (this.slashQuery() !== nextQuery) {
+      this.slashHighlightIndex.set(0);
+    }
+    this.slashQuery.set(nextQuery);
     this.closeMentionPicker();
   }
 
@@ -534,6 +654,51 @@ export class MessageInput implements AfterViewInit, OnDestroy {
   private closeSlashPicker(): void {
     this.slashQuery.set(null);
     this.slashHighlightIndex.set(0);
+    this.slashView.set('actions');
+  }
+
+  private openPhrasesView(): void {
+    this.slashView.set('phrases');
+    this.clearSlashFilter();
+    this.slashHighlightIndex.set(0);
+  }
+
+  private goBackToActions(): void {
+    this.slashView.set('actions');
+    this.clearSlashFilter();
+    this.slashHighlightIndex.set(0);
+  }
+
+  private scrollActiveSlashIntoView(): void {
+    requestAnimationFrame(() => {
+      const active = this.hostRef.nativeElement.querySelector(
+        '.message-input__slash-list .message-input__mention-option--active',
+      );
+      active?.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  /** Deja solo `/` para que el listado no quede filtrado al cambiar de vista. */
+  private clearSlashFilter(): void {
+    const text = this.messageText();
+    const caret = this.caretPosition;
+    const beforeCaret = text.slice(0, caret);
+    const slashIndex = beforeCaret.lastIndexOf('/');
+    if (slashIndex < 0) {
+      this.slashQuery.set('');
+      return;
+    }
+    const next = `${text.slice(0, slashIndex + 1)}${text.slice(caret)}`;
+    this.messageText.set(next);
+    this.caretPosition = slashIndex + 1;
+    this.slashQuery.set('');
+    this.adjustTextareaHeight();
+    setTimeout(() => {
+      const el = this.textareaRef?.nativeElement;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(this.caretPosition, this.caretPosition);
+    }, 0);
   }
 
   private rememberCaret(): void {

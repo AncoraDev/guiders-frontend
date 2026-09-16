@@ -1,5 +1,5 @@
 <div class="admin-app" [class.embed-mode]="isEmbedMode()">
-  @if (!isEmbedMode()) {
+  @if (!isEmbedMode() && isPlatformUser()) {
     <guiders-sidebar
       [items]="sidebarItems()"
       [config]="sidebarConfig()"

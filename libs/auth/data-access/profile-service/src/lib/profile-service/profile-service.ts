@@ -1,8 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
-import { ENVIRONMENT_TOKEN, UserProfile } from '@guiders-frontend/auth/data-access/session';
+import { catchError, map, tap } from 'rxjs/operators';
+import {
+  CannedReply,
+  ENVIRONMENT_TOKEN,
+  UserProfile,
+} from '@guiders-frontend/auth/data-access/session';
 
 export interface UploadAvatarResponse {
   avatarUrl: string;
@@ -98,6 +102,7 @@ export class ProfileService {
           email: profile.email,
           hasAvatar: !!profile.avatarUrl,
           greetingMessage: profile.greetingMessage,
+          cannedCount: profile.cannedReplies?.length ?? 0,
         });
       }),
       catchError(error => {
@@ -139,6 +144,61 @@ export class ProfileService {
           const message =
             error.error?.message ||
             'No se pudo guardar el mensaje de saludo.';
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  updateCannedReplies(
+    items: CannedReply[]
+  ): Observable<{ cannedReplies: CannedReply[] }> {
+    return this.http
+      .put<{ cannedReplies: CannedReply[] }>(
+        `${this.baseUrl}/user/auth/me/canned-replies`,
+        { items },
+        { withCredentials: true }
+      )
+      .pipe(
+        catchError((error) => {
+          const message =
+            error.error?.message || 'No se pudieron guardar las frases.';
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  getTeamCannedReplies(): Observable<CannedReply[]> {
+    return this.http
+      .get<{ cannedReplies: CannedReply[] }>(
+        `${this.baseUrl}/me/company/canned-replies`,
+        { withCredentials: true }
+      )
+      .pipe(
+        map((res) => res.cannedReplies ?? []),
+        catchError((error) => {
+          const message =
+            error.error?.message ||
+            'No se pudieron cargar las frases del equipo.';
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  updateTeamCannedReplies(
+    items: CannedReply[]
+  ): Observable<CannedReply[]> {
+    return this.http
+      .put<{ cannedReplies: CannedReply[] }>(
+        `${this.baseUrl}/me/company/canned-replies`,
+        { items },
+        { withCredentials: true }
+      )
+      .pipe(
+        map((res) => res.cannedReplies ?? []),
+        catchError((error) => {
+          const message =
+            error.error?.message ||
+            'No se pudieron guardar las frases del equipo.';
           return throwError(() => new Error(message));
         })
       );

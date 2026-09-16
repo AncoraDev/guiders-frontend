@@ -41,7 +41,7 @@ export class SettingsLayoutComponent {
       label: 'Espacio de trabajo',
       items: [
         { id: 'appearance', label: 'Apariencia', route: 'appearance' },
-        { id: 'chat', label: 'Chat', route: 'chat' },
+        { id: 'replies', label: 'Frases rápidas', route: 'replies' },
       ],
     },
     {

@@ -1,4 +1,4 @@
-import { Component, signal, inject, DestroyRef } from '@angular/core';
+import { Component, computed, signal, inject, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterModule } from '@angular/router';
 import { Sidebar, SidebarItem, SidebarConfig } from '@guiders-frontend/sidebar';
@@ -28,6 +28,9 @@ export class App {
   protected title = 'admin';
 
   readonly currentUser = this.userService.currentUser;
+  readonly isPlatformUser = computed(
+    () => this.currentUser()?.roles?.includes('superadmin') ?? false,
+  );
   readonly userName = signal<string | null>(null);
   readonly avatarUrl = signal<string | null>(null);
   readonly appVersion: string = this.environment.version ?? '';

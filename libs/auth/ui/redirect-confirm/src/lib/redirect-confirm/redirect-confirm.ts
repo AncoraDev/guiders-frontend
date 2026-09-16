@@ -12,9 +12,8 @@ export class RedirectConfirm {
   protected readonly redirectService = inject(RedirectConfirmService);
 
   onBackdropClick(event: Event): void {
-    if ((event.target as HTMLElement).classList.contains('redirect-confirm__backdrop')) {
-      this.redirectService.cancel();
-    }
+    // No cerrar: "Cerrar sesión" hace logout real; el backdrop no debe saltárselo.
+    event.stopPropagation();
   }
 
   onConfirm(): void {
