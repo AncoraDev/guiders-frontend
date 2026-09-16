@@ -306,7 +306,7 @@ export class PlatformUsers implements OnInit {
       }
       if (!temporaryPassword || temporaryPassword.trim().length < 6) {
         this.formError.set(
-          'La contraseña temporal debe tener al menos 6 caracteres',
+          'La contraseña debe tener al menos 6 caracteres',
         );
         return;
       }

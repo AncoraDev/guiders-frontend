@@ -54,13 +54,13 @@ export class ClientCreate {
       !adminPassword
     ) {
       this.error.set(
-        'Empresa, dominio, nombre, apellidos, email y contraseña temporal del admin son obligatorios.',
+        'Empresa, dominio, nombre, apellidos, email y contraseña del admin son obligatorios.',
       );
       return;
     }
 
     if (adminPassword.trim().length < 6) {
-      this.error.set('La contraseña temporal debe tener al menos 6 caracteres.');
+      this.error.set('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
 

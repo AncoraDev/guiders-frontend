@@ -4,8 +4,7 @@
     <h1>Nuevo cliente</h1>
     <p>
       Crea la company, genera la API key del dominio y da de alta el admin en
-      Keycloak con contraseña temporal. Entrégasela al cliente; en el primer
-      login el sistema pedirá crear una nueva.
+      Keycloak. Entrégasela al cliente: entra con esa contraseña, no es temporal.
     </p>
   </header>
 
@@ -104,7 +103,7 @@
         />
       </label>
       <label>
-        Contraseña temporal
+        Contraseña
         <input
           type="text"
           required
@@ -115,8 +114,7 @@
           autocomplete="new-password"
         />
         <span class="field-hint">
-          Mín. 6 caracteres. Entrégala al admin; en el primer acceso deberá crear
-          una nueva con formato seguro.
+          Mín. 6 caracteres. El admin entra con ella; no es temporal.
         </span>
       </label>
     </fieldset>
