@@ -74,6 +74,9 @@ export class Sidebar {
   // Tour input
   readonly showTourButton = input<boolean>(false);
 
+  /** Selector de temas en el footer. Console lo usa; Admin no. */
+  readonly showThemePicker = input<boolean>(true);
+
   // Outputs usando signals API
   readonly itemClick = output<SidebarItem>();
   readonly toggleSidebar = output<boolean>();

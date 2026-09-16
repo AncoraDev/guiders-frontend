@@ -30,6 +30,7 @@ export interface CreateCompanyUserRequest {
 export interface UpdateCompanyUserRequest {
   name?: string;
   roles?: AssignableCompanyRole[];
+  password?: string;
 }
 
 export interface SetCompanyUserActiveRequest {

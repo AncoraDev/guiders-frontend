@@ -240,6 +240,7 @@
   <!-- Footer with user menu and theme toggle -->
   <footer class="sidebar__footer">
     <!-- Theme Picker -->
+    @if (showThemePicker()) {
     <div class="sidebar__theme-toggle">
 
       <!-- Collapsed mode: single button cycling through themes -->
@@ -462,6 +463,7 @@
         }
       }
     </div>
+    }
 
     @if (userEmail()) {
     <guiders-user-menu

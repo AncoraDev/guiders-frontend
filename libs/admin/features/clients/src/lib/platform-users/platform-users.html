@@ -218,7 +218,7 @@
           </label>
 
           <label class="field">
-            <span class="field__label">Apellidos</span>
+            <span class="field__label">Apellidos (opcional)</span>
             <input
               class="field__input"
               type="text"
@@ -249,9 +249,12 @@
             type="email"
             [ngModel]="formEmail()"
             (ngModelChange)="formEmail.set($event)"
-            [disabled]="saving() || panelMode() === 'edit'"
+            [disabled]="saving()"
             autocomplete="email"
           />
+          @if (panelMode() === 'edit') {
+            <span class="field__hint">También se actualiza el login en Keycloak.</span>
+          }
         </label>
 
         @if (panelMode() === 'create') {
@@ -280,6 +283,22 @@
             <span class="field__hint">
               Entrégala al usuario. En el primer login Keycloak pedirá crear una
               nueva con formato seguro.
+            </span>
+          </label>
+        } @else {
+          <label class="field">
+            <span class="field__label">Contraseña (opcional)</span>
+            <input
+              class="field__input"
+              type="text"
+              [ngModel]="formPassword()"
+              (ngModelChange)="formPassword.set($event)"
+              [disabled]="saving()"
+              autocomplete="new-password"
+            />
+            <span class="field__hint">
+              Déjala vacía para no cambiarla. Si la pones, el usuario entra con
+              ella (no es temporal).
             </span>
           </label>
         }

@@ -2,10 +2,12 @@
 
 Índice único de la documentación del repositorio. En la raíz solo quedan:
 
-- [`README.md`](../README.md) — workspace Nx
+- [`README.md`](../README.md) — arranque local (resumen)
 - [`AGENTS.md`](../AGENTS.md) — instrucciones generales para agentes
 - [`CLAUDE.md`](../CLAUDE.md) — arquitectura Angular/Nx
 - [`CHANGELOG.md`](../CHANGELOG.md) — historial de cambios
+
+Usuarios locales: [`accesos-local.md`](./accesos-local.md).
 
 Las features tienen además su propio `libs/**/AGENTS.md` (ver [AGENTS.md](../AGENTS.md)).
 

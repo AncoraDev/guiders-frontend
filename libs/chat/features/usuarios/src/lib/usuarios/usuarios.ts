@@ -273,9 +273,9 @@ export class Usuarios implements OnInit {
       const phone = this.formPhone().trim();
       const temporaryPassword = this.formPassword();
 
-      if (!firstName || !lastName) {
+      if (!firstName) {
         this.saving.set(false);
-        this.formError.set('Nombre y apellidos son obligatorios');
+        this.formError.set('El nombre es obligatorio');
         return;
       }
       if (!email) {
@@ -323,8 +323,19 @@ export class Usuarios implements OnInit {
       return;
     }
 
+    const password = this.formPassword().trim();
+    if (password && password.length < 6) {
+      this.saving.set(false);
+      this.formError.set('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
     this.mutateSub = this.usersService
-      .updateCompanyUser(userId, { name, roles })
+      .updateCompanyUser(userId, {
+        name,
+        roles,
+        ...(password ? { password } : {}),
+      })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {

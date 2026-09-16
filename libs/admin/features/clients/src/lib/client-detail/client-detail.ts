@@ -16,6 +16,13 @@ import {
   PlatformCompanyDetail,
 } from '@guiders-frontend/platform-companies-service';
 
+interface SiteForm {
+  id?: string;
+  name: string;
+  canonicalDomain: string;
+  domainAliases: string;
+}
+
 @Component({
   selector: 'lib-client-detail',
   standalone: true,
@@ -32,6 +39,12 @@ export class ClientDetail implements OnInit {
   readonly apiKeys = signal<PlatformApiKey[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+
+  readonly formName = signal('');
+  readonly formSites = signal<SiteForm[]>([]);
+  readonly saving = signal(false);
+  readonly saveError = signal<string | null>(null);
+  readonly saveOk = signal(false);
 
   readonly newDomain = signal('');
   readonly creatingKey = signal(false);
@@ -61,10 +74,69 @@ export class ClientDetail implements OnInit {
       .subscribe({
         next: ({ company, apiKeys }) => {
           this.company.set(company);
+          this.hydrateForm(company);
           this.apiKeys.set(apiKeys);
         },
         error: (err: unknown) => {
-          this.error.set(this.mapError(err));
+          this.error.set(this.mapError(err, 'Cliente no encontrado'));
+        },
+      });
+  }
+
+  updateSite(index: number, patch: Partial<SiteForm>): void {
+    this.formSites.update((sites) =>
+      sites.map((site, i) => (i === index ? { ...site, ...patch } : site)),
+    );
+  }
+
+  addSite(): void {
+    this.formSites.update((sites) => [
+      ...sites,
+      { name: 'Sitio principal', canonicalDomain: '', domainAliases: '' },
+    ]);
+  }
+
+  removeSite(index: number): void {
+    if (this.formSites().length <= 1) return;
+    this.formSites.update((sites) => sites.filter((_, i) => i !== index));
+  }
+
+  saveCompany(): void {
+    const companyName = this.formName().trim();
+    const sites = this.formSites().map((site) => ({
+      id: site.id,
+      name: site.name.trim() || 'Sitio principal',
+      canonicalDomain: site.canonicalDomain.trim().toLowerCase(),
+      domainAliases: site.domainAliases
+        .split(',')
+        .map((alias) => alias.trim().toLowerCase())
+        .filter((alias) => alias.length > 0),
+    }));
+
+    if (!companyName) {
+      this.saveError.set('El nombre de la empresa es obligatorio');
+      return;
+    }
+    if (sites.some((site) => !site.canonicalDomain)) {
+      this.saveError.set('Cada sitio necesita un dominio canónico');
+      return;
+    }
+
+    this.saveError.set(null);
+    this.saveOk.set(false);
+    this.saving.set(true);
+    this.platform
+      .updateCompany(this.companyId, { companyName, sites })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: (company) => {
+          this.company.set(company);
+          this.hydrateForm(company);
+          this.saveOk.set(true);
+          setTimeout(() => this.saveOk.set(false), 2000);
+        },
+        error: (err: unknown) => {
+          this.saveError.set(this.mapError(err, 'No se pudo actualizar el cliente'));
         },
       });
   }
@@ -90,7 +162,7 @@ export class ClientDetail implements OnInit {
           });
         },
         error: (err: unknown) => {
-          this.keyError.set(this.mapError(err));
+          this.keyError.set(this.mapError(err, 'No se pudo crear la API key'));
         },
       });
   }
@@ -105,15 +177,28 @@ export class ClientDetail implements OnInit {
     }
   }
 
-  private mapError(err: unknown): string {
+  private hydrateForm(company: PlatformCompanyDetail): void {
+    this.formName.set(company.companyName);
+    const sites: SiteForm[] = company.sites?.length
+      ? company.sites.map((site) => ({
+          id: site.id,
+          name: site.name || 'Sitio principal',
+          canonicalDomain: site.canonicalDomain,
+          domainAliases: (site.domainAliases ?? []).join(', '),
+        }))
+      : [{ name: 'Sitio principal', canonicalDomain: '', domainAliases: '' }];
+    this.formSites.set(sites);
+  }
+
+  private mapError(err: unknown, fallback: string): string {
     if (err instanceof HttpErrorResponse) {
       if (err.status === 404) return 'Cliente no encontrado';
       return (
         (typeof err.error === 'string'
           ? err.error
-          : err.error?.message || err.message) || 'Error de red'
+          : err.error?.message || err.message) || fallback
       );
     }
-    return 'Error de red';
+    return fallback;
   }
 }

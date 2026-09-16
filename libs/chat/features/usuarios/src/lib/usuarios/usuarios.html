@@ -258,7 +258,7 @@
               </div>
 
               <div class="user-form-panel__field">
-                <label class="user-form-panel__label" for="usuarios-form-last-name">Apellidos</label>
+                <label class="user-form-panel__label" for="usuarios-form-last-name">Apellidos (opcional)</label>
                 <input
                   id="usuarios-form-last-name"
                   class="user-form-panel__input"
@@ -325,6 +325,23 @@
                 <p class="user-form-panel__hint">
                   Entrégala al usuario. En el primer login deberá crear una nueva
                   con formato seguro.
+                </p>
+              </div>
+            } @else {
+              <div class="user-form-panel__field">
+                <label class="user-form-panel__label" for="usuarios-form-password">Contraseña (opcional)</label>
+                <input
+                  id="usuarios-form-password"
+                  class="user-form-panel__input"
+                  type="text"
+                  [ngModel]="formPassword()"
+                  (ngModelChange)="formPassword.set($event)"
+                  [disabled]="saving()"
+                  autocomplete="new-password"
+                />
+                <p class="user-form-panel__hint">
+                  Déjala vacía para no cambiarla. Si la pones, el usuario entra con
+                  ella (no es temporal).
                 </p>
               </div>
             }

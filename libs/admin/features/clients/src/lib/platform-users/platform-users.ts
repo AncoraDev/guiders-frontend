@@ -282,7 +282,7 @@ export class PlatformUsers implements OnInit {
   }
 
   submitPanel(): void {
-    const email = this.formEmail().trim();
+    const email = this.formEmail().trim().toLowerCase();
     const companyId = this.formCompanyId();
     const roles = this.formRoles();
 
@@ -296,8 +296,8 @@ export class PlatformUsers implements OnInit {
         this.formError.set('Selecciona una company');
         return;
       }
-      if (!firstName || !lastName) {
-        this.formError.set('Nombre y apellidos son obligatorios');
+      if (!firstName) {
+        this.formError.set('El nombre es obligatorio');
         return;
       }
       if (!email) {
@@ -352,19 +352,35 @@ export class PlatformUsers implements OnInit {
       return;
     }
 
+    if (!email) {
+      this.formError.set('El email es obligatorio');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.formError.set('El email no es válido');
+      return;
+    }
+
     if (!this.formRolesLocked() && roles.length === 0) {
       this.formError.set('Debes asignar al menos un rol');
+      return;
+    }
+
+    const password = this.formPassword().trim();
+    if (password && password.length < 6) {
+      this.formError.set('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
     this.formError.set(null);
     this.saving.set(true);
     this.mutateSub?.unsubscribe();
+    const payload = this.formRolesLocked()
+      ? { name, email, ...(password ? { password } : {}) }
+      : { name, email, roles, ...(password ? { password } : {}) };
     this.mutateSub = this.platform
-      .updateUser(
-        userId,
-        this.formRolesLocked() ? { name } : { name, roles },
-      )
+      .updateUser(userId, payload)
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {

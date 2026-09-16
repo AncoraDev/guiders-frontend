@@ -30,6 +30,58 @@
   font-size: tokens.$font-size-2xl;
 }
 
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-xs;
+}
+
+.field__label {
+  font-size: tokens.$font-size-sm;
+  color: tokens.$color-text-secondary;
+}
+
+.field__input {
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  font-size: tokens.$font-size-base;
+  background: tokens.$color-surface-primary;
+  color: tokens.$color-text-primary;
+}
+
+.site-card {
+  margin: 0;
+  padding: tokens.$spacing-md;
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-md;
+
+  legend {
+    padding: 0 tokens.$spacing-xs;
+    font-size: tokens.$font-size-sm;
+    font-weight: tokens.$font-weight-medium;
+  }
+}
+
+.panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: tokens.$spacing-sm;
+  flex-wrap: wrap;
+}
+
+.ok {
+  margin: 0;
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border-radius: tokens.$border-radius-md;
+  background: rgba(22, 163, 74, 0.08);
+  color: #15803d;
+  font-size: tokens.$font-size-sm;
+}
+
 .muted {
   color: tokens.$color-text-secondary;
   font-size: tokens.$font-size-sm;

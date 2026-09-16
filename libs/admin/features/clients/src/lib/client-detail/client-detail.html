@@ -14,20 +14,83 @@
     </header>
 
     <section class="panel">
-      <h2>Sitios / dominios</h2>
-      <ul class="sites">
-        @for (site of company()!.sites; track site.id) {
-          <li>
-            <strong>{{ site.name }}</strong>
-            <span class="mono">{{ site.canonicalDomain }}</span>
-            @if (site.domainAliases.length) {
-              <span class="muted"
-                >(aliases: {{ site.domainAliases.join(', ') }})</span
-              >
-            }
-          </li>
-        }
-      </ul>
+      <h2>Datos del cliente</h2>
+
+      @if (saveError()) {
+        <div class="error" role="alert">{{ saveError() }}</div>
+      }
+      @if (saveOk()) {
+        <p class="ok">Cliente actualizado</p>
+      }
+
+      <label class="field">
+        <span class="field__label">Nombre</span>
+        <input
+          class="field__input"
+          type="text"
+          [ngModel]="formName()"
+          (ngModelChange)="formName.set($event)"
+          [disabled]="saving()"
+          autocomplete="organization"
+        />
+      </label>
+
+      @for (site of formSites(); track $index) {
+        <fieldset class="site-card">
+          <legend>Sitio {{ $index + 1 }}</legend>
+          <label class="field">
+            <span class="field__label">Dominio canónico</span>
+            <input
+              class="field__input"
+              type="text"
+              placeholder="ejemplo.com"
+              [ngModel]="site.canonicalDomain"
+              (ngModelChange)="updateSite($index, { canonicalDomain: $event })"
+              [disabled]="saving()"
+            />
+          </label>
+          <label class="field">
+            <span class="field__label">Aliases (separados por comas)</span>
+            <input
+              class="field__input"
+              type="text"
+              placeholder="www.ejemplo.com, shop.ejemplo.com"
+              [ngModel]="site.domainAliases"
+              (ngModelChange)="updateSite($index, { domainAliases: $event })"
+              [disabled]="saving()"
+            />
+          </label>
+          @if (formSites().length > 1) {
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              (click)="removeSite($index)"
+              [disabled]="saving()"
+            >
+              Quitar sitio
+            </button>
+          }
+        </fieldset>
+      }
+
+      <div class="panel__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          (click)="addSite()"
+          [disabled]="saving()"
+        >
+          Añadir sitio
+        </button>
+        <button
+          type="button"
+          class="btn btn--primary"
+          (click)="saveCompany()"
+          [disabled]="saving()"
+        >
+          {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </div>
     </section>
 
     <section class="panel">

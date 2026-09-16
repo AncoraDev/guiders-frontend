@@ -41,6 +41,16 @@ export interface PlatformCreateCompanyResponse {
   adminUserId: string;
 }
 
+export interface PlatformUpdateCompanyRequest {
+  companyName: string;
+  sites: Array<{
+    id?: string;
+    name: string;
+    canonicalDomain: string;
+    domainAliases?: string[];
+  }>;
+}
+
 export interface PlatformApiKey {
   domain: string;
   apiKey: string;
@@ -82,7 +92,7 @@ export type PlatformAssignableRole = 'admin' | 'commercial' | 'supervisor';
 export interface PlatformCreateUserRequest {
   companyId: string;
   firstName: string;
-  lastName: string;
+  lastName?: string;
   email: string;
   phone?: string;
   roles: PlatformAssignableRole[];
@@ -91,7 +101,9 @@ export interface PlatformCreateUserRequest {
 
 export interface PlatformUpdateUserRequest {
   name?: string;
+  email?: string;
   roles?: PlatformAssignableRole[];
+  password?: string;
 }
 
 export interface PlatformSetUserActiveRequest {

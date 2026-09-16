@@ -9,6 +9,7 @@ import {
   PlatformCreateApiKeyResponse,
   PlatformCreateCompanyRequest,
   PlatformCreateCompanyResponse,
+  PlatformUpdateCompanyRequest,
   PlatformCreateUserRequest,
   PlatformSetUserActiveRequest,
   PlatformUpdateUserRequest,
@@ -47,6 +48,17 @@ export class PlatformCompaniesService {
     return this.http.post<PlatformCreateCompanyResponse>(this.baseUrl, body, {
       withCredentials: true,
     });
+  }
+
+  updateCompany(
+    companyId: string,
+    body: PlatformUpdateCompanyRequest,
+  ): Observable<PlatformCompanyDetail> {
+    return this.http.patch<PlatformCompanyDetail>(
+      `${this.baseUrl}/${companyId}`,
+      body,
+      { withCredentials: true },
+    );
   }
 
   listApiKeys(companyId: string): Observable<PlatformApiKey[]> {

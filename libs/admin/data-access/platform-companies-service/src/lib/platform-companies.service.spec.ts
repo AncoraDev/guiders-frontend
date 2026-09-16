@@ -59,4 +59,25 @@ describe('PlatformCompaniesService', () => {
     expect(req.request.method).toBe('POST');
     req.flush({ companyId: 'c1', adminUserId: 'u1' });
   });
+
+  it('actualiza company en PATCH /platform/companies/:id', () => {
+    service
+      .updateCompany('c1', {
+        companyName: 'Acme Updated',
+        sites: [{ name: 'Principal', canonicalDomain: 'acme.test' }],
+      })
+      .subscribe((res) => {
+        expect(res.companyName).toBe('Acme Updated');
+      });
+    const req = http.expectOne('/api/platform/companies/c1');
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({
+      id: 'c1',
+      companyName: 'Acme Updated',
+      sites: [],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+    });
+  });
 });
