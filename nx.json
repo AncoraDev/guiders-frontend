@@ -38,7 +38,10 @@
     },
     "@nx/vite:test": {
       "cache": true,
-      "inputs": ["default", "^production"]
+      "inputs": ["default", "^production"],
+      "options": {
+        "passWithNoTests": true
+      }
     },
     "@nx/angular:ng-packagr-lite": {
       "cache": true,
