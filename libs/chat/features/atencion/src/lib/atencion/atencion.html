@@ -3,116 +3,117 @@
     class="atencion"
     [class.atencion--panel-open]="showVisitorPanel()"
     [class.atencion--compact]="isCompactLayout()"
-    [class.atencion--queues-open]="queuesOpen()"
   >
-  @if (isCompactLayout() && (queuesOpen() || showVisitorPanel())) {
+  @if (isCompactLayout() && showVisitorPanel()) {
     <button
       type="button"
       class="atencion__backdrop"
-      aria-label="Cerrar panel"
-      (click)="closeQueuesDrawer(); onCloseVisitorPanel()"
+      aria-label="Cerrar ficha"
+      (click)="onCloseVisitorPanel()"
     ></button>
   }
 
-  <!-- Colas -->
-  <aside
-    id="atencion-queues"
-    class="atencion__queues"
-    aria-label="Colas de atención"
-    data-testid="atencion-queues"
-    [attr.aria-hidden]="isCompactLayout() && !queuesOpen() ? true : null"
-  >
-    <header class="atencion__queues-header">
-      <h1>Atención</h1>
-      <button
-        type="button"
-        class="atencion__refresh"
-        (click)="refreshAll()"
-        [disabled]="isLoading()"
-        title="Actualizar"
-      >
-        Actualizar
-      </button>
-    </header>
-
-    <div class="atencion__presence" data-testid="atencion-presence">
-      <guiders-status-selector />
-    </div>
-
-    <nav class="atencion__queue-nav">
-      <button
-        type="button"
-        class="atencion__queue-btn"
-        [class.atencion__queue-btn--active]="activeCola() === 'pendientes'"
-        (click)="selectCola('pendientes')"
-      >
-        <span>Pendientes</span>
-        <span class="atencion__badge" [class.atencion__badge--urgent]="pendingCount() > 0">
-          {{ pendingCount() }}
-        </span>
-      </button>
-      <button
-        type="button"
-        class="atencion__queue-btn"
-        [class.atencion__queue-btn--active]="activeCola() === 'mios'"
-        (click)="selectCola('mios')"
-      >
-        <span>Míos</span>
-        <span
-          class="atencion__badge"
-          [class.atencion__badge--urgent]="mineUnreadCount() > 0"
-        >
-          {{ mineUnreadCount() > 0 ? mineUnreadCount() : mineCount() }}
-        </span>
-      </button>
-      <button
-        type="button"
-        class="atencion__queue-btn"
-        [class.atencion__queue-btn--active]="activeCola() === 'en-web'"
-        (click)="selectCola('en-web')"
-      >
-        <span>En la web</span>
-        <span class="atencion__badge">{{ webCount() }}</span>
-      </button>
-    </nav>
-
-    @if (error()) {
-      <p class="atencion__error" role="alert">{{ error() }}</p>
-    }
-  </aside>
-
-  <!-- Lista -->
-  <section class="atencion__list" aria-label="Lista de personas">
-    <header class="atencion__list-header">
-      @if (isCompactLayout()) {
+  <!-- Rail: estado, colas y lista -->
+  <section class="atencion__list" aria-label="Colas y lista de personas">
+    <header class="atencion__rail-header">
+      <div class="atencion__rail-title">
+        <h1>Atención</h1>
         <button
           type="button"
-          class="atencion__queues-toggle"
-          (click)="toggleQueuesDrawer()"
-          [attr.aria-expanded]="queuesOpen()"
-          aria-controls="atencion-queues"
-          title="Colas de atención"
+          class="atencion__refresh"
+          (click)="refreshAll()"
+          [disabled]="isLoading()"
+          title="Actualizar"
         >
-          Colas
+          Actualizar
         </button>
-      }
-      @switch (activeCola()) {
-        @case ('pendientes') {
-          <h2>Sin atender</h2>
-          <p>Han hablado y nadie los tiene todavía. Al abrir, quedan tuyos.</p>
-        }
-        @case ('mios') {
-          <h2>Mis conversaciones</h2>
-          <p>
-            En línea / desconectado en vivo. Si te escriben en otro chat, verás la notificación en rojo.
-          </p>
-        }
-        @default {
-          <h2>En la web ahora</h2>
-          <p>Solo visitantes online sin chat. Si vacías caché, es un visitante nuevo.</p>
-        }
+      </div>
+
+      <div class="atencion__presence" data-testid="atencion-presence">
+        <guiders-status-selector />
+      </div>
+
+      <nav
+        id="atencion-queues"
+        class="atencion__queue-nav"
+        aria-label="Colas de atención"
+        data-testid="atencion-queues"
+        data-tour="atencion-queues"
+      >
+        <button
+          type="button"
+          class="atencion__queue-btn"
+          [class.atencion__queue-btn--active]="activeCola() === 'pendientes'"
+          (click)="selectCola('pendientes')"
+        >
+          <span class="atencion__queue-name">Pendientes</span>
+          <span
+            class="atencion__help"
+            aria-label="Han hablado y nadie los tiene. Al abrir, quedan tuyos."
+            (click)="$event.stopPropagation()"
+          >
+            ?
+            <span class="atencion__tooltip" role="tooltip">
+              Han hablado y nadie los tiene. Al abrir, quedan tuyos.
+            </span>
+          </span>
+          <span class="atencion__badge" [class.atencion__badge--urgent]="pendingCount() > 0">
+            {{ pendingCount() }}
+          </span>
+        </button>
+        <button
+          type="button"
+          class="atencion__queue-btn"
+          [class.atencion__queue-btn--active]="activeCola() === 'mios'"
+          (click)="selectCola('mios')"
+        >
+          <span class="atencion__queue-name">Míos</span>
+          <span
+            class="atencion__help"
+            aria-label="Si te escriben en otro chat, verás la notificación en rojo."
+            (click)="$event.stopPropagation()"
+          >
+            ?
+            <span class="atencion__tooltip" role="tooltip">
+              Si te escriben en otro chat, verás la notificación en rojo.
+            </span>
+          </span>
+          <span
+            class="atencion__badge"
+            [class.atencion__badge--urgent]="mineUnreadCount() > 0"
+          >
+            {{ mineUnreadCount() > 0 ? mineUnreadCount() : mineCount() }}
+          </span>
+        </button>
+        <button
+          type="button"
+          class="atencion__queue-btn"
+          [class.atencion__queue-btn--active]="activeCola() === 'en-web'"
+          (click)="selectCola('en-web')"
+        >
+          <span class="atencion__queue-name">En la web</span>
+          <span
+            class="atencion__help"
+            aria-label="Están en la web ahora, aunque no hayan escrito. «Leyendo» = llevan un rato sin clicar. Al saludar, pasan a Míos."
+            (click)="$event.stopPropagation()"
+          >
+            ?
+            <span class="atencion__tooltip" role="tooltip">
+              Están en la web ahora, aunque no hayan escrito. «Leyendo» = llevan un rato sin clicar. Al saludar, pasan a Míos.
+            </span>
+          </span>
+          <span class="atencion__badge" [class.atencion__badge--urgent]="webCount() > 0">
+            {{ webCount() }}
+          </span>
+        </button>
+      </nav>
+
+      @if (error()) {
+        <p class="atencion__error" role="alert">{{ error() }}</p>
       }
     </header>
+
+    <h2 class="atencion__list-title">Conversaciones</h2>
 
     @if (isLoading()) {
       <div class="atencion__empty">Cargando…</div>
@@ -120,7 +121,7 @@
       <div class="atencion__empty">
         @switch (activeCola()) {
           @case ('en-web') {
-            Nadie en la web ahora. Abre el demo en Chrome o Safari y aparecerá aquí en unos segundos.
+            Nadie en la web ahora. Quien entre sale aquí aunque no escriba.
           }
           @case ('mios') {
             Aún no tienes conversaciones. Reclama un pendiente o inicia contacto desde En la web.
@@ -185,7 +186,12 @@
                   <button
                     type="button"
                     class="atencion__saludar"
-                    [disabled]="isClaiming()"
+                    [disabled]="isClaiming() || !isPresenceConnected()"
+                    [title]="
+                      isPresenceConnected()
+                        ? 'Iniciar conversación con un saludo'
+                        : 'Conéctate para saludar'
+                    "
                     (click)="onSaludar($event, item)"
                   >
                     Saludar

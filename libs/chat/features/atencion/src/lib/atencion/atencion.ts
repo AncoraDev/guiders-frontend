@@ -58,8 +58,6 @@ import {
   VisitorSearchResult,
 } from '@guiders-frontend/shared/types';
 
-/** Segundos máximos desde última actividad para considerar "en la web ahora". */
-const WEB_FRESHNESS_MS = 2 * 60 * 1000;
 /** Offline sin no-leídos más antiguos que esto → sección inactivos. */
 const MINE_ACTIVE_MS = 48 * 60 * 60 * 1000;
 /** Polling silencioso para colas (presencia/unread van por WebSocket). */
@@ -142,13 +140,7 @@ export class Atencion implements OnInit, OnDestroy {
       status === 'PENDING' || (!payload.commercialId && status !== 'ASSIGNED');
     if (!isPending) return;
 
-    const name =
-      payload.visitorInfo?.name ||
-      payload.visitorInfo?.email ||
-      'un visitante';
-
     this.ngZone.run(() => {
-      this.notifyNewPendingChat(payload.chatId!, name);
       this.refreshAll(true);
     });
   };
@@ -196,9 +188,13 @@ export class Atencion implements OnInit, OnDestroy {
     });
   };
 
-  readonly activeCola = signal<AtencionCola>('pendientes');
+  readonly activeCola = signal<AtencionCola>('mios');
+  /** Desconectado = solo lectura: no atender, no saludar, no escribir. */
+  readonly isPresenceConnected = signal(false);
   readonly isLoading = signal(false);
   readonly isClaiming = signal(false);
+  /** Solo estado de carga/sesión: el poll lo limpia cada 4s. Los errores de
+   * acción (saludar, reclamar, enviar) van por toast para no perderse. */
   readonly error = signal<string | null>(null);
   readonly showInactiveMios = signal(false);
 
@@ -224,10 +220,8 @@ export class Atencion implements OnInit, OnDestroy {
   readonly mentionCandidates = signal<
     Array<{ id: string; name: string; avatarUrl?: string | null }>
   >([]);
-  /** Layout estrecho: colas y detalles en overlay (no restan ancho al chat). */
+  /** Layout estrecho: ficha del visitante en overlay (no resta ancho al chat). */
   readonly isCompactLayout = signal(false);
-  /** Drawer de colas (solo relevante en compact). */
-  readonly queuesOpen = signal(false);
   readonly pageHistory = signal<VisitorPageHistoryItem[]>([]);
   readonly pageHistoryTotal = signal(0);
   readonly pageHistoryLoading = signal(false);
@@ -439,6 +433,10 @@ export class Atencion implements OnInit, OnDestroy {
       this.activeCola.set(colaParam);
     }
 
+    this.commercialPresence.isConnected$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((connected) => this.isPresenceConnected.set(connected));
+
     this.chatService.messages$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((mapMsgs) => {
@@ -503,21 +501,6 @@ export class Atencion implements OnInit, OnDestroy {
   selectCola(cola: AtencionCola): void {
     this.activeCola.set(cola);
     this.clearSelectedChat();
-    if (this.isCompactLayout()) {
-      this.queuesOpen.set(false);
-    }
-  }
-
-  toggleQueuesDrawer(): void {
-    const next = !this.queuesOpen();
-    this.queuesOpen.set(next);
-    if (next && this.isCompactLayout()) {
-      this.showVisitorPanel.set(false);
-    }
-  }
-
-  closeQueuesDrawer(): void {
-    this.queuesOpen.set(false);
   }
 
   onCloseChat(): void {
@@ -528,9 +511,6 @@ export class Atencion implements OnInit, OnDestroy {
     const next = !this.showVisitorPanel();
     this.showVisitorPanel.set(next);
     if (next) {
-      if (this.isCompactLayout()) {
-        this.queuesOpen.set(false);
-      }
       const visitorId = this.selectedChat()?.visitorId;
       if (visitorId) this.loadVisitorContactData(visitorId);
     }
@@ -554,9 +534,6 @@ export class Atencion implements OnInit, OnDestroy {
       this.isCompactLayout.set(compact);
       if (compact) {
         this.showVisitorPanel.set(false);
-        this.queuesOpen.set(false);
-      } else {
-        this.queuesOpen.set(false);
       }
     });
   }
@@ -631,7 +608,6 @@ export class Atencion implements OnInit, OnDestroy {
         },
         error: () => {
           this.toastService.error('No se pudieron guardar los datos de contacto');
-          this.error.set('No se pudieron guardar los datos de contacto');
         },
       });
   }
@@ -713,10 +689,13 @@ export class Atencion implements OnInit, OnDestroy {
 
     forkJoin({
       pending: this.visitorsService.getPendingChats(undefined, 50).pipe(
-        map((res) => this.mapPendingQueue(res.queue)),
+        map((res) => this.splitPendingQueue(res.queue)),
         catchError((err) => {
           console.error('[Atencion] pending queue error', err);
-          return of([] as AtencionListItem[]);
+          return of({
+            withMessage: [] as AtencionListItem[],
+            silentWeb: [] as AtencionListItem[],
+          });
         })
       ),
       mine: this.chatService
@@ -744,9 +723,11 @@ export class Atencion implements OnInit, OnDestroy {
       web: this.visitorsService
         .searchVisitors(companyId, {
           filters: {
-            connectionStatus: ['online', 'chatting'],
-            hasActiveSessions: true,
-            isInternal: false,
+            // 'away' incluido a propósito: el backend marca AWAY tras 2 min sin
+            // clic (PRESENCE_USER_INACTIVITY_MINUTES) aunque la pestaña siga
+            // abierta. Sin 'away' el visitante que solo lee desaparecía de
+            // Atención y solo se veía en Visitantes.
+            connectionStatus: ['online', 'chatting', 'away'],
           },
           limit: 50,
         })
@@ -766,23 +747,34 @@ export class Atencion implements OnInit, OnDestroy {
       )
       .subscribe({
         next: ({ pending, mine, web }) => {
-          this.notifyPendingDeltas(pending);
+          const pendingItems = pending.withMessage;
+          this.notifyPendingDeltas(pendingItems);
 
-          this.pendingItems.set(pending);
+          this.pendingItems.set(pendingItems);
           this.mineItems.set(mine);
           const mineVisitorIds = new Set(mine.map((m) => m.visitorId));
-          const pendingVisitorIds = new Set(pending.map((p) => p.visitorId));
-          const webItems = web
+          const pendingVisitorIds = new Set(
+            pendingItems.map((p) => p.visitorId)
+          );
+          const webFromSearch = web
             .filter((v) =>
               this.isEligibleForWebQueue(v, mineVisitorIds, pendingVisitorIds)
             )
             .map((v) => this.mapWebVisitor(v));
+          const webItems = this.mergeWebItems(
+            pending.silentWeb.filter(
+              (item) =>
+                !mineVisitorIds.has(item.visitorId) &&
+                !pendingVisitorIds.has(item.visitorId)
+            ),
+            webFromSearch
+          );
           this.webItems.set(webItems);
 
           this.wireMineRealtime(mine);
-          this.preserveSelection(pending, mine);
+          this.preserveSelection(pendingItems, mine);
           this.enrichRowsWithContacts(
-            [...pending, ...mine, ...webItems].map((i) => i.visitorId)
+            [...pendingItems, ...mine, ...webItems].map((i) => i.visitorId)
           );
 
           const contact = this.visitorContactData();
@@ -809,47 +801,62 @@ export class Atencion implements OnInit, OnDestroy {
 
   /**
    * Visitante válido para "En la web":
-   * - no soy yo / no interno
-   * - sin chat previo ni pendiente
+   * - no interno (empleado)
    * - no está ya en Míos
-   * - actividad reciente (evita fantasmas online en Redis)
+   * - no está en Pendientes con mensaje (evitar duplicado)
+   * - sigue en el sitio: online / chatting / away (offline = sesión cerrada)
+   *
+   * No filtramos isMe: en local el demo y Console comparten IP/navegador
+   * y el visitante real desaparecía del panel.
    */
   private isEligibleForWebQueue(
     v: VisitorSearchResult,
     mineVisitorIds: Set<string>,
     pendingVisitorIds: Set<string>
   ): boolean {
-    if (v.isMe || v.isInternal) return false;
-    if ((v.totalChatsCount ?? 0) > 0) return false;
-    if (v.pendingChatIds && v.pendingChatIds.length > 0) return false;
+    if (v.isInternal) return false;
     if (mineVisitorIds.has(v.id) || pendingVisitorIds.has(v.id)) return false;
-    if ((v.activeSessionsCount ?? 0) < 1) return false;
-
-    const lastSeen = Date.parse(v.updatedAt || v.createdAt || '');
-    if (!Number.isNaN(lastSeen) && Date.now() - lastSeen > WEB_FRESHNESS_MS) {
+    if (String(v.connectionStatus ?? '').toLowerCase() === 'offline') {
       return false;
     }
     return true;
   }
 
+  /** AWAY = pestaña abierta pero sin clic reciente; sigue siendo abordable. */
+  private isIdleOnSite(v: VisitorSearchResult): boolean {
+    return String(v.connectionStatus ?? '').toLowerCase() === 'away';
+  }
+
+  /**
+   * Desconectado no puede atender: reclamar o iniciar chat dejaría al visitante
+   * esperando a alguien que no está. Solo se permite mirar los chats propios.
+   */
+  private requireConnected(action: string): boolean {
+    if (this.isPresenceConnected()) return true;
+    this.toastService.info(`Conéctate para ${action}`);
+    return false;
+  }
+
   onSelectItem(item: AtencionListItem): void {
     if (this.isClaiming()) return;
-
-    if (this.isCompactLayout()) {
-      this.queuesOpen.set(false);
-    }
-
-    if (item.kind === 'pending' && item.chatId) {
-      this.claimAndOpen(item);
-      return;
-    }
 
     if (item.kind === 'mine' && item.chatId) {
       this.openChat(item, item.rawChat ?? null);
       return;
     }
 
+    if (item.kind === 'pending' && item.chatId) {
+      if (!this.requireConnected('atender conversaciones')) return;
+      this.claimAndOpen(item);
+      return;
+    }
+
     if (item.kind === 'web') {
+      if (!this.requireConnected('iniciar una conversación')) return;
+      if (item.chatId) {
+        this.claimAndOpen(item);
+        return;
+      }
       this.startChatWithVisitor(item);
     }
   }
@@ -859,6 +866,11 @@ export class Atencion implements OnInit, OnDestroy {
     event.stopPropagation();
     event.preventDefault();
     if (this.isClaiming() || item.kind !== 'web') return;
+    if (!this.requireConnected('saludar a un visitante')) return;
+    if (item.chatId) {
+      this.claimAndOpen(item, { withGreeting: true });
+      return;
+    }
     this.startChatWithVisitor(item, { withGreeting: true });
   }
 
@@ -874,10 +886,7 @@ export class Atencion implements OnInit, OnDestroy {
     const userId = this.currentUserId();
     if (!chat || !userId || !content.trim()) return;
 
-    if (!this.commercialPresence.getCurrentStatus().isConnected) {
-      this.toastService.info('Conéctate para poder enviar mensajes');
-      return;
-    }
+    if (!this.requireConnected('poder enviar mensajes')) return;
 
     const chatId = chat.chatId;
 
@@ -897,7 +906,7 @@ export class Atencion implements OnInit, OnDestroy {
             transferToDisplayName,
           );
         },
-        error: () => this.error.set('Error al enviar el mensaje'),
+        error: () => this.toastService.error('Error al enviar el mensaje'),
       });
   }
 
@@ -916,10 +925,7 @@ export class Atencion implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.commercialPresence.getCurrentStatus().isConnected) {
-      this.toastService.info('Conéctate para solicitar datos');
-      return;
-    }
+    if (!this.requireConnected('solicitar datos')) return;
 
     this.chatService
       .requestContactData(chat.chatId)
@@ -1178,23 +1184,40 @@ export class Atencion implements OnInit, OnDestroy {
       });
   }
 
-  private claimAndOpen(item: AtencionListItem): void {
+  private claimAndOpen(
+    item: AtencionListItem,
+    options?: { withGreeting?: boolean }
+  ): void {
     const userId = this.currentUserId();
     const chatId = item.chatId;
     if (!userId || !chatId) return;
+    if (!this.requireConnected('atender conversaciones')) return;
 
     this.isClaiming.set(true);
     this.visitorsService
       .assignChatToCommercial(chatId, userId)
       .pipe(
+        // Si ya está asignado (a mí o a otro) el backend devuelve 400: lo
+        // resolvemos con el chat real en lugar de abortar la apertura.
+        catchError(() => of(null)),
         switchMap(() => this.chatService.getChat(chatId)),
         finalize(() => this.isClaiming.set(false)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
         next: (chat) => {
+          if (chat?.commercialId && chat.commercialId !== userId) {
+            this.toastService.info(
+              'Otro comercial acaba de tomar esta conversación'
+            );
+            this.refreshAll(true);
+            return;
+          }
           this.pendingItems.update((list) =>
             list.filter((i) => i.chatId !== chatId)
+          );
+          this.webItems.update((list) =>
+            list.filter((i) => i.visitorId !== item.visitorId)
           );
           const mineItem: AtencionListItem = {
             ...item,
@@ -1203,6 +1226,12 @@ export class Atencion implements OnInit, OnDestroy {
             statusLabel: 'Mío',
             rawChat: chat ?? item.rawChat,
             updatedAtMs: Date.now(),
+            preview: options?.withGreeting
+              ? this.truncatePreview(DEFAULT_GREETING)
+              : item.preview,
+            subtitle: options?.withGreeting
+              ? this.truncatePreview(DEFAULT_GREETING)
+              : item.subtitle,
           };
           this.mineItems.update((list) => {
             if (list.some((i) => i.chatId === chatId)) return list;
@@ -1211,15 +1240,61 @@ export class Atencion implements OnInit, OnDestroy {
           this.activeCola.set('mios');
           this.openChat(mineItem, chat);
           this.wireMineRealtime([mineItem]);
+          if (options?.withGreeting) {
+            this.onSendMessage(DEFAULT_GREETING);
+          }
           this.refreshAll(true);
         },
         error: () => {
-          this.error.set('No se pudo reclamar el chat');
+          this.toastService.error('No se pudo reclamar el chat');
         },
       });
   }
 
   private startChatWithVisitor(
+    item: AtencionListItem,
+    options?: { withGreeting?: boolean }
+  ): void {
+    const userId = this.currentUserId();
+    if (!userId) return;
+    if (!this.requireConnected('iniciar una conversación')) return;
+
+    // El visitante suele tener ya un chat de entrada creado por el SDK. Crear
+    // otro dejaba al visitante escribiendo en un chat y al comercial en otro,
+    // así que se reclama el abierto si existe.
+    this.isClaiming.set(true);
+    this.visitorsService
+      .getVisitorChats(item.visitorId)
+      .pipe(
+        map((res) => this.findOpenChatId(res)),
+        catchError(() => of(null)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((openChatId) => {
+        this.isClaiming.set(false);
+        if (openChatId) {
+          this.claimAndOpen({ ...item, chatId: openChatId }, options);
+          return;
+        }
+        this.createChatWithVisitor(item, options);
+      });
+  }
+
+  /** chatId abierto (PENDING/ASSIGNED/ACTIVE) del visitante, si existe. */
+  private findOpenChatId(res: { chats?: unknown[] } | null): string | null {
+    const openStatuses = new Set(['PENDING', 'ASSIGNED', 'ACTIVE']);
+    const chats = (res?.chats ?? []) as Array<{
+      chatId?: string;
+      id?: string;
+      status?: string;
+    }>;
+    const match = chats.find((chat) =>
+      openStatuses.has(String(chat?.status ?? '').toUpperCase())
+    );
+    return match?.chatId ?? match?.id ?? null;
+  }
+
+  private createChatWithVisitor(
     item: AtencionListItem,
     options?: { withGreeting?: boolean }
   ): void {
@@ -1257,7 +1332,10 @@ export class Atencion implements OnInit, OnDestroy {
       })
       .pipe(
         switchMap((res) =>
+          // Crear el chat como comercial ya lo asigna; reasignar devuelve 400
+          // ("no puede ser asignado en estado ASSIGNED") y abortaba la apertura.
           this.visitorsService.assignChatToCommercial(res.chatId, userId).pipe(
+            catchError(() => of(null)),
             switchMap(() => this.chatService.getChat(res.chatId)),
             map((chat) => ({ chatId: res.chatId, chat }))
           )
@@ -1267,6 +1345,13 @@ export class Atencion implements OnInit, OnDestroy {
       )
       .subscribe({
         next: ({ chatId, chat }) => {
+          if (chat?.commercialId && chat.commercialId !== userId) {
+            this.toastService.info(
+              'Otro comercial acaba de tomar esta conversación'
+            );
+            this.refreshAll(true);
+            return;
+          }
           this.webItems.update((list) =>
             list.filter((i) => i.visitorId !== item.visitorId)
           );
@@ -1295,7 +1380,7 @@ export class Atencion implements OnInit, OnDestroy {
           this.wireMineRealtime([mineItem]);
           this.refreshAll(true);
         },
-        error: () => this.error.set('No se pudo iniciar el chat'),
+        error: () => this.toastService.error('No se pudo iniciar el chat'),
       });
   }
 
@@ -1464,7 +1549,7 @@ export class Atencion implements OnInit, OnDestroy {
         next: (messages) => {
           this.messages.set(messages);
         },
-        error: () => this.error.set('Error al cargar mensajes'),
+        error: () => this.toastService.error('Error al cargar mensajes'),
       });
   }
 
@@ -1554,48 +1639,144 @@ export class Atencion implements OnInit, OnDestroy {
     return Array.from(byVisitor.values());
   }
 
-  private mapPendingQueue(queue: unknown[]): AtencionListItem[] {
-    return (queue ?? []).map((raw) => {
+  private splitPendingQueue(queue: unknown[]): {
+    withMessage: AtencionListItem[];
+    silentWeb: AtencionListItem[];
+  } {
+    const withMessage: AtencionListItem[] = [];
+    const silentWeb: AtencionListItem[] = [];
+    for (const raw of queue ?? []) {
       const row = raw as Record<string, unknown>;
-      const chatId = String(row['id'] ?? row['chatId'] ?? '');
-      const visitorInfo = (row['visitorInfo'] ?? {}) as Record<string, unknown>;
-      const metadata = (row['metadata'] ?? {}) as Record<string, unknown>;
-      const visitorId = String(
-        visitorInfo['id'] ?? row['visitorId'] ?? 'unknown'
-      );
-      const name =
-        String(visitorInfo['name'] ?? visitorInfo['email'] ?? '') ||
-        `Visitante ${visitorId.slice(0, 8)}`;
-      const lastMessage = row['lastMessage'] as Message | undefined;
-      const previewRaw = String(
-        row['lastMessagePreview'] ?? row['lastMessageContent'] ?? ''
-      ).trim();
-      const preview =
-        this.previewFromMessage(
-          lastMessage ?? { content: previewRaw },
-          'Esperando atención'
-        );
-      const pageLabel = this.formatPageLabel(
-        String(metadata['initialUrl'] ?? metadata['currentUrl'] ?? '')
-      );
-      const cached = this.leadContactService.peekCache(visitorId);
-      return {
-        id: `pending-${chatId}`,
-        kind: 'pending' as const,
-        title: getContactDisplayName(cached) || name,
-        subtitle: preview,
-        preview,
-        pageLabel,
-        isLead: this.contactMeetsLeadCriteria(cached),
-        chatId,
-        visitorId,
-        unreadCount: Number(
-          row['unreadMessagesCount'] ?? row['unreadCount'] ?? 0
-        ),
-        statusLabel: 'Pendiente',
-        rawChat: undefined,
-      };
-    });
+      if (this.pendingHasVisitorMessage(row)) {
+        withMessage.push(this.mapPendingRow(row));
+      } else {
+        silentWeb.push(this.mapSilentPendingToWeb(row));
+      }
+    }
+    return { withMessage, silentWeb };
+  }
+
+  private mapPendingRow(row: Record<string, unknown>): AtencionListItem {
+    const chatId = String(row['id'] ?? row['chatId'] ?? '');
+    const visitorInfo = (row['visitorInfo'] ?? {}) as Record<string, unknown>;
+    const metadata = (row['metadata'] ?? {}) as Record<string, unknown>;
+    const visitorId = String(
+      visitorInfo['id'] ?? row['visitorId'] ?? 'unknown'
+    );
+    const name =
+      String(visitorInfo['name'] ?? visitorInfo['email'] ?? '') ||
+      `Visitante ${visitorId.slice(0, 8)}`;
+    const lastMessage = row['lastMessage'] as Message | undefined;
+    const previewRaw = String(
+      row['lastMessagePreview'] ?? row['lastMessageContent'] ?? ''
+    ).trim();
+    const preview = this.previewFromMessage(
+      lastMessage ?? { content: previewRaw },
+      'Esperando atención'
+    );
+    const pageLabel = this.formatPageLabel(
+      String(metadata['initialUrl'] ?? metadata['currentUrl'] ?? '')
+    );
+    const cached = this.leadContactService.peekCache(visitorId);
+    return {
+      id: `pending-${chatId}`,
+      kind: 'pending',
+      title: getContactDisplayName(cached) || name,
+      subtitle: preview,
+      preview,
+      pageLabel,
+      isLead: this.contactMeetsLeadCriteria(cached),
+      chatId,
+      visitorId,
+      unreadCount: Number(
+        row['unreadMessagesCount'] ?? row['unreadCount'] ?? 0
+      ),
+      statusLabel: 'Pendiente',
+      rawChat: undefined,
+    };
+  }
+
+  private mapSilentPendingToWeb(row: Record<string, unknown>): AtencionListItem {
+    const chatId = String(row['id'] ?? row['chatId'] ?? '');
+    const visitorInfo = (row['visitorInfo'] ?? {}) as Record<string, unknown>;
+    const metadata = (row['metadata'] ?? {}) as Record<string, unknown>;
+    const visitorId = String(
+      visitorInfo['id'] ?? row['visitorId'] ?? 'unknown'
+    );
+    const name =
+      String(visitorInfo['name'] ?? visitorInfo['email'] ?? '') ||
+      `Visitante ${visitorId.slice(0, 8)}`;
+    const pageLabel = this.formatPageLabel(
+      String(metadata['initialUrl'] ?? metadata['currentUrl'] ?? '')
+    );
+    const cached = this.leadContactService.peekCache(visitorId);
+    return {
+      id: `web-${visitorId}`,
+      kind: 'web',
+      title: getContactDisplayName(cached) || name,
+      subtitle: pageLabel || 'En el sitio, aún no ha escrito',
+      pageLabel,
+      isLead: this.contactMeetsLeadCriteria(cached),
+      chatId,
+      visitorId,
+      unreadCount: 0,
+      statusLabel: 'En la web',
+    };
+  }
+
+  private mergeWebItems(
+    fromPending: AtencionListItem[],
+    fromSearch: AtencionListItem[]
+  ): AtencionListItem[] {
+    const byVisitor = new Map<string, AtencionListItem>();
+    for (const item of fromSearch) {
+      byVisitor.set(item.visitorId, item);
+    }
+    for (const item of fromPending) {
+      const prev = byVisitor.get(item.visitorId);
+      byVisitor.set(item.visitorId, {
+        ...(prev ?? item),
+        ...item,
+        title: prev?.title && !prev.title.startsWith('Visitante')
+          ? prev.title
+          : item.title,
+        pageLabel: item.pageLabel || prev?.pageLabel,
+        // La búsqueda de visitantes es la única que trae estado de conexión real.
+        statusLabel: prev?.statusLabel ?? item.statusLabel,
+        presence: prev?.presence ?? item.presence,
+        rawVisitor: prev?.rawVisitor,
+      });
+    }
+    return Array.from(byVisitor.values()).sort(
+      (a, b) =>
+        (a.presence === 'away' ? 1 : 0) - (b.presence === 'away' ? 1 : 0)
+    );
+  }
+
+  /** Pendientes solo si el visitante ya escribió (los vacíos de site-entry van a En la web). */
+  private pendingHasVisitorMessage(row: Record<string, unknown>): boolean {
+    const lastMessage = row['lastMessage'] as
+      | (Message & { senderType?: string; sender?: { type?: string } })
+      | undefined;
+    const preview = String(
+      row['lastMessagePreview'] ??
+        row['lastMessageContent'] ??
+        lastMessage?.content ??
+        ''
+    ).trim();
+    if (!preview) return false;
+
+    const sender = String(
+      lastMessage?.senderType ?? lastMessage?.sender?.type ?? ''
+    ).toUpperCase();
+    if (
+      sender === 'SYSTEM' ||
+      sender === 'COMMERCIAL' ||
+      sender === 'AGENT'
+    ) {
+      return false;
+    }
+    return true;
   }
 
   private mapMineChat(chat: Chat): AtencionListItem {
@@ -1646,6 +1827,7 @@ export class Atencion implements OnInit, OnDestroy {
     const isLead =
       this.contactMeetsLeadCriteria(cached) ||
       this.isLeadLifecycle(v.lifecycle);
+    const idle = this.isIdleOnSite(v);
     return {
       id: `web-${v.id}`,
       kind: 'web',
@@ -1655,7 +1837,8 @@ export class Atencion implements OnInit, OnDestroy {
       isLead,
       visitorId: v.id,
       unreadCount: 0,
-      statusLabel: browser,
+      statusLabel: idle ? 'Leyendo' : 'Navegando',
+      presence: idle ? 'away' : 'online',
       rawVisitor: v,
     };
   }

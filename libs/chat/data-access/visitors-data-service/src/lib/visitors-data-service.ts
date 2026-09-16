@@ -202,11 +202,18 @@ export class VisitorsDataService {
     };
 
     if (request.firstMessage) {
-      // Usar endpoint que crea chat con mensaje inicial
+      // Usar endpoint que crea chat con mensaje inicial.
+      // La app usa mayúsculas para el tipo de mensaje, pero este endpoint
+      // valida contra 'text' | 'image' | 'file': normalizar o devuelve 400.
+      const firstMessage = {
+        ...request.firstMessage,
+        type: (request.firstMessage.type ?? 'TEXT').toLowerCase(),
+      };
+
       return this.http.post<CreateChatWithVisitorResponse>(
         `${this.baseUrl}/v2/chats/with-message`,
         {
-          firstMessage: request.firstMessage,
+          firstMessage,
           visitorInfo,
           metadata: request.metadata,
         },

@@ -45,6 +45,11 @@ export class StatusSelector {
   readonly label = computed(() =>
     this.isOnline() ? 'Conectado' : 'Estás desconectado'
   );
+  readonly visibilityHint = computed(() =>
+    this.isOnline()
+      ? 'Visible para los visitantes'
+      : 'No visible para los visitantes'
+  );
   readonly resolvedAvatarUrl = computed(
     () => this.avatarUrl() || this.loadedAvatarUrl()
   );
