@@ -19,10 +19,12 @@ export const environment: Environment = {
     authority: 'http://localhost:8080/realms/guiders',
     clientId: 'admin',
     scope: 'openid profile email',
-    secureRoutes: ['http://localhost:3000/api']
+    // Absolute URL: OIDC callback is http://localhost:3000/api/bff/auth/callback/admin
+    // (must match login origin so the PKCE session cookie is preserved).
+    secureRoutes: ['http://localhost:3000/api'],
   },
   api: {
-    baseUrl: 'http://localhost:3000/api'
+    baseUrl: 'http://localhost:3000/api',
   },
   consoleUrl: 'http://localhost:4200',
   version: '0.0.0-local',
