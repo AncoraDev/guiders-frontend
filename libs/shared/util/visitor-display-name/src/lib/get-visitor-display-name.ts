@@ -80,9 +80,11 @@ export function getVisitorDisplayName(visitor: VisitorInfo): string {
 
   const alias = visitor.alias?.trim();
   const trimmedName = visitor.name?.trim() ?? '';
+  const looksLikeIdLabel = /^Visitante\s+#?[0-9a-f]{8}$/i.test(trimmedName);
   const usefulName =
     trimmedName &&
     !genericNames.includes(trimmedName) &&
+    !looksLikeIdLabel &&
     trimmedName !== alias
       ? trimmedName
       : '';

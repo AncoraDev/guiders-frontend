@@ -123,6 +123,8 @@ export class Atencion implements OnInit, OnDestroy {
 
   /** Chats PENDING ya notificados (WS + poll) para no duplicar toasts. */
   private readonly notifiedPendingChatIds = new Set<string>();
+  /** Visitantes que el WS marcó offline: no re-entrar por PENDING vacío. */
+  private readonly offlineWebVisitorIds = new Set<string>();
   /** Tras el primer refresh, el poll puede emitir toasts por deltas. */
   private pendingToastBaselineReady = false;
   private readonly onChatCreated = (data: unknown): void => {
@@ -765,7 +767,8 @@ export class Atencion implements OnInit, OnDestroy {
             pending.silentWeb.filter(
               (item) =>
                 !mineVisitorIds.has(item.visitorId) &&
-                !pendingVisitorIds.has(item.visitorId)
+                !pendingVisitorIds.has(item.visitorId) &&
+                !this.offlineWebVisitorIds.has(item.visitorId)
             ),
             webFromSearch
           );
@@ -1089,6 +1092,20 @@ export class Atencion implements OnInit, OnDestroy {
             }));
           }
         });
+        // En la web = está en el sitio. Al cerrar el navegador sale ya.
+        if (event.status === 'offline') {
+          this.offlineWebVisitorIds.add(event.userId);
+          this.webItems.update((list) =>
+            list.filter((item) => item.visitorId !== event.userId)
+          );
+        } else if (
+          event.status === 'online' ||
+          event.status === 'away' ||
+          event.status === 'chatting'
+        ) {
+          this.offlineWebVisitorIds.delete(event.userId);
+          this.refreshAll(true);
+        }
       });
 
     // Tras reconectar WS: re-join + refresh
@@ -1663,9 +1680,11 @@ export class Atencion implements OnInit, OnDestroy {
     const visitorId = String(
       visitorInfo['id'] ?? row['visitorId'] ?? 'unknown'
     );
-    const name =
-      String(visitorInfo['name'] ?? visitorInfo['email'] ?? '') ||
-      `Visitante ${visitorId.slice(0, 8)}`;
+    const name = getVisitorDisplayName({
+      id: visitorId,
+      name: String(visitorInfo['name'] ?? ''),
+      email: String(visitorInfo['email'] ?? ''),
+    });
     const lastMessage = row['lastMessage'] as Message | undefined;
     const previewRaw = String(
       row['lastMessagePreview'] ?? row['lastMessageContent'] ?? ''
@@ -1703,9 +1722,11 @@ export class Atencion implements OnInit, OnDestroy {
     const visitorId = String(
       visitorInfo['id'] ?? row['visitorId'] ?? 'unknown'
     );
-    const name =
-      String(visitorInfo['name'] ?? visitorInfo['email'] ?? '') ||
-      `Visitante ${visitorId.slice(0, 8)}`;
+    const name = getVisitorDisplayName({
+      id: visitorId,
+      name: String(visitorInfo['name'] ?? ''),
+      email: String(visitorInfo['email'] ?? ''),
+    });
     const pageLabel = this.formatPageLabel(
       String(metadata['initialUrl'] ?? metadata['currentUrl'] ?? '')
     );
@@ -1734,17 +1755,20 @@ export class Atencion implements OnInit, OnDestroy {
     }
     for (const item of fromPending) {
       const prev = byVisitor.get(item.visitorId);
+      // PENDING vacío solo enriquece a quien sigue en el sitio (búsqueda).
+      // Sin esto, al cerrar la pestaña el chat site-entry reaparece en gris.
+      if (!prev) continue;
       byVisitor.set(item.visitorId, {
-        ...(prev ?? item),
+        ...prev,
         ...item,
-        title: prev?.title && !prev.title.startsWith('Visitante')
+        title: prev.title && !prev.title.startsWith('Visitante')
           ? prev.title
           : item.title,
-        pageLabel: item.pageLabel || prev?.pageLabel,
-        // La búsqueda de visitantes es la única que trae estado de conexión real.
-        statusLabel: prev?.statusLabel ?? item.statusLabel,
-        presence: prev?.presence ?? item.presence,
-        rawVisitor: prev?.rawVisitor,
+        pageLabel: item.pageLabel || prev.pageLabel,
+        statusLabel: prev.statusLabel,
+        presence: prev.presence,
+        rawVisitor: prev.rawVisitor,
+        chatId: item.chatId ?? prev.chatId,
       });
     }
     return Array.from(byVisitor.values()).sort(
@@ -1798,9 +1822,10 @@ export class Atencion implements OnInit, OnDestroy {
       kind: 'mine',
       title:
         getContactDisplayName(cached) ||
-        chat.name ||
-        chat.participants?.[0]?.name ||
-        'Visitante',
+        getVisitorDisplayName({
+          id: chat.visitorId,
+          name: chat.name || chat.participants?.[0]?.name,
+        }),
       subtitle: preview,
       preview,
       pageLabel,
@@ -1815,14 +1840,14 @@ export class Atencion implements OnInit, OnDestroy {
   }
 
   private mapWebVisitor(v: VisitorSearchResult): AtencionListItem {
-    const browser = this.guessBrowser(v.lastUserAgent);
-    const shortId = v.id.slice(0, 8);
     const cached = this.leadContactService.peekCache(v.id);
     const title =
       getContactDisplayName(cached) ||
-      v.name ||
-      v.email ||
-      `Visitante · ${browser} · ${shortId}`;
+      getVisitorDisplayName({
+        id: v.id,
+        name: v.name,
+        email: v.email,
+      });
     const pageLabel = this.formatPageLabel(v.currentUrl) ?? v.domain;
     const isLead =
       this.contactMeetsLeadCriteria(cached) ||
