@@ -26,4 +26,9 @@ export interface SidebarConfig {
   density?: 'comfortable' | 'compact'; // Soporte para densidades según guía B2B
   /** Cerrar al clic fuera del menú (escritorio). En overlay se cierra siempre. */
   collapseOnOutsideClick?: boolean;
+  /**
+   * Drawer + hamburguesa en viewport ≤1280px.
+   * `false` = rail de iconos persistente (Console).
+   */
+  overlayOnNarrow?: boolean;
 }

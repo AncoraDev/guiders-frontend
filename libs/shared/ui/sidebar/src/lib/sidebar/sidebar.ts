@@ -99,8 +99,12 @@ export class Sidebar {
 
   // Estado interno con signals
   readonly isCollapsed = signal(false);
-  /** Viewport estrecho: el menú pasa a drawer overlay. */
-  readonly isOverlayMode = signal(false);
+  /** Viewport ≤1280px (independiente del config del host). */
+  private readonly viewportNarrow = signal(false);
+  /** Drawer + hamburguesa solo si el host no desactiva overlayOnNarrow. */
+  readonly isOverlayMode = computed(
+    () => this.viewportNarrow() && this.config().overlayOnNarrow !== false
+  );
   /** Controls the theme picker dropdown in the sidebar footer */
   readonly isThemePickerOpen = signal(false);
   /** Controls the help menu dropdown in the sidebar footer */
@@ -140,8 +144,14 @@ export class Sidebar {
   readonly isDarkTheme = computed(() => true); // All named themes are dark
 
   constructor() {
-    this.bindOverlayMode();
+    this.bindViewportNarrow();
     this.bindOutsideDismiss();
+
+    effect(() => {
+      if (this.isOverlayMode()) {
+        this.collapseSidebar();
+      }
+    });
 
     // Respetar el collapsed inicial del config (p. ej. cerrado por defecto en console)
     let collapsedSynced = false;
@@ -413,18 +423,15 @@ export class Sidebar {
     this.toggleSidebar.emit(true);
   }
 
-  private bindOverlayMode(): void {
+  private bindViewportNarrow(): void {
     const win = this.document.defaultView;
     if (!win?.matchMedia) {
       return;
     }
     const media = win.matchMedia(`(max-width: ${SIDEBAR_OVERLAY_MAX_WIDTH}px)`);
-    this.isOverlayMode.set(media.matches);
+    this.viewportNarrow.set(media.matches);
     const onChange = (event: MediaQueryListEvent) => {
-      this.isOverlayMode.set(event.matches);
-      if (event.matches) {
-        this.collapseSidebar();
-      }
+      this.viewportNarrow.set(event.matches);
     };
     media.addEventListener('change', onChange);
     this.destroyRef.onDestroy(() => media.removeEventListener('change', onChange));

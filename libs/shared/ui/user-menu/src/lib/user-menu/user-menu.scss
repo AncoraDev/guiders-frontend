@@ -9,8 +9,8 @@
 .user-menu {
   display: flex;
   align-items: center;
-  gap: tokens.$spacing-md;
-  padding: tokens.$spacing-md;
+  gap: tokens.$spacing-3;
+  padding: tokens.$spacing-sm tokens.$spacing-3;
   border-radius: tokens.$border-radius-md;
   transition: background-color tokens.$duration-fast tokens.$easing-standard;
   overflow: visible;

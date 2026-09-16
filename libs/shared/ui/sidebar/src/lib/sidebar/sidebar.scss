@@ -13,15 +13,20 @@
   height: 100%;
   font-family: tokens.$font-family-ui;
 
+  // Un gutter para header, nav y footer (alineación de iconos y texto).
+  --sidebar-gutter: #{tokens.$spacing-3}; // 12px
+  --sidebar-item-radius: #{tokens.$border-radius-md};
+
   // Soporte para densidades según guía B2B
   &.compact {
     --sidebar-header-height: 48px;
     --sidebar-nav-item-height: #{tokens.$size-2xl}; // 32px
     --sidebar-nav-padding: #{tokens.$spacing-sm};
+    --sidebar-gutter: #{tokens.$spacing-2};
   }
 
   &:not(.compact) {
-    --sidebar-header-height: 64px;
+    --sidebar-header-height: 56px;
     --sidebar-nav-item-height: 40px;
     --sidebar-nav-padding: #{tokens.$spacing-sm};
   }
@@ -70,7 +75,7 @@
 
   // Iconos de navegación - definición base
   .sidebar__nav-icon {
-    margin-right: tokens.$spacing-md;
+    margin-right: tokens.$spacing-3;
     font-size: tokens.$font-size-lg;
     width: 20px;
     text-align: center;
@@ -86,23 +91,25 @@
 
   // Estados colapsado
   &--collapsed {
+    --sidebar-gutter: #{tokens.$spacing-2};
+
     .sidebar__header {
-      padding: tokens.$spacing-md 0;
-      display: block;
-      text-align: center;
+      padding: tokens.$spacing-3 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       min-height: var(--sidebar-header-height);
     }
 
     .sidebar__toggle {
       margin: 0;
-      display: inline-block;
     }
 
     .sidebar__nav-link {
       justify-content: center;
       padding: tokens.$spacing-sm;
-      margin: 0 tokens.$spacing-sm;
-      width: calc(100% - 2 * tokens.$spacing-sm);
+      margin: 0 var(--sidebar-gutter);
+      width: calc(100% - 2 * var(--sidebar-gutter));
       display: flex;
       align-items: center;
 
@@ -132,13 +139,15 @@
 
 // Header del sidebar
 .sidebar__header {
-  padding: tokens.$spacing-lg;
+  padding: 0 var(--sidebar-gutter);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: tokens.$spacing-sm;
   min-height: var(--sidebar-header-height);
   background: transparent;
   flex-shrink: 0;
+  border-bottom: 1px solid var(--sidebar-border);
 }
 
 .sidebar__toggle {
@@ -147,17 +156,26 @@
   // Sobrescribir estilos del Button para layout específico del sidebar
   &.sidebar__toggle {
     min-width: auto;
-    width: tokens.$size-xl;
-    height: tokens.$size-xl;
-    font-size: tokens.$font-size-lg;
-    font-weight: tokens.$font-weight-bold;
-    color: var(--sidebar-text);
+    width: tokens.$spacing-8;
+    height: tokens.$spacing-8;
+    font-size: tokens.$font-size-base;
+    font-weight: tokens.$font-weight-medium;
+    color: var(--sidebar-text-muted);
+    border-radius: var(--sidebar-item-radius);
+    opacity: 0.85;
+
+    &:hover {
+      color: var(--sidebar-text);
+      background: var(--sidebar-bg-hover) !important;
+      opacity: 1;
+    }
   }
 }
 
 .sidebar__logo {
   flex: 1;
-  margin-left: tokens.$spacing-md;
+  min-width: 0;
+  margin-left: 0;
   animation: sidebar-logo-enter tokens.$duration-fast ease-out;
   display: flex;
   align-items: center;
@@ -189,15 +207,16 @@
 }
 
 .sidebar__logo-text {
-  font-size: tokens.$font-size-xl;
-  font-weight: tokens.$font-weight-bold;
-  color: var(--sidebar-text, #ffffff);
+  font-size: tokens.$font-size-lg;
+  font-weight: tokens.$font-weight-semibold;
+  color: var(--sidebar-text-active, #ffffff);
   line-height: tokens.$line-height-tight;
+  letter-spacing: -0.01em;
 }
 
 .sidebar__logo-image {
-  max-height: 40px;
-  max-width: 180px;
+  max-height: 28px;
+  max-width: 160px;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -206,9 +225,11 @@
 
 // Navegación
 .sidebar__nav {
-  flex: 0 1 auto;
-  overflow-y: visible;
-  padding: tokens.$spacing-lg 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: tokens.$spacing-3 0;
   display: flex;
   flex-direction: column;
 }
@@ -217,20 +238,23 @@
   list-style: none;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-0-5;
 }
 
 .sidebar__nav-item {
-  margin: 0 0 tokens.$spacing-xs 0;
+  margin: 0;
 }
 
 // Enlaces de navegación
 .sidebar__nav-link {
-  width: calc(100% - 2 * tokens.$spacing-sm);
+  width: calc(100% - 2 * var(--sidebar-gutter));
   justify-content: flex-start;
   text-align: left;
   position: relative;
-  margin: 0 tokens.$spacing-sm;
-  border-radius: tokens.$border-radius-md;
+  margin: 0 var(--sidebar-gutter);
+  border-radius: var(--sidebar-item-radius);
   display: flex;
   align-items: center;
 
@@ -239,7 +263,7 @@
   &.sidebar__nav-link.guiders-button--ghost,
   &.sidebar__nav-link {
     min-height: var(--sidebar-nav-item-height);
-    padding: var(--sidebar-nav-padding) tokens.$spacing-md;
+    padding: var(--sidebar-nav-padding) tokens.$spacing-3;
 
     // Remover estilos de Button y aplicar los del sidebar
     background: transparent !important;
@@ -480,11 +504,12 @@
   display: none;
 }
 
-// Overlay desde tablet/desktop estrecho: libera ancho al chat (Atención, etc.)
+// Overlay (Admin): drawer + hamburguesa en viewport estrecho.
+// Console desactiva overlayOnNarrow y mantiene el rail de iconos.
 @media (max-width: tokens.$breakpoint-xl) {
   // El host no debe ocupar espacio en el flex del shell (si no, con
   // height:100% + flex-column el contenido principal queda a altura 0).
-  :host {
+  :host(.sidebar-host--overlay) {
     position: fixed;
     top: 0;
     left: 0;
@@ -494,7 +519,7 @@
     overflow: visible;
   }
 
-  .sidebar__mobile-open {
+  :host(.sidebar-host--overlay) .sidebar__mobile-open {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -520,7 +545,7 @@
     }
   }
 
-  .sidebar__backdrop {
+  :host(.sidebar-host--overlay) .sidebar__backdrop {
     display: block;
     position: fixed;
     inset: 0;
@@ -533,7 +558,7 @@
     animation: sidebar-backdrop-in tokens.$duration-normal tokens.$easing-standard;
   }
 
-  .sidebar {
+  :host(.sidebar-host--overlay) .sidebar {
     position: absolute;
     top: 0;
     left: 0;
@@ -560,30 +585,30 @@
 }
 
 @media (max-width: 480px) {
-  .sidebar {
+  :host(.sidebar-host--overlay) .sidebar {
     width: 260px !important;
   }
 
-  .sidebar__header {
+  :host(.sidebar-host--overlay) .sidebar__header {
     padding: tokens.$spacing-md;
     min-height: 56px;
   }
 
-  .sidebar__nav {
+  :host(.sidebar-host--overlay) .sidebar__nav {
     padding: tokens.$spacing-md 0;
   }
 
-  .sidebar__nav-link.sidebar__nav-link {
+  :host(.sidebar-host--overlay) .sidebar__nav-link.sidebar__nav-link {
     margin: 0 tokens.$spacing-xs;
     padding: tokens.$spacing-md;
     min-height: tokens.$size-2xl;
   }
 
-  .sidebar__nav-text {
+  :host(.sidebar-host--overlay) .sidebar__nav-text {
     font-size: tokens.$font-size-sm;
   }
 
-  .sidebar__submenu-link.sidebar__submenu-link {
+  :host(.sidebar-host--overlay) .sidebar__submenu-link.sidebar__submenu-link {
     padding: tokens.$spacing-xs tokens.$spacing-md tokens.$spacing-xs
       tokens.$spacing-2xl;
   }
@@ -593,7 +618,7 @@
 :host(.compact) {
   .sidebar__header {
     min-height: 48px;
-    padding: tokens.$spacing-sm tokens.$spacing-md;
+    padding: 0 var(--sidebar-gutter);
   }
 
   .sidebar__logo-icon {
@@ -782,25 +807,34 @@
   margin-top: auto;
   border-top: 1px solid var(--sidebar-border);
   background: transparent;
-  padding: tokens.$spacing-sm tokens.$spacing-md;
+  padding: tokens.$spacing-2 0 tokens.$spacing-3;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-0-5;
   position: relative; // anchor for help dropdown
+
+  guiders-user-menu {
+    display: block;
+    width: calc(100% - 2 * var(--sidebar-gutter));
+    margin: 0 var(--sidebar-gutter);
+  }
 }
 
 // === THEME PICKER ===
 .sidebar__theme-toggle {
-  padding: tokens.$spacing-xs 0;
-  margin-bottom: tokens.$spacing-xs;
+  padding: 0;
+  margin: 0 var(--sidebar-gutter);
   position: relative;
 }
 
 .sidebar__theme-button {
   display: flex;
   align-items: center;
-  gap: tokens.$spacing-sm;
+  gap: tokens.$spacing-3;
   width: 100%;
-  padding: tokens.$spacing-sm tokens.$spacing-md;
+  padding: tokens.$spacing-sm tokens.$spacing-3;
   border: none;
-  border-radius: tokens.$border-radius-md;
+  border-radius: var(--sidebar-item-radius);
   background: transparent;
   color: var(--sidebar-text-muted);
   font-family: tokens.$font-family-sans;
@@ -905,8 +939,8 @@
 .sidebar__theme-dropdown {
   position: absolute;
   bottom: calc(100% + tokens.$spacing-1);
-  left: tokens.$spacing-md;
-  right: tokens.$spacing-md;
+  left: 0;
+  right: 0;
   list-style: none;
   margin: 0;
   padding: tokens.$spacing-1;
@@ -975,10 +1009,12 @@
   display: flex;
   align-items: center;
   gap: tokens.$spacing-xs;
-  padding: tokens.$spacing-xs tokens.$spacing-md;
+  margin: tokens.$spacing-1 var(--sidebar-gutter) 0;
+  padding: tokens.$spacing-1 tokens.$spacing-3 0;
   font-family: tokens.$font-family-sans;
   font-size: tokens.$font-size-xs;
   user-select: none;
+  border-top: 1px solid var(--sidebar-border);
 }
 
 .sidebar__version-text {

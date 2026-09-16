@@ -67,6 +67,7 @@ export class App {
     width: '280px',
     collapsedWidth: '64px',
     collapseOnOutsideClick: true,
+    overlayOnNarrow: false,
   });
 
   // Items de navegación específicos para console (usuario final)
