@@ -96,7 +96,8 @@ export class ProfileService {
           id: profile.id,
           name: profile.name,
           email: profile.email,
-          hasAvatar: !!profile.avatarUrl
+          hasAvatar: !!profile.avatarUrl,
+          greetingMessage: profile.greetingMessage,
         });
       }),
       catchError(error => {
@@ -115,5 +116,31 @@ export class ProfileService {
         return throwError(() => new Error(errorMessage));
       })
     );
+  }
+
+  /**
+   * Guarda el saludo del comercial (CTA Saludar). Vacío = texto por defecto.
+   */
+  updateGreetingMessage(
+    greetingMessage: string | null
+  ): Observable<{ greetingMessage: string | null }> {
+    return this.http
+      .patch<{ greetingMessage: string | null }>(
+        `${this.baseUrl}/user/auth/me/greeting`,
+        { greetingMessage },
+        { withCredentials: true }
+      )
+      .pipe(
+        tap((response) => {
+          console.log('[ProfileService] Greeting updated:', response);
+        }),
+        catchError((error) => {
+          console.error('[ProfileService] Error updating greeting:', error);
+          const message =
+            error.error?.message ||
+            'No se pudo guardar el mensaje de saludo.';
+          return throwError(() => new Error(message));
+        })
+      );
   }
 }

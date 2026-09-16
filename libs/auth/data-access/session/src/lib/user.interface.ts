@@ -28,4 +28,6 @@ export interface UserProfile {
   lastLoginAt: string;
   keycloakId: string;
   avatarUrl?: string;
+  /** Saludo al pulsar Saludar. Null = texto por defecto. */
+  greetingMessage?: string | null;
 }

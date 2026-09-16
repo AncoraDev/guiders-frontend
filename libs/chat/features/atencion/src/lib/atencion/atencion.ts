@@ -23,6 +23,7 @@ import {
 } from 'rxjs/operators';
 import { ChatService } from '@guiders-frontend/chat-service';
 import { SessionService } from '@guiders-frontend/auth/data-access/session';
+import { ProfileService } from '@guiders-frontend/profile-service';
 import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service';
 import { PresenceService } from '@guiders-frontend/presence-service';
 import {
@@ -112,6 +113,7 @@ export class Atencion implements OnInit, OnDestroy {
   private readonly ngZone = inject(NgZone);
   private readonly chatService = inject(ChatService);
   private readonly sessionService = inject(SessionService);
+  private readonly profileService = inject(ProfileService);
   private readonly unreadMessagesService = inject(UnreadMessagesService);
   private readonly presenceService = inject(PresenceService);
   private readonly visitorsService = inject(VisitorsDataService);
@@ -193,6 +195,8 @@ export class Atencion implements OnInit, OnDestroy {
   readonly activeCola = signal<AtencionCola>('mios');
   /** Desconectado = solo lectura: no atender, no saludar, no escribir. */
   readonly isPresenceConnected = signal(false);
+  /** Saludo del perfil; vacío = DEFAULT_GREETING. */
+  private readonly greetingMessage = signal<string | null>(null);
   readonly isLoading = signal(false);
   readonly isClaiming = signal(false);
   /** Solo estado de carga/sesión: el poll lo limpia cada 4s. Los errores de
@@ -425,6 +429,15 @@ export class Atencion implements OnInit, OnDestroy {
     if (userId) {
       this.unreadMessagesService.setCurrentUser(userId);
     }
+
+    this.profileService
+      .getUserProfile()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (profile) =>
+          this.greetingMessage.set(profile.greetingMessage ?? null),
+        error: () => this.greetingMessage.set(null),
+      });
 
     const colaParam = this.route.snapshot.queryParamMap.get('cola');
     if (
@@ -864,6 +877,12 @@ export class Atencion implements OnInit, OnDestroy {
     }
   }
 
+  /** Texto que se envía al pulsar Saludar. */
+  private greetingText(): string {
+    const custom = this.greetingMessage()?.trim();
+    return custom || DEFAULT_GREETING;
+  }
+
   /** CTA En la web: inicia chat con mensaje de saludo → Míos. */
   onSaludar(event: Event, item: AtencionListItem): void {
     event.stopPropagation();
@@ -1244,10 +1263,10 @@ export class Atencion implements OnInit, OnDestroy {
             rawChat: chat ?? item.rawChat,
             updatedAtMs: Date.now(),
             preview: options?.withGreeting
-              ? this.truncatePreview(DEFAULT_GREETING)
+              ? this.truncatePreview(this.greetingText())
               : item.preview,
             subtitle: options?.withGreeting
-              ? this.truncatePreview(DEFAULT_GREETING)
+              ? this.truncatePreview(this.greetingText())
               : item.subtitle,
           };
           this.mineItems.update((list) => {
@@ -1258,7 +1277,7 @@ export class Atencion implements OnInit, OnDestroy {
           this.openChat(mineItem, chat);
           this.wireMineRealtime([mineItem]);
           if (options?.withGreeting) {
-            this.onSendMessage(DEFAULT_GREETING);
+            this.onSendMessage(this.greetingText());
           }
           this.refreshAll(true);
         },
@@ -1341,7 +1360,7 @@ export class Atencion implements OnInit, OnDestroy {
         ...(options?.withGreeting
           ? {
               firstMessage: {
-                content: DEFAULT_GREETING,
+                content: this.greetingText(),
                 type: 'TEXT' as const,
               },
             }
@@ -1377,10 +1396,10 @@ export class Atencion implements OnInit, OnDestroy {
             kind: 'mine',
             title: item.title,
             subtitle: options?.withGreeting
-              ? this.truncatePreview(DEFAULT_GREETING)
+              ? this.truncatePreview(this.greetingText())
               : 'Conversación iniciada',
             preview: options?.withGreeting
-              ? this.truncatePreview(DEFAULT_GREETING)
+              ? this.truncatePreview(this.greetingText())
               : undefined,
             pageLabel: item.pageLabel,
             isLead: item.isLead,
