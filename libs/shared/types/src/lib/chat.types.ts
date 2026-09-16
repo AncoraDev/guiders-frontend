@@ -8,11 +8,22 @@ export interface User {
   role: 'admin' | 'commercial' | 'visitor';
 }
 
+export interface ContactRequestPayload {
+  nombre?: string;
+  apellidos?: string;
+  email?: string;
+  telefono?: string;
+  poblacion?: string;
+}
+
 export interface MessageSystemData {
   action?: string;
   fromUserId?: string;
   toUserId?: string;
   reason?: string;
+  requestId?: string;
+  status?: 'pending' | 'submitted' | 'confirmed';
+  data?: ContactRequestPayload;
 }
 
 export interface Message {
@@ -21,7 +32,7 @@ export interface Message {
   senderId: string;
   senderType: 'COMMERCIAL' | 'VISITOR' | 'SYSTEM'; // API usa senderType
   content: string;
-  type: 'TEXT' | 'IMAGE' | 'FILE' | 'AUDIO' | 'VIDEO' | 'SYSTEM' | 'AI'; // API usa mayúsculas
+  type: 'TEXT' | 'IMAGE' | 'FILE' | 'AUDIO' | 'VIDEO' | 'SYSTEM' | 'AI' | 'INTERACTIVE'; // API usa mayúsculas
   sentAt: Date; // API usa sentAt en lugar de timestamp
   status: 'SENT' | 'DELIVERED' | 'READ'; // API usa mayúsculas, no tiene 'sending'
   replyTo?: string; // ID del mensaje al que responde

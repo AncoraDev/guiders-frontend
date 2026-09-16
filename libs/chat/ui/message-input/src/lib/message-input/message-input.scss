@@ -123,6 +123,26 @@
     color: #16a34a;
   }
 
+  &__slash-hint {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-text-secondary, #64748b);
+  }
+
+  &__slash-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: var(--color-surface-secondary, #f4f4f5);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text-primary, #111);
+  }
+
   &__mention-empty {
     margin: 0;
     padding: 8px 10px;

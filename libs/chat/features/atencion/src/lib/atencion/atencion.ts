@@ -15,6 +15,7 @@ import { ActivatedRoute } from '@angular/router';
 import { forkJoin, interval, of } from 'rxjs';
 import {
   catchError,
+  filter,
   finalize,
   map,
   startWith,
@@ -30,7 +31,11 @@ import {
 } from '@guiders-frontend/visitors-data-service';
 import { GuidersChatPlaceholderComponent } from '@guiders-frontend/chat/ui/chat-placeholder';
 import type { VisitorChatProfile } from '@guiders-frontend/chat/ui/chat-placeholder';
-import type { MessageSendPayload } from '@guiders-frontend/chat/ui/message-input';
+import type {
+  MessageSendPayload,
+  SlashCommand,
+} from '@guiders-frontend/chat/ui/message-input';
+import type { ContactRequestCardConfirm } from '@guiders-frontend/chat/ui/contact-request-card';
 import { GuidersChatWelcomeStateComponent } from '@guiders-frontend/chat/ui/chat-welcome-state';
 import { VisitorDetailPanel } from '@guiders-frontend/visitor-detail-panel';
 import { LeadContactService } from '@guiders-frontend/lead-contact-service';
@@ -213,6 +218,7 @@ export class Atencion implements OnInit, OnDestroy {
   readonly visitorActivity = signal<VisitorActivity | null>(null);
   readonly visitorContactData = signal<LeadContactData | null>(null);
   readonly savingContactData = signal(false);
+  readonly confirmedContactRequestIds = signal<string[]>([]);
   readonly showVisitorPanel = signal(false);
   /** Comerciales online (excluye al usuario actual) para @mention. */
   readonly mentionCandidates = signal<
@@ -380,6 +386,44 @@ export class Atencion implements OnInit, OnDestroy {
     };
   });
 
+  /** `/` Solicitar datos solo si aún no tenemos contacto ni una solicitud viva. */
+  readonly canRequestContactData = computed(() => {
+    if (this.contactMeetsLeadCriteria(this.visitorContactData())) {
+      return false;
+    }
+
+    const confirmedIds = this.confirmedContactRequestIds();
+    const submittedIds = new Set<string>();
+    let hasSubmission = false;
+    let hasOpenRequest = false;
+
+    for (const message of this.messages()) {
+      const data = message.systemData;
+      if (!data) continue;
+      if (data.action === 'contact_submission') {
+        hasSubmission = true;
+        if (data.requestId) submittedIds.add(data.requestId);
+      }
+    }
+
+    if (hasSubmission) return false;
+
+    for (const message of this.messages()) {
+      const data = message.systemData;
+      if (data?.action !== 'contact_request' || !data.requestId) continue;
+      if (
+        data.status === 'confirmed' ||
+        submittedIds.has(data.requestId) ||
+        confirmedIds.includes(data.requestId)
+      ) {
+        return false;
+      }
+      hasOpenRequest = true;
+    }
+
+    return !hasOpenRequest;
+  });
+
   ngOnInit(): void {
     const userId = this.currentUserId();
     if (userId) {
@@ -416,14 +460,15 @@ export class Atencion implements OnInit, OnDestroy {
         this.ngZone.run(() => {
           this.messages.set([...current, ...incoming]);
           const last = incoming[incoming.length - 1];
-          if (last?.content) {
+          if (last) {
+            const preview = this.previewFromMessage(last, 'Sin mensajes');
             this.mineItems.update((list) =>
               list.map((item) =>
                 item.chatId === chatId
                   ? {
                       ...item,
-                      preview: this.truncatePreview(String(last.content)),
-                      subtitle: this.truncatePreview(String(last.content)),
+                      preview,
+                      subtitle: preview,
                       updatedAtMs: Date.now(),
                     }
                   : item
@@ -516,9 +561,30 @@ export class Atencion implements OnInit, OnDestroy {
     });
   }
 
+  onConfirmContactData(event: ContactRequestCardConfirm): void {
+    this.saveVisitorContact(
+      {
+        ...event.data,
+        extractedFromChatId: this.selectedChat()?.chatId,
+      },
+      event.requestId,
+    );
+  }
+
   onSaveContactData(request: SaveContactDataRequest): void {
-    const visitorId = this.selectedVisitor()?.id;
-    if (!visitorId) return;
+    this.saveVisitorContact(request);
+  }
+
+  private saveVisitorContact(
+    request: SaveContactDataRequest,
+    requestId?: string,
+  ): void {
+    const visitorId =
+      this.selectedVisitor()?.id || this.selectedChat()?.visitorId;
+    if (!visitorId || visitorId === 'unknown') {
+      this.toastService.error('No se pudo identificar al visitante');
+      return;
+    }
 
     this.savingContactData.set(true);
     this.leadContactService
@@ -528,31 +594,45 @@ export class Atencion implements OnInit, OnDestroy {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
-        next: () => {
+        next: (saved) => {
           const now = new Date().toISOString();
           const updated: LeadContactData = {
-            id: this.visitorContactData()?.id || `temp-${Date.now()}`,
+            id: saved?.id || this.visitorContactData()?.id || `temp-${Date.now()}`,
             visitorId,
             companyId:
+              saved?.companyId ||
               this.visitorContactData()?.companyId ||
               this.companyId() ||
               'unknown',
-            alias: request.alias,
-            nombre: request.nombre,
-            apellidos: request.apellidos,
-            email: request.email,
-            telefono: request.telefono,
-            poblacion: request.poblacion,
-            extractedFromChatId: request.extractedFromChatId,
-            additionalData: request.additionalData,
-            extractedAt: this.visitorContactData()?.extractedAt || now,
-            updatedAt: now,
+            alias: saved?.alias ?? request.alias,
+            nombre: saved?.nombre ?? request.nombre,
+            apellidos: saved?.apellidos ?? request.apellidos,
+            email: saved?.email ?? request.email,
+            telefono: saved?.telefono ?? request.telefono,
+            poblacion: saved?.poblacion ?? request.poblacion,
+            extractedFromChatId:
+              saved?.extractedFromChatId ?? request.extractedFromChatId,
+            additionalData: saved?.additionalData ?? request.additionalData,
+            extractedAt:
+              saved?.extractedAt ||
+              this.visitorContactData()?.extractedAt ||
+              now,
+            updatedAt: saved?.updatedAt || now,
           };
           this.visitorContactData.set(updated);
           this.leadContactService.putCache(updated);
           this.applyContactDisplayName(visitorId, updated);
+          if (requestId) {
+            this.confirmedContactRequestIds.update((ids) =>
+              ids.includes(requestId) ? ids : [...ids, requestId]
+            );
+          }
+          this.showVisitorPanel.set(true);
         },
-        error: () => this.error.set('No se pudieron guardar los datos de contacto'),
+        error: () => {
+          this.toastService.error('No se pudieron guardar los datos de contacto');
+          this.error.set('No se pudieron guardar los datos de contacto');
+        },
       });
   }
 
@@ -821,6 +901,51 @@ export class Atencion implements OnInit, OnDestroy {
       });
   }
 
+  onSlashCommand(command: SlashCommand): void {
+    if (command.id !== 'request-contact') return;
+
+    const chat = this.selectedChat();
+    if (!chat) return;
+
+    if (!this.canRequestContactData()) {
+      this.toastService.info(
+        this.contactMeetsLeadCriteria(this.visitorContactData())
+          ? 'Ya tienes los datos de este visitante'
+          : 'Ya se ha enviado la solicitud de datos a este visitante',
+      );
+      return;
+    }
+
+    if (!this.commercialPresence.getCurrentStatus().isConnected) {
+      this.toastService.info('Conéctate para solicitar datos');
+      return;
+    }
+
+    this.chatService
+      .requestContactData(chat.chatId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toastService.info('Solicitud de datos enviada al visitante');
+        },
+        error: (err) => {
+          const message = String(err?.error?.message ?? '');
+          const alreadyHasData =
+            err?.status === 409 &&
+            (message.includes('Ya existen') || message.includes('ya envió'));
+          const alreadyPending =
+            err?.status === 409 || message.includes('pendiente');
+          this.toastService.info(
+            alreadyHasData
+              ? 'Ya tienes los datos de este visitante'
+              : alreadyPending
+                ? 'Ya se ha enviado la solicitud de datos a este visitante'
+                : 'No se pudo enviar la solicitud de datos',
+          );
+        },
+      });
+  }
+
   private transferChatAfterMessage(
     chatId: string,
     commercialId: string,
@@ -966,6 +1091,29 @@ export class Atencion implements OnInit, OnDestroy {
       .subscribe((state) => {
         if (state === 'connected') {
           this.wireMineRealtime(this.mineItems());
+        }
+      });
+
+    // El visitante envía el formulario en el widget: recargar el hilo abierto
+    // para pintar la tarjeta editable (no esperar a que el comercial cambie de chat).
+    this.chatService.webSocketService.messageReceived$
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        filter((message): message is Message => !!message),
+      )
+      .subscribe((message) => {
+        const chatId = this.selectedChat()?.chatId;
+        if (!chatId || message.chatId !== chatId) {
+          return;
+        }
+        const action = message.systemData?.action;
+        const type = String(message.type || '').toUpperCase();
+        if (
+          action === 'contact_submission' ||
+          action === 'contact_request' ||
+          type === 'INTERACTIVE'
+        ) {
+          this.loadMessages(chatId, { silent: true });
         }
       });
 
@@ -1296,14 +1444,20 @@ export class Atencion implements OnInit, OnDestroy {
     };
   }
 
-  private loadMessages(chatId: string): void {
-    this.messagesLoading.set(true);
+  private loadMessages(chatId: string, options?: { silent?: boolean }): void {
+    if (!options?.silent) {
+      this.messagesLoading.set(true);
+    }
     // getMessages (no V2): sincroniza el historial en ChatService para que
     // message:new del WebSocket se añada al mismo array y el panel se actualice.
     this.chatService
       .getMessages(chatId, { limit: 50 })
       .pipe(
-        finalize(() => this.messagesLoading.set(false)),
+        finalize(() => {
+          if (!options?.silent) {
+            this.messagesLoading.set(false);
+          }
+        }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
@@ -1412,11 +1566,15 @@ export class Atencion implements OnInit, OnDestroy {
       const name =
         String(visitorInfo['name'] ?? visitorInfo['email'] ?? '') ||
         `Visitante ${visitorId.slice(0, 8)}`;
+      const lastMessage = row['lastMessage'] as Message | undefined;
       const previewRaw = String(
         row['lastMessagePreview'] ?? row['lastMessageContent'] ?? ''
       ).trim();
       const preview =
-        this.truncatePreview(previewRaw) || 'Esperando atención';
+        this.previewFromMessage(
+          lastMessage ?? { content: previewRaw },
+          'Esperando atención'
+        );
       const pageLabel = this.formatPageLabel(
         String(metadata['initialUrl'] ?? metadata['currentUrl'] ?? '')
       );
@@ -1446,8 +1604,7 @@ export class Atencion implements OnInit, OnDestroy {
       : chat.createdAt
         ? new Date(chat.createdAt).getTime()
         : 0;
-    const previewRaw = chat.lastMessage?.content ?? '';
-    const preview = this.truncatePreview(previewRaw) || 'Sin mensajes';
+    const preview = this.previewFromMessage(chat.lastMessage, 'Sin mensajes');
     const meta = (
       chat as Chat & { metadata?: { initialUrl?: string; currentUrl?: string } }
     ).metadata;
@@ -1566,6 +1723,19 @@ export class Atencion implements OnInit, OnDestroy {
   private isLeadLifecycle(lifecycle?: string | null): boolean {
     const value = String(lifecycle ?? '').toUpperCase();
     return value === 'LEAD' || value === 'CONVERTED';
+  }
+
+  private previewFromMessage(
+    message?: Pick<Message, 'content' | 'systemData'> | { content?: string } | null,
+    fallback = ''
+  ): string {
+    const action = (message as Message | undefined)?.systemData?.action;
+    if (action === 'contact_request') return 'Solicitud de datos';
+    if (action === 'contact_submission') return 'Datos recibidos';
+    const content = String(message?.content ?? '').trim();
+    if (/solicitud de datos/i.test(content)) return 'Solicitud de datos';
+    if (/datos de contacto enviados/i.test(content)) return 'Datos recibidos';
+    return this.truncatePreview(content) || fallback;
   }
 
   private truncatePreview(text: string, max = PREVIEW_MAX_CHARS): string {

@@ -24,4 +24,6 @@ export interface SidebarConfig {
   collapsedWidth: string;
   ariaLabel?: string; // Para accesibilidad
   density?: 'comfortable' | 'compact'; // Soporte para densidades según guía B2B
+  /** Cerrar al clic fuera del menú (escritorio). En overlay se cierra siempre. */
+  collapseOnOutsideClick?: boolean;
 }

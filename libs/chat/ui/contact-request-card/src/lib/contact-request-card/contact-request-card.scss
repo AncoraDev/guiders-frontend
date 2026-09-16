@@ -1,0 +1,102 @@
+@use '../../../../../../shared/design-tokens/src/lib/tokens-vars' as tokens;
+
+:host {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+}
+
+.contact-request-card {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-xs;
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  background: var(--color-surface-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: tokens.$border-radius-md;
+
+  &__title {
+    margin: 0;
+    font-size: tokens.$font-size-sm;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: tokens.$font-size-xs;
+    color: var(--color-text-tertiary);
+  }
+
+  &__form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: tokens.$spacing-xs tokens.$spacing-sm;
+    margin-top: tokens.$spacing-xs;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: tokens.$font-size-xs;
+    color: var(--color-text-tertiary);
+
+    &--full {
+      grid-column: span 2;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px tokens.$spacing-sm;
+      font-family: tokens.$font-family-ui;
+      font-size: tokens.$font-size-sm;
+      color: var(--color-text-primary);
+      background: var(--color-surface-primary);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: tokens.$border-radius-sm;
+
+      &:focus {
+        outline: none;
+        border-color: var(--color-primary-default);
+      }
+    }
+
+    em {
+      font-style: normal;
+      color: var(--color-danger-default, #{tokens.$color-danger-500});
+    }
+  }
+
+  &__actions {
+    grid-column: span 2;
+    display: flex;
+    justify-content: flex-end;
+    gap: tokens.$spacing-xs;
+    padding-top: tokens.$spacing-xs;
+  }
+
+  &__button {
+    padding: 5px tokens.$spacing-md;
+    font-family: tokens.$font-family-ui;
+    font-size: tokens.$font-size-sm;
+    font-weight: 500;
+    color: var(--color-text-on-primary, #fff);
+    background: var(--color-primary-default);
+    border: 1px solid var(--color-primary-default);
+    border-radius: tokens.$border-radius-sm;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &--ghost {
+      color: var(--color-text-secondary);
+      background: transparent;
+      border-color: var(--color-border-subtle);
+    }
+  }
+}

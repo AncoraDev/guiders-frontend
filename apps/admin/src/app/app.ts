@@ -8,10 +8,11 @@ import {
 } from '@guiders-frontend/auth/data-access/session';
 import { ProfileService } from '@guiders-frontend/profile-service';
 import { RedirectConfirm } from '@guiders-frontend/redirect-confirm';
+import { ToastHostComponent } from '@guiders-frontend/shared/ui/toast';
 import { EmbedModeService } from '@guiders-frontend/embed';
 
 @Component({
-  imports: [RouterModule, Sidebar, RedirectConfirm],
+  imports: [RouterModule, Sidebar, RedirectConfirm, ToastHostComponent],
   selector: 'admin-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',

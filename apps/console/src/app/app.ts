@@ -65,7 +65,8 @@ export class App {
     showToggle: true,
     theme: 'dark',
     width: '280px',
-    collapsedWidth: '64px'
+    collapsedWidth: '64px',
+    collapseOnOutsideClick: true,
   });
 
   // Items de navegación específicos para console (usuario final)

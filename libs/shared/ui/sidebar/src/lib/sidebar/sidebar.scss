@@ -450,7 +450,8 @@
   .sidebar,
   .sidebar__logo,
   .sidebar__nav-arrow,
-  .sidebar__submenu {
+  .sidebar__submenu,
+  .sidebar__backdrop {
     animation: none;
     transition: none;
   }
@@ -475,6 +476,10 @@
   display: none;
 }
 
+.sidebar__backdrop {
+  display: none;
+}
+
 // Overlay desde tablet/desktop estrecho: libera ancho al chat (Atención, etc.)
 @media (max-width: tokens.$breakpoint-xl) {
   // El host no debe ocupar espacio en el flex del shell (si no, con
@@ -494,8 +499,8 @@
     align-items: center;
     justify-content: center;
     position: fixed;
-    top: 12px;
-    left: 12px;
+    top: max(12px, env(safe-area-inset-top, 0px));
+    left: max(12px, env(safe-area-inset-left, 0px));
     z-index: 151;
     width: 40px;
     height: 40px;
@@ -509,6 +514,23 @@
     &:hover {
       background: var(--color-sidebar-bg-hover, #{tokens.$color-sidebar-dark-bg-hover});
     }
+
+    &:focus-visible {
+      @include tokens.focus-ring;
+    }
+  }
+
+  .sidebar__backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 149;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: tokens.$color-overlay-backdrop;
+    cursor: default;
+    animation: sidebar-backdrop-in tokens.$duration-normal tokens.$easing-standard;
   }
 
   .sidebar {
@@ -520,31 +542,20 @@
     transform: translateX(-100%);
     transition: transform tokens.$duration-normal tokens.$easing-standard;
     box-shadow: tokens.$shadow-xl;
-    width: 280px !important; // Forzar ancho fijo en móvil
+    width: min(280px, 88vw) !important;
 
     &:not(.sidebar--collapsed) {
       transform: translateX(0);
     }
   }
+}
 
-  // Overlay para cerrar sidebar en móvil
-  .sidebar::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 100%;
-    right: -100vw;
-    bottom: 0;
-    background: tokens.$color-overlay-backdrop;
-    z-index: -1;
+@keyframes sidebar-backdrop-in {
+  from {
     opacity: 0;
-    pointer-events: none;
-    transition: opacity tokens.$duration-normal;
   }
-
-  .sidebar:not(.sidebar--collapsed)::after {
+  to {
     opacity: 1;
-    pointer-events: auto;
   }
 }
 

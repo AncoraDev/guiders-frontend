@@ -15,7 +15,7 @@ import { ToastService } from './toast.service';
             @switch (toast.variant) {
               @case ('success') { ✓ }
               @case ('error') { ✕ }
-              @default { i }
+              @default { ! }
             }
           </span>
           <span class="toast__text">{{ toast.text }}</span>

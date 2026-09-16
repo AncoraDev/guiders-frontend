@@ -110,6 +110,12 @@ export class ConversationItem {
     }
 
     const message = chat.lastMessage;
+    if (message.systemData?.action === 'contact_request') {
+      return 'Solicitud de datos';
+    }
+    if (message.systemData?.action === 'contact_submission') {
+      return 'Datos recibidos';
+    }
     if (message.type === 'TEXT') {
       return message.content.length > 60
         ? message.content.substring(0, 60) + '...'
@@ -122,6 +128,8 @@ export class ConversationItem {
       case 'AUDIO': return '🎵 Audio';
       case 'VIDEO': return '🎥 Video';
       case 'SYSTEM': return '📢 Mensaje del sistema';
+      case 'INTERACTIVE':
+        return /enviados/i.test(message.content) ? 'Datos recibidos' : 'Solicitud de datos';
       default: return 'Mensaje';
     }
   }

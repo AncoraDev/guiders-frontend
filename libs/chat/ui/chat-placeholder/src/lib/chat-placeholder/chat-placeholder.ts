@@ -12,18 +12,26 @@ import {
   ViewChild,
   ElementRef,
   inject,
-  computed,
-  effect
+  computed
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Chat, User, PresenceStatus, Participant } from '@guiders-frontend/shared/types';
+import {
+  Chat,
+  Message,
+  PresenceStatus,
+  User,
+} from '@guiders-frontend/shared/types';
 import { IconComponent } from '@guiders-frontend/icon';
-import { Message } from '@guiders-frontend/shared/types';
 import {
   MessageInput,
   MessageMentionCandidate,
   MessageSendPayload,
+  SlashCommand,
 } from '@guiders-frontend/chat/ui/message-input';
+import {
+  ContactRequestCard,
+  ContactRequestCardConfirm,
+} from '@guiders-frontend/chat/ui/contact-request-card';
 import { PresenceService } from '@guiders-frontend/presence-service';
 import { Avatar } from '@guiders-frontend/avatar';
 import { getVisitorDisplayName } from '@guiders-frontend/visitor-display-name';
@@ -43,7 +51,7 @@ export interface VisitorChatProfile {
 @Component({
   selector: 'guiders-chat-placeholder',
   standalone: true,
-  imports: [CommonModule, Avatar, IconComponent, MessageInput],
+  imports: [CommonModule, Avatar, IconComponent, MessageInput, ContactRequestCard],
   templateUrl: './chat-placeholder.html',
   styleUrl: './chat-placeholder.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,10 +74,15 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
   /** Comerciales online para @mention / transferencia. */
   @Input() mentionCandidates: MessageMentionCandidate[] = [];
   @Input() enableMentions = false;
+  @Input() enableSlashCommands = false;
+  @Input() savingContactData = false;
+  @Input() confirmedContactRequestIds: string[] = [];
 
   @Output() settingsClicked = new EventEmitter<void>();
   @Output() closeChat = new EventEmitter<void>();
   @Output() messageSent = new EventEmitter<MessageSendPayload>();
+  @Output() slashCommand = new EventEmitter<SlashCommand>();
+  @Output() confirmContactData = new EventEmitter<ContactRequestCardConfirm>();
   @Output() loadMoreMessages = new EventEmitter<void>(); // Evento para cargar más mensajes
 
   @ViewChild('messagesContainer') private messagesContainer?: ElementRef<HTMLDivElement>;
@@ -429,6 +442,49 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
     return message.senderType === 'SYSTEM' || message.type === 'SYSTEM';
   }
 
+  isContactInteractiveMessage(message: Message): boolean {
+    const action = message.systemData?.action;
+    return action === 'contact_request' || action === 'contact_submission';
+  }
+
+  contactCardVariant(message: Message): 'request' | 'submission' {
+    return message.systemData?.action === 'contact_submission'
+      ? 'submission'
+      : 'request';
+  }
+
+  contactCardStatus(message: Message): 'pending' | 'submitted' | 'confirmed' {
+    if (this.isContactConfirmed(message)) return 'confirmed';
+    if (this.isContactRequestSubmitted(message)) return 'submitted';
+    return message.systemData?.status ?? 'pending';
+  }
+
+  isContactConfirmed(message: Message): boolean {
+    const requestId = message.systemData?.requestId ?? message.messageId;
+    return (
+      message.systemData?.status === 'confirmed' ||
+      this.confirmedContactRequestIds.includes(requestId)
+    );
+  }
+
+  isContactRequestSubmitted(message: Message): boolean {
+    if (message.systemData?.action !== 'contact_request') return false;
+    if (message.systemData.status === 'submitted' || message.systemData.status === 'confirmed') {
+      return true;
+    }
+    const requestId = message.systemData.requestId;
+    if (!requestId) return false;
+    return this.messages.some(
+      (item) =>
+        item.systemData?.action === 'contact_submission' &&
+        item.systemData.requestId === requestId
+    );
+  }
+
+  onConfirmContactData(event: ContactRequestCardConfirm): void {
+    this.confirmContactData.emit(event);
+  }
+
   /** Marcador de transferencia (origen → destino) en el hilo. */
   isTransferMessage(message: Message): boolean {
     if (!this.isSystemMessage(message)) return false;
@@ -545,6 +601,10 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
 
   onMessageSent(payload: MessageSendPayload): void {
     this.messageSent.emit(payload);
+  }
+
+  onSlashCommand(command: SlashCommand): void {
+    this.slashCommand.emit(command);
   }
 
   private scheduleScrollToBottom(): void {

@@ -34,6 +34,10 @@
     }
   </button>
 
+  @if (!isOnline()) {
+    <p class="status-selector__hint">No visible para los visitantes</p>
+  }
+
   @if (error()) {
     <p class="status-selector__error" role="alert">{{ error() }}</p>
   }

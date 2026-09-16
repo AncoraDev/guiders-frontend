@@ -10,6 +10,15 @@
   </button>
 }
 
+@if (!isCollapsed() && isOverlayMode()) {
+  <button
+    type="button"
+    class="sidebar__backdrop"
+    (click)="collapseSidebar()"
+    aria-label="Cerrar menú de navegación"
+  ></button>
+}
+
 <aside
   [ngClass]="sidebarClasses()"
   [style.width]="sidebarWidth()"

@@ -354,6 +354,11 @@
     max-width: 60%;
   }
 
+  guiders-contact-request-card {
+    align-self: flex-start;
+    margin: tokens.$spacing-xs 0;
+  }
+
   &__transfer-marker {
     display: flex;
     align-items: center;

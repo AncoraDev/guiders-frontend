@@ -30,6 +30,10 @@
 
 // Responsive: el sidebar es overlay. Mantener fila para que el main no colapse.
 @media (max-width: 1280px) {
+  .admin-app:not(.embed-mode) {
+    padding-left: 52px;
+  }
+
   .admin-main {
     width: 100%;
     min-width: 0;

@@ -1,0 +1,20 @@
+{
+  "name": "contact-request-card",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/chat/ui/contact-request-card/src",
+  "prefix": "guiders",
+  "projectType": "library",
+  "tags": ["scope:chat", "type:ui"],
+  "targets": {
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "../../../../coverage/libs/chat/ui/contact-request-card"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

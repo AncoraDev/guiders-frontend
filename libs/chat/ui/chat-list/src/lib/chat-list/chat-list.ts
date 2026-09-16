@@ -136,6 +136,8 @@ export class ChatList {
     
     const message = chat.lastMessage;
     const maxLength = 50;
+    if (message.systemData?.action === 'contact_request') return 'Solicitud de datos';
+    if (message.systemData?.action === 'contact_submission') return 'Datos recibidos';
     
     if (message.type === 'TEXT') {
       return message.content.length > maxLength 
@@ -149,6 +151,8 @@ export class ChatList {
       case 'AUDIO': return '🎵 Audio';
       case 'VIDEO': return '🎥 Video';
       case 'SYSTEM': return '📢 Mensaje del sistema';
+      case 'INTERACTIVE':
+        return /enviados/i.test(message.content) ? 'Datos recibidos' : 'Solicitud de datos';
       default: return 'Mensaje';
     }
   }

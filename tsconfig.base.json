@@ -95,6 +95,9 @@
       "@guiders-frontend/chat/ui/chat-widget": [
         "libs/chat/ui/chat-widget/src/index.ts"
       ],
+      "@guiders-frontend/chat/ui/contact-request-card": [
+        "libs/chat/ui/contact-request-card/src/index.ts"
+      ],
       "@guiders-frontend/chat/ui/conversation-item": [
         "libs/chat/ui/conversation-item/src/index.ts"
       ],

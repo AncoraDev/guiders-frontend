@@ -14,7 +14,7 @@ export class ToastService {
   readonly toasts = this._toasts.asReadonly();
   private nextId = 1;
 
-  show(text: string, variant: ToastVariant = 'success', durationMs = 2000): void {
+  show(text: string, variant: ToastVariant = 'success', durationMs = 3500): void {
     const id = this.nextId++;
     const toast: ToastMessage = { id, text, variant };
     this._toasts.update(list => [...list, toast]);
@@ -24,15 +24,19 @@ export class ToastService {
     }
   }
 
-  success(text: string, durationMs = 2000): void {
+  success(text: string, durationMs = 3500): void {
     this.show(text, 'success', durationMs);
   }
 
-  error(text: string, durationMs = 2000): void {
+  error(text: string, durationMs = 4500): void {
     this.show(text, 'error', durationMs);
   }
 
-  info(text: string, durationMs = 4000): void {
+  info(text: string, durationMs = 4500): void {
+    this.show(text, 'info', durationMs);
+  }
+
+  warning(text: string, durationMs = 4500): void {
     this.show(text, 'info', durationMs);
   }
 

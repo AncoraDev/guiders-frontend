@@ -76,7 +76,7 @@ interface ApiMessageResponse {
   senderId: string;
   senderType?: 'VISITOR' | 'COMMERCIAL' | 'SYSTEM';
   content: string;
-  type: 'TEXT' | 'IMAGE' | 'FILE' | 'SYSTEM';
+  type: 'TEXT' | 'IMAGE' | 'FILE' | 'SYSTEM' | 'INTERACTIVE';
   
   // Fechas en diferentes formatos
   sentAt?: string; // Formato anterior
@@ -93,6 +93,15 @@ interface ApiMessageResponse {
     fromUserId?: string;
     toUserId?: string;
     reason?: string;
+    requestId?: string;
+    status?: 'pending' | 'submitted' | 'confirmed';
+    data?: {
+      nombre?: string;
+      apellidos?: string;
+      email?: string;
+      telefono?: string;
+      poblacion?: string;
+    };
   };
   
   // Campos adicionales del nuevo formato
@@ -103,14 +112,15 @@ interface ApiMessageResponse {
 
 // Tipo para mensajes del WebSocket (pueden venir con sentAt como string o Date)
 interface WebSocketMessage {
-  messageId: string;
+  id?: string;
+  messageId?: string;
   chatId: string;
   senderId: string;
-  senderType: 'VISITOR' | 'COMMERCIAL' | 'SYSTEM';
+  senderType?: 'VISITOR' | 'COMMERCIAL' | 'SYSTEM';
   content: string;
-  type: 'TEXT' | 'IMAGE' | 'FILE' | 'SYSTEM';
-  sentAt: string | Date;
-  status: 'SENT' | 'DELIVERED' | 'READ';
+  type: 'TEXT' | 'IMAGE' | 'FILE' | 'SYSTEM' | 'INTERACTIVE';
+  sentAt?: string | Date;
+  status?: 'SENT' | 'DELIVERED' | 'READ';
   replyTo?: string;
   edited?: boolean;
   editedAt?: string | Date;
@@ -120,6 +130,15 @@ interface WebSocketMessage {
     fromUserId?: string;
     toUserId?: string;
     reason?: string;
+    requestId?: string;
+    status?: 'pending' | 'submitted' | 'confirmed';
+    data?: {
+      nombre?: string;
+      apellidos?: string;
+      email?: string;
+      telefono?: string;
+      poblacion?: string;
+    };
   };
   isInternal?: boolean;
   isAI?: boolean;
@@ -191,6 +210,9 @@ export class ChatService {
     // desde app.config.ts después de que el usuario está autenticado y
     // provisionado. Llamarlo en el constructor causa intentos de conexión
     // fallidos cuando el usuario no está en el backend (ej. admin-wp).
+    // Sí hay que suscribirse: message:new (p.ej. datos de contacto del visitante)
+    // no entra en messages$ si nadie escucha.
+    this.subscribeRealtimeEvents();
 
     // Bridge SelfChatService → chats$/messages$ streams (Microsoft Teams-style self chat)
     this.bridgeSelfChat();
@@ -231,39 +253,26 @@ export class ChatService {
   }
 
   /**
-   * Inicializar conexión WebSocket y suscribirse a eventos
+   * Escucha message:new / chat:status. No conecta el socket (eso lo hace app.config).
    */
-  private initializeWebSocket(): void {
-    // Conectar al servidor WebSocket
-    this.webSocket.connect({
-      authToken: this.authToken,
-      autoConnect: true
-    });
-
-    // Suscribirse a mensajes nuevos
+  private subscribeRealtimeEvents(): void {
     this.webSocket.messageReceived$
       .pipe(filter((message): message is Message => message !== null))
       .subscribe(message => {
-        console.log('[ChatService] Mensaje recibido via WebSocket:', message);
-        console.log('[ChatService] Comparando senderId:', message.senderId, 'con currentUserId:', this.currentUserId);
-        
-        // Ignorar mensajes propios - ya fueron agregados por la respuesta HTTP
         if (message.senderId === this.currentUserId) {
-          console.log('[ChatService] ✅ Mensaje propio ignorado (ya fue agregado por HTTP):', message.messageId);
           return;
         }
-        
-        console.log('[ChatService] ✅ Mensaje de otro usuario, agregando al estado');
-        // Normalizar el mensaje para asegurar que sentAt sea Date
+
         const normalizedMessage = this.normalizeMessage(message);
+        if (!normalizedMessage.messageId || !normalizedMessage.chatId) {
+          return;
+        }
         this.addMessageToState(normalizedMessage.chatId, normalizedMessage);
       });
 
-    // Suscribirse a cambios de estado del chat
     this.webSocket.chatStatus$
       .pipe(filter((status): status is ChatStatusUpdate => status !== null))
       .subscribe(status => {
-        console.log('[ChatService] Estado del chat actualizado:', status);
         this.updateChatStatus(status.chatId, status.status);
       });
   }
@@ -789,6 +798,25 @@ export class ChatService {
   }
 
   /**
+   * Pide al visitante nombre, email y teléfono (mensaje INTERACTIVE).
+   */
+  requestContactData(chatId: string): Observable<Message> {
+    return this.http
+      .post<ApiMessageResponse>(
+        `${this.baseUrl}/chats/${chatId}/contact-request`,
+        {},
+        this.getHttpOptions()
+      )
+      .pipe(
+        map((response) => {
+          const message = this.transformMessageFromApi(response);
+          this.addMessageToState(chatId, message);
+          return message;
+        })
+      );
+  }
+
+  /**
    * Obtener mensajes no leídos para un chat específico
    * GET /v2/messages/chat/:chatId/unread
    */
@@ -974,6 +1002,8 @@ export class ChatService {
     if (apiMessage.type === 'SYSTEM') {
       senderType = 'SYSTEM';
     }
+
+    const type = (apiMessage.type || 'TEXT').toUpperCase() as Message['type'];
     
     return {
       messageId: messageId,
@@ -981,7 +1011,7 @@ export class ChatService {
       senderId: apiMessage.senderId,
       senderType: senderType,
       content: apiMessage.content,
-      type: apiMessage.type,
+      type,
       sentAt: new Date(dateString),
       status: apiMessage.status || 'SENT',
       replyTo: apiMessage.replyTo,
@@ -1002,27 +1032,32 @@ export class ChatService {
    * Los mensajes del WebSocket pueden venir con sentAt como string
    */
   private normalizeMessage(message: Message | WebSocketMessage): Message {
+    const raw = message as Message & WebSocketMessage;
+    const type = String(raw.type || 'TEXT').toUpperCase() as Message['type'];
     const senderType =
-      message.type === 'SYSTEM' ? 'SYSTEM' : message.senderType;
+      type === 'SYSTEM' ? 'SYSTEM' : (raw.senderType || 'VISITOR');
+    const sentAt = raw.sentAt instanceof Date
+      ? raw.sentAt
+      : new Date(raw.sentAt || Date.now());
 
     return {
-      messageId: message.messageId,
-      chatId: message.chatId,
-      senderId: message.senderId,
+      messageId: raw.messageId || raw.id || '',
+      chatId: raw.chatId,
+      senderId: raw.senderId,
       senderType,
-      content: message.content,
-      type: message.type,
-      sentAt: message.sentAt instanceof Date ? message.sentAt : new Date(message.sentAt),
-      status: message.status,
-      replyTo: message.replyTo,
-      edited: message.edited,
-      editedAt: message.editedAt ? 
-        (message.editedAt instanceof Date ? message.editedAt : new Date(message.editedAt)) : 
+      content: raw.content,
+      type,
+      sentAt,
+      status: raw.status || 'SENT',
+      replyTo: raw.replyTo,
+      edited: raw.edited,
+      editedAt: raw.editedAt ?
+        (raw.editedAt instanceof Date ? raw.editedAt : new Date(raw.editedAt)) :
         undefined,
-      isInternal: message.isInternal,
-      isAI: message.isAI,
-      systemData: message.systemData,
-      metadata: message.metadata
+      isInternal: raw.isInternal,
+      isAI: raw.isAI,
+      systemData: raw.systemData,
+      metadata: raw.metadata
     };
   }
 

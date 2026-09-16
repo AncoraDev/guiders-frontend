@@ -98,6 +98,21 @@ export interface MessageSendPayload {
   transferToDisplayName?: string;
 }
 
+/** Acción del menú `/` (Atención). */
+export interface SlashCommand {
+  id: string;
+  label: string;
+  hint: string;
+}
+
+const SLASH_COMMANDS: SlashCommand[] = [
+  {
+    id: 'request-contact',
+    label: 'Solicitar datos',
+    hint: 'Pide nombre, email y teléfono',
+  },
+];
+
 @Component({
   selector: 'guiders-message-input',
   imports: [FormsModule, CommonModule, Avatar],
@@ -107,6 +122,7 @@ export interface MessageSendPayload {
 })
 export class MessageInput implements AfterViewInit, OnDestroy {
   @Output() messageSent = new EventEmitter<MessageSendPayload>();
+  @Output() slashCommand = new EventEmitter<SlashCommand>();
 
   @ViewChild('textarea') textareaRef?: ElementRef<HTMLTextAreaElement>;
 
@@ -118,6 +134,8 @@ export class MessageInput implements AfterViewInit, OnDestroy {
   readonly mentionCandidates = input<MessageMentionCandidate[]>([]);
   /** Activa el autocomplete @ (Atención). */
   readonly enableMentions = input(false);
+  /** Activa el menú `/` de acciones (Atención). */
+  readonly enableSlashCommands = input(false);
 
   readonly messageText = signal('');
   readonly isSending = signal(false);
@@ -125,8 +143,11 @@ export class MessageInput implements AfterViewInit, OnDestroy {
   readonly isCommercialOnline = signal(false);
   readonly mentionQuery = signal<string | null>(null);
   readonly mentionHighlightIndex = signal(0);
+  readonly slashQuery = signal<string | null>(null);
+  readonly slashHighlightIndex = signal(0);
   readonly pendingTransfer = signal<MessageMentionCandidate | null>(null);
   readonly emojis = QUICK_EMOJIS;
+  readonly slashCommands = SLASH_COMMANDS;
 
   readonly isComposerLocked = computed(
     () => this.requireOnline() && !this.isCommercialOnline(),
@@ -154,6 +175,26 @@ export class MessageInput implements AfterViewInit, OnDestroy {
       !this.isComposerLocked(),
   );
 
+  readonly filteredSlashCommands = computed(() => {
+    const query = this.slashQuery();
+    if (query === null) return [];
+    const q = query.trim().toLowerCase();
+    if (!q) return SLASH_COMMANDS;
+    return SLASH_COMMANDS.filter(
+      (cmd) =>
+        cmd.label.toLowerCase().includes(q) ||
+        cmd.id.toLowerCase().includes(q) ||
+        cmd.hint.toLowerCase().includes(q),
+    );
+  });
+
+  readonly showSlashPicker = computed(
+    () =>
+      this.enableSlashCommands() &&
+      this.slashQuery() !== null &&
+      !this.isComposerLocked(),
+  );
+
   private sendingTimestamp = 0;
   private readonly SEND_DEBOUNCE_MS = 500;
   private caretPosition = 0;
@@ -176,6 +217,7 @@ export class MessageInput implements AfterViewInit, OnDestroy {
         if (!connected) {
           this.showEmojiPicker.set(false);
           this.closeMentionPicker();
+          this.closeSlashPicker();
           const chatId = this.chatId();
           if (chatId) {
             this.presenceService.stopTyping(chatId);
@@ -186,13 +228,18 @@ export class MessageInput implements AfterViewInit, OnDestroy {
 
   @HostListener('document:pointerdown', ['$event'])
   onDocumentPointerDown(event: PointerEvent): void {
-    if (!this.showEmojiPicker() && !this.showMentionPicker()) {
+    if (
+      !this.showEmojiPicker() &&
+      !this.showMentionPicker() &&
+      !this.showSlashPicker()
+    ) {
       return;
     }
 
     if (!this.hostRef.nativeElement.contains(event.target as Node)) {
       this.showEmojiPicker.set(false);
       this.closeMentionPicker();
+      this.closeSlashPicker();
     }
   }
 
@@ -200,6 +247,7 @@ export class MessageInput implements AfterViewInit, OnDestroy {
   onEscape(): void {
     this.showEmojiPicker.set(false);
     this.closeMentionPicker();
+    this.closeSlashPicker();
   }
 
   ngAfterViewInit(): void {
@@ -222,6 +270,7 @@ export class MessageInput implements AfterViewInit, OnDestroy {
     event.stopPropagation();
     this.rememberCaret();
     this.closeMentionPicker();
+    this.closeSlashPicker();
     this.showEmojiPicker.update((open) => !open);
   }
 
@@ -251,6 +300,7 @@ export class MessageInput implements AfterViewInit, OnDestroy {
     this.syncTyping();
     this.adjustTextareaHeight();
     this.updateMentionState();
+    this.updateSlashState();
 
     setTimeout(() => {
       const el = this.textareaRef?.nativeElement;
@@ -266,6 +316,7 @@ export class MessageInput implements AfterViewInit, OnDestroy {
     this.adjustTextareaHeight();
     this.syncTyping();
     this.updateMentionState();
+    this.updateSlashState();
   }
 
   onBlur(): void {
@@ -280,6 +331,28 @@ export class MessageInput implements AfterViewInit, OnDestroy {
     if (this.isComposerLocked()) {
       event.preventDefault();
       return;
+    }
+
+    if (this.showSlashPicker()) {
+      const items = this.filteredSlashCommands();
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        this.slashHighlightIndex.update((i) =>
+          Math.min(i + 1, items.length - 1),
+        );
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.slashHighlightIndex.update((i) => Math.max(i - 1, 0));
+        return;
+      }
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        const selected = items[this.slashHighlightIndex()];
+        if (selected) this.selectSlashCommand(selected);
+        return;
+      }
     }
 
     if (this.showMentionPicker()) {
@@ -316,6 +389,23 @@ export class MessageInput implements AfterViewInit, OnDestroy {
     this.selectMention(candidate);
   }
 
+  onSlashPointerDown(event: Event, command: SlashCommand): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.selectSlashCommand(command);
+  }
+
+  selectSlashCommand(command: SlashCommand): void {
+    this.messageText.set('');
+    this.caretPosition = 0;
+    this.closeSlashPicker();
+    this.closeMentionPicker();
+    this.showEmojiPicker.set(false);
+    this.adjustTextareaHeight();
+    this.slashCommand.emit(command);
+    setTimeout(() => this.textareaRef?.nativeElement.focus(), 0);
+  }
+
   selectMention(candidate: MessageMentionCandidate): void {
     if (this.mentionStartIndex < 0) return;
 
@@ -329,6 +419,7 @@ export class MessageInput implements AfterViewInit, OnDestroy {
     this.caretPosition = before.length + insertion.length;
     this.pendingTransfer.set(candidate);
     this.closeMentionPicker();
+    this.closeSlashPicker();
     this.syncTyping();
     this.adjustTextareaHeight();
 
@@ -359,6 +450,7 @@ export class MessageInput implements AfterViewInit, OnDestroy {
     this.isSending.set(true);
     this.showEmojiPicker.set(false);
     this.closeMentionPicker();
+    this.closeSlashPicker();
 
     const chatId = this.chatId();
     if (chatId) {
@@ -409,12 +501,39 @@ export class MessageInput implements AfterViewInit, OnDestroy {
     this.mentionStartIndex = beforeCaret.length - (match[1].length + 1);
     this.mentionQuery.set(match[1]);
     this.mentionHighlightIndex.set(0);
+    this.closeSlashPicker();
+  }
+
+  private updateSlashState(): void {
+    if (!this.enableSlashCommands()) {
+      this.closeSlashPicker();
+      return;
+    }
+
+    const text = this.messageText();
+    const caret = this.caretPosition;
+    const beforeCaret = text.slice(0, caret);
+    const match = beforeCaret.match(/(?:^|[\s])\/([^\s]*)$/);
+
+    if (!match) {
+      this.closeSlashPicker();
+      return;
+    }
+
+    this.slashQuery.set(match[1]);
+    this.slashHighlightIndex.set(0);
+    this.closeMentionPicker();
   }
 
   private closeMentionPicker(): void {
     this.mentionQuery.set(null);
     this.mentionStartIndex = -1;
     this.mentionHighlightIndex.set(0);
+  }
+
+  private closeSlashPicker(): void {
+    this.slashQuery.set(null);
+    this.slashHighlightIndex.set(0);
   }
 
   private rememberCaret(): void {

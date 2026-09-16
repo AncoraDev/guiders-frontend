@@ -115,9 +115,20 @@
         @let own = isOwnMessage(message);
         @let system = isSystemMessage(message);
         @let transfer = isTransferMessage(message);
+        @let contact = isContactInteractiveMessage(message);
         @let isAIMessage = message.isAI || message.type === 'AI';
 
-        @if (transfer) {
+        @if (contact) {
+        <guiders-contact-request-card
+          [variant]="contactCardVariant(message)"
+          [requestId]="message.systemData?.requestId || message.messageId"
+          [status]="contactCardStatus(message)"
+          [data]="message.systemData?.data"
+          [saving]="savingContactData"
+          [confirmed]="isContactConfirmed(message)"
+          (confirm)="onConfirmContactData($event)"
+        />
+        } @else if (transfer) {
         <div class="guiders-chat-placeholder__transfer-marker" role="status">
           <span class="guiders-chat-placeholder__transfer-marker-line" aria-hidden="true"></span>
           <span class="guiders-chat-placeholder__transfer-marker-pill">
@@ -198,6 +209,8 @@
     [mode]="'inbox'"
     [enableMentions]="enableMentions"
     [mentionCandidates]="mentionCandidates"
+    [enableSlashCommands]="enableSlashCommands"
     (messageSent)="onMessageSent($event)"
+    (slashCommand)="onSlashCommand($event)"
   />
 </div>

@@ -8,11 +8,12 @@ import {
   effect,
   ElementRef,
   ViewChild,
+  DestroyRef,
 } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { filter, map, startWith } from 'rxjs';
+import { CommonModule, DOCUMENT } from '@angular/common';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { filter, fromEvent, map, startWith } from 'rxjs';
 import { SidebarItem, SidebarConfig } from './sidebar.types';
 import { Button } from '@guiders-frontend/button';
 import { IconComponent } from '@guiders-frontend/icon';
@@ -24,14 +25,24 @@ import {
   type NamedTheme,
 } from '@guiders-frontend/shared/data-access/theme';
 
+/** Debe coincidir con `$breakpoint-xl` (1280px) en design-tokens. */
+const SIDEBAR_OVERLAY_MAX_WIDTH = 1280;
+
 @Component({
   selector: 'guiders-sidebar',
   imports: [CommonModule, Button, IconComponent, Badge, UserMenu],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss',
+  host: {
+    '[class.sidebar-host--overlay]': 'isOverlayMode()',
+    '[class.sidebar-host--expanded]': '!isCollapsed()',
+  },
 })
 export class Sidebar {
   private readonly router = inject(Router);
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** URL actual sin query/fragment — reacciona a cada navegación */
   private readonly currentPath = toSignal(
@@ -88,6 +99,8 @@ export class Sidebar {
 
   // Estado interno con signals
   readonly isCollapsed = signal(false);
+  /** Viewport estrecho: el menú pasa a drawer overlay. */
+  readonly isOverlayMode = signal(false);
   /** Controls the theme picker dropdown in the sidebar footer */
   readonly isThemePickerOpen = signal(false);
   /** Controls the help menu dropdown in the sidebar footer */
@@ -127,6 +140,9 @@ export class Sidebar {
   readonly isDarkTheme = computed(() => true); // All named themes are dark
 
   constructor() {
+    this.bindOverlayMode();
+    this.bindOutsideDismiss();
+
     // Respetar el collapsed inicial del config (p. ej. cerrado por defecto en console)
     let collapsedSynced = false;
     effect(() => {
@@ -234,7 +250,10 @@ export class Sidebar {
       // Si tiene ruta, navegar
       console.log(`Navegando a: ${item.route}`);
       this.navigateToRoute(item.route);
-      this.closePopover(); // Cerrar popover si está abierto
+      this.closePopover();
+      if (this.isOverlayMode()) {
+        this.collapseSidebar();
+      }
     } else {
       console.log(`Item sin ruta: ${item.label}`);
       this.closePopover(); // Cerrar popover si está abierto
@@ -339,6 +358,9 @@ export class Sidebar {
       } else {
         console.log(`Item sin ruta: ${item.label}`);
       }
+      if (this.isOverlayMode()) {
+        this.collapseSidebar();
+      }
     }, 10);
   }
 
@@ -372,7 +394,69 @@ export class Sidebar {
   onToggleSidebar(): void {
     const newCollapsedState = !this.isCollapsed();
     this.isCollapsed.set(newCollapsedState);
+    if (newCollapsedState) {
+      this.closePopover();
+      this.closeThemePicker();
+      this.closeHelpMenu();
+    }
     this.toggleSidebar.emit(newCollapsedState);
+  }
+
+  collapseSidebar(): void {
+    if (this.isCollapsed()) {
+      return;
+    }
+    this.isCollapsed.set(true);
+    this.closePopover();
+    this.closeThemePicker();
+    this.closeHelpMenu();
+    this.toggleSidebar.emit(true);
+  }
+
+  private bindOverlayMode(): void {
+    const win = this.document.defaultView;
+    if (!win?.matchMedia) {
+      return;
+    }
+    const media = win.matchMedia(`(max-width: ${SIDEBAR_OVERLAY_MAX_WIDTH}px)`);
+    this.isOverlayMode.set(media.matches);
+    const onChange = (event: MediaQueryListEvent) => {
+      this.isOverlayMode.set(event.matches);
+      if (event.matches) {
+        this.collapseSidebar();
+      }
+    };
+    media.addEventListener('change', onChange);
+    this.destroyRef.onDestroy(() => media.removeEventListener('change', onChange));
+  }
+
+  private bindOutsideDismiss(): void {
+    fromEvent<MouseEvent>(this.document, 'click')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => this.onDocumentClick(event));
+
+    fromEvent<KeyboardEvent>(this.document, 'keydown')
+      .pipe(
+        filter((event) => event.key === 'Escape'),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.collapseSidebar());
+  }
+
+  private onDocumentClick(event: MouseEvent): void {
+    if (this.isCollapsed()) {
+      return;
+    }
+    const collapseOutside =
+      this.isOverlayMode() || this.config().collapseOnOutsideClick === true;
+    if (!collapseOutside) {
+      return;
+    }
+    const target = event.target;
+    if (target instanceof Node && this.host.nativeElement.contains(target)) {
+      return;
+    }
+    this.collapseSidebar();
   }
 
   isItemActive(item: SidebarItem): boolean {

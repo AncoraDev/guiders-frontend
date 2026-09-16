@@ -1,0 +1,88 @@
+<article class="contact-request-card" [attr.data-variant]="variant()">
+  @if (isRequest()) {
+    <p class="contact-request-card__title">Has pedido los datos de contacto</p>
+    <p class="contact-request-card__hint">
+      @if (isSubmitted()) {
+        El visitante ya los ha enviado.
+      } @else {
+        El visitante verá un formulario en el chat.
+      }
+    </p>
+  } @else if (confirmed()) {
+    <p class="contact-request-card__title">Datos aplicados</p>
+    <p class="contact-request-card__hint">Guardados en el panel de contacto.</p>
+  } @else {
+    <p class="contact-request-card__title">Datos recibidos</p>
+    <p class="contact-request-card__hint">Revisa y confirma para guardarlos.</p>
+
+    <form class="contact-request-card__form" [formGroup]="form" (ngSubmit)="onSubmit()">
+      <label class="contact-request-card__field" [attr.for]="fieldId('nombre')">
+        <span>Nombre *</span>
+        <input
+          [id]="fieldId('nombre')"
+          type="text"
+          formControlName="nombre"
+          autocomplete="off"
+        />
+        @if (getError('nombre'); as error) {
+          <em>{{ error }}</em>
+        }
+      </label>
+      <label class="contact-request-card__field" [attr.for]="fieldId('apellidos')">
+        <span>Apellidos</span>
+        <input
+          [id]="fieldId('apellidos')"
+          type="text"
+          formControlName="apellidos"
+          autocomplete="off"
+        />
+      </label>
+      <label class="contact-request-card__field contact-request-card__field--full" [attr.for]="fieldId('email')">
+        <span>Email *</span>
+        <input
+          [id]="fieldId('email')"
+          type="email"
+          formControlName="email"
+          autocomplete="off"
+        />
+        @if (getError('email'); as error) {
+          <em>{{ error }}</em>
+        }
+      </label>
+      <label class="contact-request-card__field contact-request-card__field--full" [attr.for]="fieldId('telefono')">
+        <span>Teléfono *</span>
+        <input
+          [id]="fieldId('telefono')"
+          type="tel"
+          formControlName="telefono"
+          autocomplete="off"
+        />
+        @if (getError('telefono'); as error) {
+          <em>{{ error }}</em>
+        }
+      </label>
+      <label class="contact-request-card__field contact-request-card__field--full" [attr.for]="fieldId('poblacion')">
+        <span>Población</span>
+        <input
+          [id]="fieldId('poblacion')"
+          type="text"
+          formControlName="poblacion"
+          autocomplete="off"
+        />
+      </label>
+
+      <div class="contact-request-card__actions">
+        <button type="button" class="contact-request-card__button contact-request-card__button--ghost" (click)="onCancel()">
+          Cancelar
+        </button>
+        <button type="submit" class="contact-request-card__button" [disabled]="!canSubmit()">
+          @if (saving()) {
+            Confirmando…
+          } @else {
+            Confirmar
+          }
+        </button>
+      </div>
+    </form>
+  }
+</article>

@@ -43,7 +43,7 @@ export class StatusSelector {
 
   readonly isOnline = computed(() => this.currentStatus() === 'online');
   readonly label = computed(() =>
-    this.isOnline() ? 'Conectado' : 'Desconectado'
+    this.isOnline() ? 'Conectado' : 'Estás desconectado'
   );
   readonly resolvedAvatarUrl = computed(
     () => this.avatarUrl() || this.loadedAvatarUrl()
