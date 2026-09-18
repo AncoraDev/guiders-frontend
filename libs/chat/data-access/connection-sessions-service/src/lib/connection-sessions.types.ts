@@ -2,6 +2,7 @@ export type ConnectionSessionEndReason =
   | 'manual'
   | 'logout'
   | 'browser_close'
+  | 'connection_lost'
   | 'unknown';
 
 export type ConnectionSessionStatusFilter = 'open' | 'closed';

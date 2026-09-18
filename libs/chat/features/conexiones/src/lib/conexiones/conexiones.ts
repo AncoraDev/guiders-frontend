@@ -253,6 +253,8 @@ export class Conexiones implements OnInit {
         return 'Logout';
       case 'browser_close':
         return 'Cierre navegador';
+      case 'connection_lost':
+        return 'Conexión perdida';
       case 'unknown':
         return 'Desconocido';
       default:

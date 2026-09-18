@@ -209,7 +209,11 @@ export class CommercialPresenceService {
     this.commercialId = userId;
     this.disableAutoReconnectOnActivity();
 
-    const request: DisconnectCommercialRequest = { id: userId };
+    // Si quedó una sesión abierta, la cerró el cierre del navegador anterior.
+    const request: DisconnectCommercialRequest = {
+      id: userId,
+      reason: 'browser_close',
+    };
     return this.http
       .post<ApiResponse>(`${this.baseUrl}/disconnect`, request, this.getHttpOptions())
       .pipe(
