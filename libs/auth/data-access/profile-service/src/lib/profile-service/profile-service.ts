@@ -13,6 +13,12 @@ export interface UploadAvatarResponse {
   message: string;
 }
 
+export interface ContactFormLegalSettings {
+  privacyPolicyUrl: string;
+  privacyCheckboxLabel: string;
+  marketingCheckboxLabel: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -199,6 +205,41 @@ export class ProfileService {
           const message =
             error.error?.message ||
             'No se pudieron guardar las frases del equipo.';
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  getContactFormLegal(): Observable<ContactFormLegalSettings> {
+    return this.http
+      .get<ContactFormLegalSettings>(
+        `${this.baseUrl}/me/company/contact-form-legal`,
+        { withCredentials: true }
+      )
+      .pipe(
+        catchError((error) => {
+          const message =
+            error.error?.message ||
+            'No se pudieron cargar los textos del formulario.';
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  updateContactFormLegal(
+    legal: ContactFormLegalSettings
+  ): Observable<ContactFormLegalSettings> {
+    return this.http
+      .put<ContactFormLegalSettings>(
+        `${this.baseUrl}/me/company/contact-form-legal`,
+        legal,
+        { withCredentials: true }
+      )
+      .pipe(
+        catchError((error) => {
+          const message =
+            error.error?.message ||
+            'No se pudieron guardar los textos del formulario.';
           return throwError(() => new Error(message));
         })
       );

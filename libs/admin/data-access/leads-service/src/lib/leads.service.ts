@@ -130,33 +130,46 @@ export class LeadsService {
   }
 
   /**
-   * Crear o actualizar configuracion de LeadCars
-   * POST /api/v1/leads/admin/config
+   * Crear o actualizar configuracion de LeadCars.
+   * POST /api/v1/leads/admin/config — alta
+   * PUT /api/v1/leads/admin/config/:id — edición
    */
   saveConfig(
-    request: CreateLeadCarsConfigRequest
+    request: CreateLeadCarsConfigRequest,
+    configId?: string | null,
   ): Observable<LeadCarsCompanyConfig> {
     this.savingSubject.next(true);
     this.errorSubject.next(null);
 
-    return this.http
-      .post<LeadCarsCompanyConfig>(
-        `${this.baseUrl}/config`,
-        request,
-        this.getHttpOptions()
-      )
-      .pipe(
-        tap((config) => {
-          this.configSubject.next(config);
-          this.savingSubject.next(false);
-        }),
-        catchError((error) => {
-          console.error('Error al guardar configuracion LeadCars:', error);
-          this.errorSubject.next('Error al guardar la configuracion');
-          this.savingSubject.next(false);
-          throw error;
-        })
-      );
+    const request$ = configId
+      ? this.http.put<LeadCarsCompanyConfig>(
+          `${this.baseUrl}/config/${configId}`,
+          {
+            enabled: request.enabled,
+            syncChatConversations: request.syncChatConversations,
+            triggerEvents: request.triggerEvents,
+            config: request.config,
+          },
+          this.getHttpOptions(),
+        )
+      : this.http.post<LeadCarsCompanyConfig>(
+          `${this.baseUrl}/config`,
+          request,
+          this.getHttpOptions(),
+        );
+
+    return request$.pipe(
+      tap((config) => {
+        this.configSubject.next(config);
+        this.savingSubject.next(false);
+      }),
+      catchError((error) => {
+        console.error('Error al guardar configuracion LeadCars:', error);
+        this.errorSubject.next('Error al guardar la configuracion');
+        this.savingSubject.next(false);
+        throw error;
+      }),
+    );
   }
 
   /**

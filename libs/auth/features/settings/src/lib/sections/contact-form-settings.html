@@ -1,0 +1,64 @@
+<lib-settings-section-header
+  title="Formulario de contacto"
+  description="Textos legales que ve el visitante cuando un comercial pide sus datos.">
+</lib-settings-section-header>
+
+@if (!isAdmin) {
+  <p class="contact-form-settings__denied">
+    Solo el administrador del concesionario puede cambiar estos textos.
+  </p>
+} @else if (isLoading()) {
+  <p class="contact-form-settings__hint">Cargando…</p>
+} @else {
+  <lib-settings-row
+    [stacked]="true"
+    label="Política de privacidad"
+    description="URL que se enlaza en el check RGPD. Si la dejas vacía, el texto no tendrá enlace.">
+    <input
+      type="url"
+      class="contact-form-settings__input"
+      placeholder="https://ejemplo.com/privacidad"
+      [ngModel]="privacyPolicyUrl()"
+      (ngModelChange)="privacyPolicyUrl.set($event)"
+      [disabled]="isSaving()"
+    />
+  </lib-settings-row>
+
+  <lib-settings-row
+    [stacked]="true"
+    label="Check RGPD"
+    description="Obligatorio para enviar el formulario. Por defecto: He leído y acepto la política de privacidad.">
+    <textarea
+      class="contact-form-settings__textarea"
+      rows="2"
+      maxlength="300"
+      [ngModel]="privacyCheckboxLabel()"
+      (ngModelChange)="privacyCheckboxLabel.set($event)"
+      [disabled]="isSaving()"
+    ></textarea>
+  </lib-settings-row>
+
+  <lib-settings-row
+    [stacked]="true"
+    label="Check de comunicaciones"
+    description="Opcional y desmarcado por defecto. Por defecto: Acepto recibir comunicaciones.">
+    <textarea
+      class="contact-form-settings__textarea"
+      rows="2"
+      maxlength="300"
+      [ngModel]="marketingCheckboxLabel()"
+      (ngModelChange)="marketingCheckboxLabel.set($event)"
+      [disabled]="isSaving()"
+    ></textarea>
+  </lib-settings-row>
+
+  <div class="contact-form-settings__actions">
+    <button
+      type="button"
+      class="contact-form-settings__save"
+      [disabled]="isSaving() || !isDirty()"
+      (click)="save()">
+      {{ isSaving() ? 'Guardando...' : 'Guardar' }}
+    </button>
+  </div>
+}

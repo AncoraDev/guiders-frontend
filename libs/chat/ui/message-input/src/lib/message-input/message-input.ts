@@ -110,13 +110,14 @@ export interface SlashCommand {
   kind?: SlashCommandKind;
   group?: SlashCommandGroup;
   body?: string;
+  preface?: string;
 }
 
 const DEFAULT_SLASH_COMMANDS: SlashCommand[] = [
   {
     id: 'request-contact',
     label: 'Solicitar datos',
-    hint: 'Pide nombre, email y teléfono',
+    hint: 'Pide nombre, email, teléfono y población',
     kind: 'action',
     group: 'action',
   },
@@ -205,7 +206,7 @@ export class MessageInput implements AfterViewInit, OnDestroy {
     const query = this.slashQuery();
     if (query === null) return [];
     const q = query.trim().toLowerCase();
-    const all = this.slashCommands() ?? DEFAULT_SLASH_COMMANDS;
+    const all = this.mergeSlashCommands(this.slashCommands());
     const snippets = all.filter((cmd) => cmd.kind === 'snippet');
     const actions = all.filter((cmd) => cmd.kind !== 'snippet');
 
@@ -495,11 +496,25 @@ export class MessageInput implements AfterViewInit, OnDestroy {
       return;
     }
 
+    const preface =
+      command.id === 'request-contact' ? this.extractPreface() : undefined;
     this.messageText.set('');
     this.caretPosition = 0;
     this.adjustTextareaHeight();
-    this.slashCommand.emit(command);
+    this.slashCommand.emit({ ...command, preface });
     setTimeout(() => this.textareaRef?.nativeElement.focus(), 0);
+  }
+
+  private extractPreface(): string {
+    const text = this.messageText();
+    const caret = this.caretPosition;
+    const beforeCaret = text.slice(0, caret);
+    const slashIndex = beforeCaret.lastIndexOf('/');
+    const withoutSlash =
+      slashIndex >= 0
+        ? `${text.slice(0, slashIndex)}${text.slice(caret)}`
+        : text;
+    return withoutSlash.replace(/\s+/g, ' ').trim();
   }
 
   private insertSnippet(body: string): void {
@@ -699,6 +714,17 @@ export class MessageInput implements AfterViewInit, OnDestroy {
       el.focus();
       el.setSelectionRange(this.caretPosition, this.caretPosition);
     }, 0);
+  }
+
+  /** Solicitar datos siempre entra, aunque el padre mande una lista incompleta. */
+  private mergeSlashCommands(provided?: SlashCommand[]): SlashCommand[] {
+    const list = provided?.length ? [...provided] : [];
+    for (const fallback of DEFAULT_SLASH_COMMANDS) {
+      if (!list.some((cmd) => cmd.id === fallback.id)) {
+        list.unshift(fallback);
+      }
+    }
+    return list.length ? list : DEFAULT_SLASH_COMMANDS;
   }
 
   private rememberCaret(): void {

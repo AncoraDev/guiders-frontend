@@ -107,6 +107,12 @@ export class App {
               icon: 'user' as const,
               route: '/usuarios',
             },
+            {
+              id: 'integraciones',
+              label: 'Integraciones',
+              icon: 'layers' as const,
+              route: '/integraciones',
+            },
           ]
         : []),
     ];

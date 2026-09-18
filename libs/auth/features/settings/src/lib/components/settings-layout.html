@@ -13,7 +13,7 @@
 
     <div class="settings-page__body">
       <nav class="settings-nav" aria-label="Secciones de configuración">
-        @for (group of navGroups; track group.label) {
+        @for (group of navGroups(); track group.label) {
           <div class="settings-nav__group">
             <p class="settings-nav__group-label">{{ group.label }}</p>
             <ul class="settings-nav__list">

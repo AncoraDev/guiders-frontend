@@ -1,8 +1,13 @@
 <article class="contact-request-card" [attr.data-variant]="variant()">
   @if (isRequest()) {
     <p class="contact-request-card__title">Has pedido los datos de contacto</p>
+    @if (preface()) {
+      <p class="contact-request-card__preface">{{ preface() }}</p>
+    }
     <p class="contact-request-card__hint">
-      @if (isSubmitted()) {
+      @if (status() === 'cancelled') {
+        El visitante ha cancelado el formulario.
+      } @else if (isSubmitted()) {
         El visitante ya los ha enviado.
       } @else {
         El visitante verá un formulario en el chat.
@@ -62,13 +67,16 @@
         }
       </label>
       <label class="contact-request-card__field contact-request-card__field--full" [attr.for]="fieldId('poblacion')">
-        <span>Población</span>
+        <span>Población *</span>
         <input
           [id]="fieldId('poblacion')"
           type="text"
           formControlName="poblacion"
           autocomplete="off"
         />
+        @if (getError('poblacion'); as error) {
+          <em>{{ error }}</em>
+        }
       </label>
 
       <div class="contact-request-card__actions">

@@ -116,6 +116,9 @@ export class ConversationItem {
     if (message.systemData?.action === 'contact_submission') {
       return 'Datos recibidos';
     }
+    if (message.systemData?.action === 'contact_cancellation') {
+      return 'Formulario cancelado';
+    }
     if (message.type === 'TEXT') {
       return message.content.length > 60
         ? message.content.substring(0, 60) + '...'

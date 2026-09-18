@@ -102,7 +102,7 @@
         </div>
         }
 
-        @for (message of messages; track trackMessageById($index, message)) {
+        @for (message of visibleMessages; track trackMessageById($index, message)) {
         <!-- Separador de fecha -->
         @if (shouldShowDateSeparator($index)) {
         <div class="guiders-chat-placeholder__date-separator">
@@ -131,6 +131,7 @@
           [requestId]="message.systemData?.requestId || message.messageId"
           [status]="contactCardStatus(message)"
           [data]="message.systemData?.data"
+          [preface]="message.systemData?.preface || message.content"
           [saving]="savingContactData"
           [confirmed]="isContactConfirmed(message)"
           (confirm)="onConfirmContactData($event)"
@@ -217,7 +218,7 @@
     [enableMentions]="enableMentions"
     [mentionCandidates]="mentionCandidates"
     [enableSlashCommands]="enableSlashCommands"
-    [slashCommands]="slashCommands ?? []"
+    [slashCommands]="slashCommands ?? undefined"
     (messageSent)="onMessageSent($event)"
     (slashCommand)="onSlashCommand($event)"
   />

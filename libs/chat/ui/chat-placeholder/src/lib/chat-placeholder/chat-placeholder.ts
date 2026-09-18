@@ -17,6 +17,7 @@ import {
 import { CommonModule } from '@angular/common';
 import {
   Chat,
+  ContactRequestStatus,
   Message,
   PresenceStatus,
   User,
@@ -78,6 +79,12 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
   @Input() slashCommands: SlashCommand[] | null = null;
   @Input() savingContactData = false;
   @Input() confirmedContactRequestIds: string[] = [];
+
+  /**
+   * Mensajes que se pintan en el hilo. Cancelación y confirmación de datos solo
+   * cambian el estado de la tarjeta, así que no se muestran como burbuja.
+   */
+  visibleMessages: Message[] = [];
 
   @Output() settingsClicked = new EventEmitter<void>();
   @Output() closeChat = new EventEmitter<void>();
@@ -243,6 +250,12 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['visitorProfile']) {
       this.cdr.markForCheck();
+    }
+
+    if (changes['messages']) {
+      this.visibleMessages = this.messages.filter(
+        (message) => !this.isHiddenContactMessage(message),
+      );
     }
 
     // Si cambia el chat seleccionado, hacer scroll al final
@@ -448,13 +461,33 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
     return action === 'contact_request' || action === 'contact_submission';
   }
 
+  private isHiddenContactMessage(message: Message): boolean {
+    const action = message.systemData?.action;
+    return (
+      action === 'contact_cancellation' || action === 'contact_confirmation'
+    );
+  }
+
+  isContactRequestCancelled(message: Message): boolean {
+    if (message.systemData?.action !== 'contact_request') return false;
+    if (message.systemData.status === 'cancelled') return true;
+    const requestId = message.systemData.requestId;
+    if (!requestId) return false;
+    return this.messages.some(
+      (item) =>
+        item.systemData?.action === 'contact_cancellation' &&
+        item.systemData.requestId === requestId
+    );
+  }
+
   contactCardVariant(message: Message): 'request' | 'submission' {
     return message.systemData?.action === 'contact_submission'
       ? 'submission'
       : 'request';
   }
 
-  contactCardStatus(message: Message): 'pending' | 'submitted' | 'confirmed' {
+  contactCardStatus(message: Message): ContactRequestStatus {
+    if (this.isContactRequestCancelled(message)) return 'cancelled';
     if (this.isContactConfirmed(message)) return 'confirmed';
     if (this.isContactRequestSubmitted(message)) return 'submitted';
     return message.systemData?.status ?? 'pending';
@@ -547,8 +580,8 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
   shouldShowDateSeparator(index: number): boolean {
     if (index === 0) return true; // Siempre mostrar separador para el primer mensaje
     
-    const currentMessage = this.messages[index];
-    const previousMessage = this.messages[index - 1];
+    const currentMessage = this.visibleMessages[index];
+    const previousMessage = this.visibleMessages[index - 1];
     
     if (!currentMessage?.sentAt || !previousMessage?.sentAt) return false;
     
@@ -562,8 +595,8 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
   /** Otro chatId del mismo visitante: bloque de sesión en el hilo único. */
   shouldShowSessionSeparator(index: number): boolean {
     if (index === 0) return false;
-    const current = this.messages[index];
-    const previous = this.messages[index - 1];
+    const current = this.visibleMessages[index];
+    const previous = this.visibleMessages[index - 1];
     if (!current?.chatId || !previous?.chatId) return false;
     return current.chatId !== previous.chatId;
   }

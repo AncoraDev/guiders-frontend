@@ -1,6 +1,7 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  DestroyRef,
   input,
   output,
   computed,
@@ -8,10 +9,12 @@ import {
   effect,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   ContactRequestPayload,
+  ContactRequestStatus,
   SaveContactDataRequest,
 } from '@guiders-frontend/shared/types';
 
@@ -30,11 +33,13 @@ export interface ContactRequestCardConfirm {
 })
 export class ContactRequestCard {
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly variant = input.required<'request' | 'submission'>();
   readonly requestId = input.required<string>();
-  readonly status = input<'pending' | 'submitted' | 'confirmed'>('pending');
+  readonly status = input<ContactRequestStatus>('pending');
   readonly data = input<ContactRequestPayload | undefined>(undefined);
+  readonly preface = input<string | undefined>(undefined);
   readonly saving = input(false);
   readonly confirmed = input(false);
 
@@ -53,7 +58,7 @@ export class ContactRequestCard {
         Validators.maxLength(20),
       ],
     ],
-    poblacion: ['', [Validators.maxLength(100)]],
+    poblacion: ['', [Validators.required, Validators.maxLength(100)]],
   });
 
   private readonly _isFormValid = signal(false);
@@ -71,9 +76,11 @@ export class ContactRequestCard {
   );
 
   constructor() {
-    this.form.statusChanges.subscribe(() => {
-      this._isFormValid.set(this.form.valid);
-    });
+    this.form.statusChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this._isFormValid.set(this.form.valid);
+      });
 
     effect(() => {
       const payload = this.data();

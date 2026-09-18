@@ -128,6 +128,7 @@ export class Atencion implements OnInit, OnDestroy {
 
   /** Chats PENDING ya notificados (WS + poll) para no duplicar toasts. */
   private readonly notifiedPendingChatIds = new Set<string>();
+  private contactRequestInFlight = false;
   /** Visitantes que el WS marcó offline: no re-entrar por PENDING vacío. */
   private readonly offlineWebVisitorIds = new Set<string>();
   /** Tras el primer refresh, el poll puede emitir toasts por deltas. */
@@ -232,7 +233,26 @@ export class Atencion implements OnInit, OnDestroy {
   readonly visitorActivity = signal<VisitorActivity | null>(null);
   readonly visitorContactData = signal<LeadContactData | null>(null);
   readonly savingContactData = signal(false);
-  readonly confirmedContactRequestIds = signal<string[]>([]);
+  /** Confirmaciones aplicadas en esta sesión, antes de que llegue el mensaje. */
+  private readonly optimisticConfirmedRequestIds = signal<string[]>([]);
+  /**
+   * El backend deja un mensaje `contact_confirmation` en el hilo, así que el
+   * estado confirmado se deriva de los mensajes y sobrevive a un recargo.
+   */
+  readonly confirmedContactRequestIds = computed(() => {
+    const ids = new Set(this.optimisticConfirmedRequestIds());
+    for (const message of this.messages()) {
+      const systemData = message.systemData;
+      if (!systemData?.requestId) continue;
+      if (
+        systemData.action === 'contact_confirmation' ||
+        systemData.status === 'confirmed'
+      ) {
+        ids.add(systemData.requestId);
+      }
+    }
+    return Array.from(ids);
+  });
   readonly showVisitorPanel = signal(false);
   /** Comerciales online (excluye al usuario actual) para @mention. */
   readonly mentionCandidates = signal<
@@ -398,55 +418,16 @@ export class Atencion implements OnInit, OnDestroy {
     };
   });
 
-  /** `/` Solicitar datos solo si aún no tenemos contacto ni una solicitud viva. */
-  readonly canRequestContactData = computed(() => {
-    if (this.contactMeetsLeadCriteria(this.visitorContactData())) {
-      return false;
-    }
-
-    const confirmedIds = this.confirmedContactRequestIds();
-    const submittedIds = new Set<string>();
-    let hasSubmission = false;
-    let hasOpenRequest = false;
-
-    for (const message of this.messages()) {
-      const data = message.systemData;
-      if (!data) continue;
-      if (data.action === 'contact_submission') {
-        hasSubmission = true;
-        if (data.requestId) submittedIds.add(data.requestId);
-      }
-    }
-
-    if (hasSubmission) return false;
-
-    for (const message of this.messages()) {
-      const data = message.systemData;
-      if (data?.action !== 'contact_request' || !data.requestId) continue;
-      if (
-        data.status === 'confirmed' ||
-        submittedIds.has(data.requestId) ||
-        confirmedIds.includes(data.requestId)
-      ) {
-        return false;
-      }
-      hasOpenRequest = true;
-    }
-
-    return !hasOpenRequest;
-  });
-
   readonly slashCommands = computed<SlashCommand[]>(() => {
-    const commands: SlashCommand[] = [];
-    if (this.canRequestContactData()) {
-      commands.push({
+    const commands: SlashCommand[] = [
+      {
         id: 'request-contact',
         label: 'Solicitar datos',
-        hint: 'Pide nombre, email y teléfono',
+        hint: 'Pide nombre, email, teléfono y población',
         kind: 'action',
         group: 'action',
-      });
-    }
+      },
+    ];
     for (const item of this.teamCannedReplies()) {
       commands.push({
         id: `team:${item.id}`,
@@ -696,14 +677,37 @@ export class Atencion implements OnInit, OnDestroy {
           this.leadContactService.putCache(updated);
           this.applyContactDisplayName(visitorId, updated);
           if (requestId) {
-            this.confirmedContactRequestIds.update((ids) =>
+            this.optimisticConfirmedRequestIds.update((ids) =>
               ids.includes(requestId) ? ids : [...ids, requestId]
             );
+            this.persistContactConfirmation(requestId);
           }
+          this.toastService.success('Datos de contacto guardados');
           this.showVisitorPanel.set(true);
         },
         error: () => {
           this.toastService.error('No se pudieron guardar los datos de contacto');
+        },
+      });
+  }
+
+  /**
+   * Marca la solicitud como confirmada en el hilo. Los datos del lead ya están
+   * guardados, así que un fallo aquí solo afecta al estado de la tarjeta.
+   */
+  private persistContactConfirmation(requestId: string): void {
+    const chatId = this.selectedChat()?.chatId;
+    if (!chatId) return;
+
+    this.chatService
+      .confirmContactData(chatId, requestId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: (error) => {
+          console.warn(
+            '[Atencion] No se pudo registrar la confirmación en el hilo',
+            error
+          );
         },
       });
   }
@@ -1019,37 +1023,45 @@ export class Atencion implements OnInit, OnDestroy {
     const chat = this.selectedChat();
     if (!chat) return;
 
-    if (!this.canRequestContactData()) {
+    if (!this.requireConnected('solicitar datos')) return;
+    if (this.isCurrentVisitorLead()) {
       this.toastService.info(
-        this.contactMeetsLeadCriteria(this.visitorContactData())
-          ? 'Ya tienes los datos de este visitante'
-          : 'Ya se ha enviado la solicitud de datos a este visitante',
+        'Este visitante ya es lead. No hace falta volver a pedir los datos.',
       );
       return;
     }
+    if (this.contactRequestInFlight) {
+      this.toastService.info('Ya se está enviando la solicitud de datos');
+      return;
+    }
 
-    if (!this.requireConnected('solicitar datos')) return;
-
+    this.contactRequestInFlight = true;
     this.chatService
-      .requestContactData(chat.chatId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .requestContactData(chat.chatId, { preface: command.preface })
+      .pipe(
+        finalize(() => {
+          this.contactRequestInFlight = false;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: () => {
           this.toastService.info('Solicitud de datos enviada al visitante');
         },
-        error: (err) => {
-          const message = String(err?.error?.message ?? '');
-          const alreadyHasData =
-            err?.status === 409 &&
-            (message.includes('Ya existen') || message.includes('ya envió'));
-          const alreadyPending =
-            err?.status === 409 || message.includes('pendiente');
-          this.toastService.info(
-            alreadyHasData
-              ? 'Ya tienes los datos de este visitante'
-              : alreadyPending
-                ? 'Ya se ha enviado la solicitud de datos a este visitante'
-                : 'No se pudo enviar la solicitud de datos',
+        error: (error: { status?: number; error?: { message?: string } }) => {
+          const reason = error?.error?.message;
+          // 400/409: regla de negocio (p. ej. ya hay una solicitud pendiente).
+          // No es un fallo técnico, así que se informa sin alarmar.
+          if (error?.status === 400 || error?.status === 409) {
+            this.toastService.info(
+              reason || 'Ya hay una solicitud de datos pendiente en este chat',
+            );
+            return;
+          }
+          this.toastService.error(
+            reason
+              ? `No se pudo enviar la solicitud de datos: ${reason}`
+              : 'No se pudo enviar la solicitud de datos',
           );
         },
       });
@@ -1238,6 +1250,7 @@ export class Atencion implements OnInit, OnDestroy {
         const type = String(message.type || '').toUpperCase();
         if (
           action === 'contact_submission' ||
+          action === 'contact_cancellation' ||
           action === 'contact_request' ||
           type === 'INTERACTIVE'
         ) {
@@ -2135,6 +2148,15 @@ export class Atencion implements OnInit, OnDestroy {
       });
   }
 
+  private isCurrentVisitorLead(): boolean {
+    if (this.selectedItem()?.isLead) return true;
+    const visitorId = this.selectedChat()?.visitorId;
+    const contact =
+      this.visitorContactData() ??
+      (visitorId ? this.leadContactService.peekCache(visitorId) : null);
+    return this.contactMeetsLeadCriteria(contact);
+  }
+
   private contactMeetsLeadCriteria(contact: LeadContactData | null): boolean {
     if (!contact) return false;
     const hasName = !!contact.nombre?.trim();
@@ -2155,6 +2177,7 @@ export class Atencion implements OnInit, OnDestroy {
     const action = (message as Message | undefined)?.systemData?.action;
     if (action === 'contact_request') return 'Solicitud de datos';
     if (action === 'contact_submission') return 'Datos recibidos';
+    if (action === 'contact_cancellation') return 'Formulario cancelado';
     const content = String(message?.content ?? '').trim();
     if (/solicitud de datos/i.test(content)) return 'Solicitud de datos';
     if (/datos de contacto enviados/i.test(content)) return 'Datos recibidos';

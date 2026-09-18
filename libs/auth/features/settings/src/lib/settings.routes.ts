@@ -30,6 +30,14 @@ export const settingsRoutes: Route[] = [
       },
       { path: 'chat', redirectTo: 'replies', pathMatch: 'full' },
       {
+        path: 'contact-form',
+        loadComponent: () =>
+          import('./sections/contact-form-settings').then(
+            (m) => m.ContactFormSettingsComponent,
+          ),
+        title: 'Formulario de contacto · Configuración',
+      },
+      {
         path: 'privacy',
         loadComponent: () => import('./sections/privacy-settings').then(m => m.PrivacySettingsComponent),
         title: 'Privacidad · Configuración',

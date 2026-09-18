@@ -14,9 +14,9 @@
 
 | Campo | Valor |
 |-------|--------|
-| Email | `isa@rmotion.com` |
+| Email | `admin@rmotion.com` |
 | Password | `Admin123!` |
-| Rol | comercial / equipo test |
+| Rol | admin / comercial (Demo Company) |
 
 `admin@guiders.local` **no existe** en Keycloak local. No uses el `superadmin`
 de Admin en Console: las APIs de atención exigen `admin` / `commercial` /

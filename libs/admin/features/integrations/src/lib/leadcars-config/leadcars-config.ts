@@ -243,7 +243,11 @@ export class LeadCarsConfigComponent implements OnInit {
     const leadCarsConfig = config.config as LeadCarsConfig;
 
     const savedSedeId = leadCarsConfig.sedeId || null;
-    const savedCampanaId = leadCarsConfig.campanaId || null;
+    const savedCampanaCode = leadCarsConfig.campanaCode || null;
+    const savedCampanaId = this.resolveCampanaId(
+      leadCarsConfig.campanaId,
+      savedCampanaCode,
+    );
 
     // Usamos emitEvent: false en el concesionarioId para evitar que el listener
     // de valueChanges resetee sedeId y campanaId durante la carga inicial
@@ -297,7 +301,13 @@ export class LeadCarsConfigComponent implements OnInit {
         )
         .subscribe(() => {
           this.form.patchValue(
-            { sedeId: savedSedeId, campanaId: savedCampanaId },
+            {
+              sedeId: savedSedeId,
+              campanaId: this.resolveCampanaId(
+                leadCarsConfig.campanaId,
+                savedCampanaCode,
+              ),
+            },
             { emitEvent: false },
           );
         });
@@ -397,6 +407,10 @@ export class LeadCarsConfigComponent implements OnInit {
       triggerEvents.push('contact_data_updated');
     }
 
+    const campanaId =
+      formValue.campanaId != null ? Number(formValue.campanaId) : undefined;
+    const campanaCode = this.resolveCampanaCode(campanaId);
+
     // Construir configuración específica de LeadCars
     // Solo incluir campos que el backend acepta
     const leadCarsConfig: LeadCarsConfig = {
@@ -407,9 +421,8 @@ export class LeadCarsConfigComponent implements OnInit {
         ? Number(formValue.tipoLeadDefault)
         : undefined,
       ...(formValue.sedeId != null && { sedeId: Number(formValue.sedeId) }),
-      ...(formValue.campanaId != null && {
-        campanaId: Number(formValue.campanaId),
-      }),
+      ...(campanaId != null && { campanaId }),
+      ...(campanaCode && { campanaCode }),
     };
 
     return {
@@ -434,7 +447,7 @@ export class LeadCarsConfigComponent implements OnInit {
     const request = this.buildRequest();
 
     this.leadsService
-      .saveConfig(request)
+      .saveConfig(request, this.config()?.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         error: () => {
@@ -499,6 +512,30 @@ export class LeadCarsConfigComponent implements OnInit {
           });
         },
       });
+  }
+
+  private resolveCampanaId(
+    campanaId?: number,
+    campanaCode?: string | null,
+  ): number | null {
+    if (campanaId) {
+      return campanaId;
+    }
+    if (!campanaCode) {
+      return null;
+    }
+    const match = this.campanas().find(
+      (camp) => camp.codigo === campanaCode || camp.nombre === campanaCode,
+    );
+    return match?.id ?? null;
+  }
+
+  private resolveCampanaCode(campanaId?: number): string | undefined {
+    if (campanaId == null) {
+      return undefined;
+    }
+    const match = this.campanas().find((camp) => camp.id === campanaId);
+    return match?.codigo || match?.nombre || undefined;
   }
 
   getTriggerEventLabel(event: string): string {

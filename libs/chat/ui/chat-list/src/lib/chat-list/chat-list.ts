@@ -138,6 +138,7 @@ export class ChatList {
     const maxLength = 50;
     if (message.systemData?.action === 'contact_request') return 'Solicitud de datos';
     if (message.systemData?.action === 'contact_submission') return 'Datos recibidos';
+    if (message.systemData?.action === 'contact_cancellation') return 'Formulario cancelado';
     
     if (message.type === 'TEXT') {
       return message.content.length > maxLength 

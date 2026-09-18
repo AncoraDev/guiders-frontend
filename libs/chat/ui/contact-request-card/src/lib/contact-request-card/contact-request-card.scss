@@ -22,6 +22,14 @@
     color: var(--color-text-primary);
   }
 
+  &__preface {
+    margin: 0;
+    font-size: tokens.$font-size-sm;
+    color: var(--color-text-primary);
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+
   &__hint {
     margin: 0;
     font-size: tokens.$font-size-xs;

@@ -270,6 +270,13 @@
     justify-content: space-between;
   }
 
+  &__actions-start {
+    display: flex;
+    align-items: center;
+    gap: tokens.$spacing-xs;
+    min-width: 0;
+  }
+
   &__action-button {
     display: inline-flex;
     align-items: center;

@@ -103,6 +103,8 @@ export interface LeadCarsConfig {
   // IDs opcionales
   sedeId?: number;
   campanaId?: number;
+  /** Código de texto que LeadCars usa al crear el lead (`campana`). */
+  campanaCode?: string;
 
   // Tipo de lead por defecto (ID numérico de GET /tipos)
   tipoLeadDefault?: number;

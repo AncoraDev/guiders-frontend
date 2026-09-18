@@ -10,7 +10,8 @@ import {
   MarkAsReadRequest,
   CreateChatResponse,
   User,
-  MessageListResponse
+  MessageListResponse,
+  ContactRequestStatus,
 } from '@guiders-frontend/shared/types';
 import { ENVIRONMENT_TOKEN, UserService } from '@guiders-frontend/auth/data-access/session';
 import { SelfChatService } from '@guiders-frontend/self-chat';
@@ -94,7 +95,15 @@ interface ApiMessageResponse {
     toUserId?: string;
     reason?: string;
     requestId?: string;
-    status?: 'pending' | 'submitted' | 'confirmed';
+    status?: ContactRequestStatus;
+    preface?: string;
+    legal?: {
+      privacyPolicyUrl: string;
+      privacyCheckboxLabel: string;
+      marketingCheckboxLabel: string;
+    };
+    acceptedPrivacyPolicy?: boolean;
+    acceptedMarketing?: boolean;
     data?: {
       nombre?: string;
       apellidos?: string;
@@ -131,7 +140,15 @@ interface WebSocketMessage {
     toUserId?: string;
     reason?: string;
     requestId?: string;
-    status?: 'pending' | 'submitted' | 'confirmed';
+    status?: ContactRequestStatus;
+    preface?: string;
+    legal?: {
+      privacyPolicyUrl: string;
+      privacyCheckboxLabel: string;
+      marketingCheckboxLabel: string;
+    };
+    acceptedPrivacyPolicy?: boolean;
+    acceptedMarketing?: boolean;
     data?: {
       nombre?: string;
       apellidos?: string;
@@ -800,11 +817,37 @@ export class ChatService {
   /**
    * Pide al visitante nombre, email y teléfono (mensaje INTERACTIVE).
    */
-  requestContactData(chatId: string): Observable<Message> {
+  requestContactData(
+    chatId: string,
+    options?: { preface?: string }
+  ): Observable<Message> {
+    const preface = options?.preface?.trim();
+    const body = preface ? { preface } : {};
+
     return this.http
       .post<ApiMessageResponse>(
         `${this.baseUrl}/chats/${chatId}/contact-request`,
-        {},
+        body,
+        this.getHttpOptions()
+      )
+      .pipe(
+        map((response) => {
+          const message = this.transformMessageFromApi(response);
+          this.addMessageToState(chatId, message);
+          return message;
+        })
+      );
+  }
+
+  /**
+   * Deja constancia en el hilo de que el comercial ha aplicado los datos
+   * recibidos, para que el estado sobreviva a un recargo de Console.
+   */
+  confirmContactData(chatId: string, requestId: string): Observable<Message> {
+    return this.http
+      .post<ApiMessageResponse>(
+        `${this.baseUrl}/chats/${chatId}/contact-confirm`,
+        { requestId },
         this.getHttpOptions()
       )
       .pipe(
