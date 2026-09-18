@@ -33,6 +33,31 @@
         <guiders-status-selector />
       </div>
 
+      @if (desktopPermission() === 'default') {
+        <button
+          type="button"
+          class="atencion__notify-banner"
+          (click)="enableDesktopNotifications()"
+        >
+          Activar avisos de escritorio
+        </button>
+      }
+      @if (desktopPermission() === 'denied') {
+        <p class="atencion__notify-hint">
+          Chrome ha bloqueado los avisos. Candado de la barra → Notificaciones →
+          Permitir, y recarga.
+        </p>
+      }
+      @if (desktopPermission() === 'granted') {
+        <button
+          type="button"
+          class="atencion__notify-banner"
+          (click)="testDesktopNotification()"
+        >
+          Probar aviso de escritorio
+        </button>
+      }
+
       <nav
         id="atencion-queues"
         class="atencion__queue-nav"

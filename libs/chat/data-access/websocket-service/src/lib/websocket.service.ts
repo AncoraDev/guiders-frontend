@@ -633,20 +633,9 @@ export class WebSocketService {
         console.log('💬 [WebSocket] Reconectando a sala de CHAT:', roomId);
         this.socket?.emit('chat:join', { chatId });
       } else if (roomId.startsWith('tenant:')) {
-        // DEPRECATED: Sala de presencia del tenant
-        // Ya no se usa para inbox/chat. Solo para casos especiales (tabla de visitantes).
-        console.warn('═══════════════════════════════════════════════════════════');
-        console.warn('⚠️ [WebSocket] DETECTADA SALA DE TENANT (DEPRECATED)');
-        console.warn('═══════════════════════════════════════════════════════════');
-        console.warn('🚪 Room ID:', roomId);
-        console.warn('❌ Acción: NO se reconectará (deprecated para inbox/chat)');
-        console.warn('💡 Recomendación: Usar solo commercial:${id} para presencia');
-        console.warn('═══════════════════════════════════════════════════════════');
-
-        // Remover del estado local para evitar intentos futuros
-        const updatedRooms = new Set(this.currentRooms());
-        updatedRooms.delete(roomId);
-        this.currentRooms.set(updatedRooms);
+        const tenantId = roomId.replace('tenant:', '');
+        console.log('🏢 [WebSocket] Reconectando a sala del TENANT:', roomId);
+        this.socket?.emit('tenant:join', { tenantId });
       } else if (roomId.includes(':')) {
         // Sala de presencia personal (commercial: o visitor:)
         const [userType, userId] = roomId.split(':');

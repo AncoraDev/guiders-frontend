@@ -132,6 +132,9 @@ export class UnreadMessagesService {
   private notificationSound: HTMLAudioElement | null = null;
   private audioContext: AudioContext | null = null;
   private audioResumed = false;
+  /** Evita duplicar escritorio si el mismo message:new llega por sala + tenant. */
+  private readonly recentNotificationIds = new Set<string>();
+  private readonly maxRecentNotificationIds = 80;
 
   // ===== TÍTULO PARPADEANTE =====
   private originalTitle = '';
@@ -142,7 +145,7 @@ export class UnreadMessagesService {
     console.log('[UnreadMessagesService] 🚀 === SERVICIO INICIALIZADO ===');
     console.log('[UnreadMessagesService] 📋 BaseUrl:', this.baseUrl);
     this.initializeWebSocketListenersWhenConnected();
-    this.requestNotificationPermission();
+    this.syncNotificationPermission();
     this.initializeNotificationSound();
     this.setupAudioContextResume();
   }
@@ -669,6 +672,11 @@ export class UnreadMessagesService {
     this.notifyChatIds = new Set(chatIds.filter(Boolean));
   }
 
+  includeNotifyChat(chatId: string): void {
+    if (!chatId) return;
+    this.notifyChatIds?.add(chatId);
+  }
+
   /**
    * Deja de trackear un chat (p. ej. tras transferirlo): limpia unread local
    * y lo excluye de futuras notificaciones.
@@ -705,22 +713,19 @@ export class UnreadMessagesService {
     }
   }
 
-  private shouldNotifyForChat(chatId: string): boolean {
+  private shouldNotifyForChat(
+    chatId: string,
+    queue?: Message['queue']
+  ): boolean {
+    if (queue === 'pendientes') return true;
     if (!this.notifyChatIds) return true;
     return this.notifyChatIds.has(chatId);
   }
 
-  /**
-   * Verificar si un visitante tiene mensajes no leídos
-   * (en cualquiera de sus chats asignados al comercial)
-   */
   hasUnreadForVisitor(visitorId: string): boolean {
     return (this.unreadCountByVisitor()[visitorId] || 0) > 0;
   }
 
-  /**
-   * Obtener el total de mensajes no leídos para un visitante específico
-   */
   getUnreadCountForVisitor(visitorId: string): number {
     return this.unreadCountByVisitor()[visitorId] || 0;
   }
@@ -731,191 +736,54 @@ export class UnreadMessagesService {
    * Inicializar listeners de WebSocket
    */
   private initializeWebSocketListeners(): void {
-    console.log(
-      '[UnreadMessagesService] 🎧 Inicializando listeners de WebSocket'
-    );
-
-    // Escuchar mensajes nuevos del WebSocket
     this.webSocket.messageReceived$
       .pipe(
         filter((message): message is Message => message !== null),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((message) => {
-        console.log(
-          '[UnreadMessagesService] 📨 === NUEVO MENSAJE RECIBIDO POR WEBSOCKET ==='
-        );
-        console.log('[UnreadMessagesService] 📋 MessageId:', message.messageId);
-        console.log('[UnreadMessagesService] 📋 ChatId:', message.chatId);
-        console.log('[UnreadMessagesService] 📋 SenderId:', message.senderId);
-        console.log(
-          '[UnreadMessagesService] 📋 Content:',
-          message.content.substring(0, 50) + '...'
-        );
+        if (message.senderId === this.currentUserId) return;
+        if (message.senderType === 'SYSTEM' || message.type === 'SYSTEM') return;
+        if (message.senderType === 'COMMERCIAL') return;
+        if (this.hasRecentlyNotified(message.messageId)) return;
+        if (!this.shouldNotifyForChat(message.chatId, message.queue)) return;
 
-        // Solo procesar si no es mensaje propio
-        if (message.senderId === this.currentUserId) {
-          console.log(
-            '[UnreadMessagesService] ⏭️ Mensaje propio ignorado (senderId === currentUserId)'
-          );
-          console.log(
-            '[UnreadMessagesService] 📋 CurrentUserId:',
-            this.currentUserId
-          );
-          return;
-        }
-
-        if (message.senderType === 'SYSTEM' || message.type === 'SYSTEM') {
-          return;
-        }
-
-        // Tras transferencia (u otro release): no notificar chats que ya no son nuestros
-        if (!this.shouldNotifyForChat(message.chatId)) {
-          console.log(
-            '[UnreadMessagesService] ⏭️ Chat no asignado a este comercial, ignorando notificación:',
-            message.chatId
-          );
-          return;
-        }
-
-        console.log(
-          '[UnreadMessagesService] ✅ Mensaje de otro usuario, procesando...'
-        );
-
-        // ✅ VERIFICAR SI ES DEL CHAT ACTIVO
         const isFromActiveChat = message.chatId === this.activeChatId;
-        console.log(
-          '[UnreadMessagesService] 🔍 ===== VERIFICACIÓN DE CHAT ACTIVO ====='
-        );
-        console.log(
-          '[UnreadMessagesService] 📋 message.chatId:',
-          message.chatId
-        );
-        console.log(
-          '[UnreadMessagesService] 📋 this.activeChatId:',
-          this.activeChatId
-        );
-        console.log(
-          '[UnreadMessagesService] 📋 Son iguales?:',
-          message.chatId === this.activeChatId
-        );
-        console.log(
-          '[UnreadMessagesService] 📋 isFromActiveChat:',
-          isFromActiveChat
-        );
-        console.log('[UnreadMessagesService] 🔍 ===== FIN VERIFICACIÓN =====');
+        const pageHidden = this.isPageHidden();
 
-        if (isFromActiveChat) {
-          console.log(
-            '[UnreadMessagesService] ✅ Mensaje del chat activo - NO incrementar contador ni notificar'
-          );
-
-          // Marcar como leído inmediatamente (chat activo visible)
-          console.log(
-            '[UnreadMessagesService] ⏱️ Esperando 1 segundo para marcar como leído...'
-          );
-          setTimeout(() => {
-            console.log(
-              '[UnreadMessagesService] 🚀 Marcando mensaje del chat activo como leído'
-            );
-
-            // IMPORTANTE: Usar el mismo fallback que en markActiveChatAsRead
-            const messageId = (message as any).id || message.messageId;
-            console.log(
-              '[UnreadMessagesService] 📋 MessageId extraído:',
-              messageId
-            );
-
-            if (!messageId) {
-              console.error(
-                '[UnreadMessagesService] ❌ No se pudo extraer messageId del mensaje del chat activo'
-              );
-              console.error(
-                '[UnreadMessagesService] ❌ Estructura del mensaje:',
-                message
-              );
-              return;
-            }
-
-            this.markAsRead([messageId]).subscribe({
-              next: (response) => {
-                if (response.success) {
-                  console.log(
-                    `✅ Mensaje del chat activo marcado como leído automáticamente`
-                  );
-                }
-              },
-              error: (error) => {
-                console.error(
-                  '[UnreadMessagesService] ❌ Error al marcar mensaje del chat activo:',
-                  error
-                );
-              },
-            });
-          }, 1000);
-
-          return; // NO incrementar contador ni mostrar notificación
+        if (isFromActiveChat && !pageHidden) {
+          const messageId = (message as { id?: string }).id || message.messageId;
+          if (messageId) {
+            setTimeout(() => {
+              this.markAsRead([messageId]).subscribe();
+            }, 1000);
+          }
+          return;
         }
 
-        // Solo si NO es del chat activo:
-        console.log(
-          '[UnreadMessagesService] ⚠️ Mensaje de chat INACTIVO - Incrementando contador'
-        );
+        if (isFromActiveChat && pageHidden) {
+          this.rememberNotification(message.messageId);
+          this.showBrowserNotification(message);
+          this.startTitleFlashing();
+          return;
+        }
 
-        // 1. Actualizar contador — preferir el valor autoritativo del servidor si viene en el payload.
         if (message.unreadMessagesCount !== undefined) {
-          console.log(
-            `[UnreadMessagesService] 📊 Usando unreadMessagesCount del servidor: ${message.unreadMessagesCount}`
-          );
           this.unreadCountMap.update((map) => ({
             ...map,
             [message.chatId]: message.unreadMessagesCount as number,
           }));
           this.unreadCountSubject.next(this.unreadCountMap());
         } else {
-          // Fallback: incrementar localmente si el backend aún no envía el campo.
-          const currentCount = this.unreadCountMap()[message.chatId] || 0;
-          console.log('[UnreadMessagesService] 📊 Contador ANTES (local):', currentCount);
           this.incrementUnreadCount(message.chatId);
-          console.log(
-            '[UnreadMessagesService] 📊 Contador DESPUÉS:',
-            this.unreadCountMap()[message.chatId]
-          );
         }
 
-        // 2. Agregar a lista de mensajes no leídos
         this.addUnreadMessage(message);
-        console.log(
-          '[UnreadMessagesService] 📨 Mensaje agregado a lista de no leídos'
-        );
-
-        // 3. Mostrar notificación del navegador si está habilitado
-        // IMPORTANTE: Mostrar notificación incluso si la app está activa,
-        // porque el usuario está mirando OTRO chat (no el que recibió el mensaje)
-        if (this.notificationsEnabled) {
-          console.log(
-            '[UnreadMessagesService] 🔔 Mostrando notificación del navegador para chat inactivo'
-          );
-          this.showBrowserNotification(message);
-        } else {
-          console.log(
-            '[UnreadMessagesService] 🔕 No mostrar notificación (notificationsEnabled:',
-            this.notificationsEnabled,
-            ')'
-          );
-        }
-
-        // 4. Iniciar parpadeo del título
+        this.rememberNotification(message.messageId);
+        this.showBrowserNotification(message);
         this.startTitleFlashing();
-
-        console.log(
-          `[UnreadMessagesService] 📊 === PROCESAMIENTO COMPLETADO ===`
-        );
       });
 
-    // Listen for authoritative unread count updates from the server.
-    // Emitted after PUT /v2/chats/:chatId/unread/reset so the badge stays
-    // in sync across sessions without polling.
     this.webSocket.on('chat:unread_count', (data: unknown) => {
       const payload = data as { chatId: string; unreadMessagesCount: number };
       if (!payload?.chatId) return;
@@ -1179,32 +1047,58 @@ export class UnreadMessagesService {
     }
   }
 
-  /**
-   * Solicitar permiso para notificaciones del navegador
-   */
-  private requestNotificationPermission(): void {
-    if ('Notification' in window) {
-      if (Notification.permission === 'default') {
-        Notification.requestPermission().then((permission) => {
-          this.notificationsEnabled = permission === 'granted';
-          console.log(
-            '[UnreadMessagesService] Permiso de notificaciones:',
-            permission
-          );
-        });
-      } else {
-        this.notificationsEnabled = Notification.permission === 'granted';
-        console.log(
-          '[UnreadMessagesService] Estado de notificaciones:',
-          this.notificationsEnabled ? 'habilitadas' : 'deshabilitadas'
-        );
-      }
-    }
+  desktopPermission(): NotificationPermission | 'unsupported' {
+    if (typeof Notification === 'undefined') return 'unsupported';
+    return Notification.permission;
   }
 
   /**
-   * Obtener el Router de forma lazy para evitar dependencias circulares
+   * Pide el permiso de escritorio. Tiene que ir en un click.
+   * Si Chrome ya lo denegó, no vuelve a preguntar.
    */
+  async requestDesktopPermission(): Promise<
+    NotificationPermission | 'unsupported'
+  > {
+    if (typeof Notification === 'undefined') return 'unsupported';
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      this.syncNotificationPermission();
+      return permission;
+    }
+    this.syncNotificationPermission();
+    return Notification.permission;
+  }
+
+  private syncNotificationPermission(): void {
+    if (typeof Notification === 'undefined') {
+      this.notificationsEnabled = false;
+      return;
+    }
+    this.notificationsEnabled = Notification.permission === 'granted';
+  }
+
+  private isPageHidden(): boolean {
+    return (
+      document.hidden ||
+      document.visibilityState === 'hidden' ||
+      !document.hasFocus()
+    );
+  }
+
+  private hasRecentlyNotified(messageId?: string): boolean {
+    if (!messageId) return false;
+    return this.recentNotificationIds.has(messageId);
+  }
+
+  private rememberNotification(messageId?: string): void {
+    if (!messageId) return;
+    this.recentNotificationIds.add(messageId);
+    if (this.recentNotificationIds.size > this.maxRecentNotificationIds) {
+      const first = this.recentNotificationIds.values().next().value;
+      if (first) this.recentNotificationIds.delete(first);
+    }
+  }
+
   private getRouter(): Router | null {
     if (!this.router) {
       try {
@@ -1221,126 +1115,61 @@ export class UnreadMessagesService {
   }
 
   /**
-   * Mostrar notificación del navegador
-   * Solo muestra notificaciones cuando:
-   * - La pestaña está en background (document.hidden === true)
-   * - O la pestaña está visible pero el usuario está en otro chat
+   * Fallback de poll (Atención): avisa si el WS no llegó a tiempo.
    */
+  notifyVisitorSpeech(options: {
+    chatId: string;
+    body: string;
+    visitorName?: string;
+    queue: 'pendientes' | 'mios';
+  }): void {
+    const dedupeKey = `poll:${options.chatId}:${options.queue}`;
+    if (this.hasRecentlyNotified(dedupeKey)) return;
+    this.rememberNotification(dedupeKey);
+
+    this.showBrowserNotification({
+      messageId: dedupeKey,
+      chatId: options.chatId,
+      senderId: '',
+      senderType: 'VISITOR',
+      content: options.body,
+      type: 'TEXT',
+      sentAt: new Date(),
+      status: 'SENT',
+      queue: options.queue,
+    });
+    this.startTitleFlashing();
+  }
+
   private showBrowserNotification(message: Message): void {
-    console.log(
-      '[UnreadMessagesService] 🔔 === INTENTANDO MOSTRAR NOTIFICACIÓN ==='
-    );
-    console.log('[UnreadMessagesService] 📋 Estado de permisos:', {
-      notificationsEnabled: this.notificationsEnabled,
-      notificationInWindow: 'Notification' in window,
-      notificationPermission:
-        'Notification' in window ? Notification.permission : 'N/A',
-    });
+    this.syncNotificationPermission();
 
-    if (!this.notificationsEnabled || !('Notification' in window)) {
-      console.log(
-        '[UnreadMessagesService] ❌ Notificaciones del navegador deshabilitadas'
-      );
-      return;
-    }
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission !== 'granted') return;
 
-    if (Notification.permission !== 'granted') {
-      console.log(
-        '[UnreadMessagesService] ❌ Permiso de notificaciones NO concedido:',
-        Notification.permission
-      );
-      return;
-    }
-
-    // Verificar si la pestaña está en background
-    const isPageHidden =
-      document.hidden || document.visibilityState === 'hidden';
-    console.log('[UnreadMessagesService] 📋 Estado de visibilidad:', {
-      hidden: document.hidden,
-      visibilityState: document.visibilityState,
-      isPageHidden,
-    });
-
-    // Reproducir sonido de notificación
     this.playNotificationSound();
 
-    // Preparar título de la notificación con más contexto
-    const title = isPageHidden
-      ? '💬 Nuevo mensaje de visitante'
-      : '💬 Mensaje en otro chat';
-
-    // Preparar contenido con preview del mensaje
+    const title = 'Nuevo mensaje en Guiders';
+    const rawBody = message.content || 'El visitante ha escrito';
     const body =
-      message.content.length > 100
-        ? `${message.content.substring(0, 100)}...`
-        : message.content;
-
-    console.log(
-      '[UnreadMessagesService] 🔔 Mostrando notificación del navegador:',
-      {
-        title,
-        body,
-        chatId: message.chatId,
-        isPageHidden,
-      }
-    );
+      rawBody.length > 100 ? `${rawBody.substring(0, 100)}...` : rawBody;
+    const cola = message.queue === 'pendientes' ? 'pendientes' : 'mios';
 
     try {
       const notification = new Notification(title, {
-        body: body,
-        icon: '/favicon.ico', // Icono de la notificación
+        body,
+        icon: '/favicon.ico',
         badge: '/favicon.ico',
-        tag: `chat-${message.chatId}`, // Agrupa notificaciones del mismo chat
-        requireInteraction: false, // No requiere interacción del usuario
-        silent: true, // Ya reproducimos nuestro propio sonido
+        tag: `chat-${message.chatId}`,
+        requireInteraction: true,
+        silent: true,
       });
 
-      // Navegar al chat al hacer click
       notification.onclick = () => {
         window.focus();
-
-        // Navegar a Atención con el chat seleccionado
-        const router = this.getRouter();
-        if (router) {
-          console.log(
-            '[UnreadMessagesService] 🚀 Navegando a atención con chat:',
-            message.chatId
-          );
-          router
-            .navigate(['/atencion'], {
-              queryParams: { cola: 'mios', chat: message.chatId },
-            })
-            .then(() => {
-              console.log('[UnreadMessagesService] ✅ Navegación completada');
-            })
-            .catch((error) => {
-              console.error(
-                '[UnreadMessagesService] ❌ Error en navegación:',
-                error
-              );
-            });
-        } else {
-          console.warn(
-            '[UnreadMessagesService] ⚠️ No se pudo navegar: Router no disponible'
-          );
-          window.location.href = `/atencion?cola=mios&chat=${message.chatId}`;
-        }
-
+        this.navigateToAtencion(message.chatId, cola);
         notification.close();
       };
-
-      // Auto-cerrar después de 6 segundos
-      setTimeout(() => {
-        try {
-          notification.close();
-        } catch (e) {
-          // Ignorar errores si la notificación ya fue cerrada
-        }
-      }, 6000);
-
-      console.log(
-        '[UnreadMessagesService] ✅ Notificación del navegador mostrada correctamente'
-      );
     } catch (error) {
       console.error(
         '[UnreadMessagesService] Error al mostrar notificación del navegador:',
@@ -1349,16 +1178,25 @@ export class UnreadMessagesService {
     }
   }
 
-  /**
-   * Habilitar/deshabilitar notificaciones del navegador
-   */
+  private navigateToAtencion(
+    chatId: string,
+    cola: 'pendientes' | 'mios'
+  ): void {
+    const router = this.getRouter();
+    if (router) {
+      void router.navigate(['/atencion'], {
+        queryParams: { cola, chat: chatId },
+      });
+      return;
+    }
+    window.location.href = `/atencion?cola=${cola}&chat=${chatId}`;
+  }
+
   enableNotifications(enabled: boolean): void {
     this.notificationsEnabled =
-      enabled && Notification.permission === 'granted';
-    console.log(
-      '[UnreadMessagesService] Notificaciones',
-      enabled ? 'habilitadas' : 'deshabilitadas'
-    );
+      enabled &&
+      typeof Notification !== 'undefined' &&
+      Notification.permission === 'granted';
   }
 
   /**
@@ -1446,10 +1284,11 @@ export class UnreadMessagesService {
 
   private showTestNotification(): void {
     try {
-      const notification = new Notification('🧪 Prueba de notificación', {
-        body: 'Si ves esto, las notificaciones funcionan correctamente!',
+      const notification = new Notification('Guiders — prueba de aviso', {
+        body: 'Si ves esto, los avisos de escritorio funcionan.',
         icon: '/favicon.ico',
-        tag: 'test-notification',
+        tag: `guiders-test-${Date.now()}`,
+        requireInteraction: true,
       });
 
       console.log('[UnreadMessagesService] ✅ Notificación de prueba creada');

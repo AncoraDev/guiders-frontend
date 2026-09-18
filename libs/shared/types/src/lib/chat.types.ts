@@ -44,6 +44,8 @@ export interface Message {
   readBy?: string | null; // ID del usuario que leyó el mensaje
   /** Server-authoritative unread count for this chat, included in message:new WebSocket events. */
   unreadMessagesCount?: number;
+  /** Cola de Atención cuando el backend replica un PENDING a tenant:{companyId}. */
+  queue?: 'pendientes' | 'mios';
   isInternal?: boolean; // Mensaje interno (solo entre comerciales)
   isFirstResponse?: boolean; // Primer mensaje de respuesta del comercial
   /** Metadatos de mensajes SYSTEM (assigned / transferred / …). */

@@ -66,16 +66,6 @@ function initializeApp() {
 
       // 2. Conectar presencia del comercial (solo si hay usuario)
       if (user) {
-        // Unirse a la sala del tenant para recibir eventos de badges
-        // Esto permite escuchar chat:unread_count y chat:created para actualizar
-        // los contadores de mensajes no leídos en la lista de visitantes
-        if (user.companyId) {
-          console.log(
-            `[AppInitializer] 🏢 Uniéndose a sala del tenant: tenant:${user.companyId}`
-          );
-          webSocketService.joinTenantPresenceRoom(user.companyId);
-        }
-
         // Presencia manual: login queda Desconectado hasta que el comercial active el toggle.
         // Limpiar residual Redis de sesiones anteriores y NO auto-connect / auto-reconnect.
         console.log(
@@ -133,24 +123,14 @@ function initializeApp() {
               );
             });
 
-            console.log(
-              '═══════════════════════════════════════════════════════════'
-            );
-            console.log('🚀 [AppInitializer] NUEVA ARQUITECTURA DE PRESENCIA');
-            console.log(
-              '═══════════════════════════════════════════════════════════'
-            );
-            console.log('ℹ️  Ya NO se une a sala de tenant (tenant:companyId)');
-            console.log(
-              'ℹ️  El comercial SOLO recibe eventos presence:changed de:'
-            );
-            console.log('   1️⃣  Visitantes con los que tiene chats activos');
-            console.log('   2️⃣  Sus propios cambios de presencia');
-            console.log('ℹ️  El filtrado lo hace el backend automáticamente');
-            console.log(
-              '═══════════════════════════════════════════════════════════'
-            );
-            console.log('');
+            // Cola PENDING: message:new y chat:created llegan a tenant:{companyId}
+            if (user.companyId) {
+              console.log(
+                `[AppInitializer] 🏢 Uniéndose a sala del tenant: tenant:${user.companyId}`
+              );
+              webSocketService.joinTenantPresenceRoom(user.companyId);
+            }
+
             console.log(
               '📡 [AppInitializer] Uniéndose a sala de presencia personal...'
             );

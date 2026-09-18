@@ -111,6 +111,13 @@
           </span>
         </div>
         }
+        @if (shouldShowSessionSeparator($index)) {
+        <div class="guiders-chat-placeholder__date-separator">
+          <span class="guiders-chat-placeholder__date-separator-text">
+            Nueva conversación
+          </span>
+        </div>
+        }
 
         @let own = isOwnMessage(message);
         @let system = isSystemMessage(message);

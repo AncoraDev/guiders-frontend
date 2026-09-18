@@ -559,6 +559,15 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
     return currentDate.toDateString() !== previousDate.toDateString();
   }
 
+  /** Otro chatId del mismo visitante: bloque de sesión en el hilo único. */
+  shouldShowSessionSeparator(index: number): boolean {
+    if (index === 0) return false;
+    const current = this.messages[index];
+    const previous = this.messages[index - 1];
+    if (!current?.chatId || !previous?.chatId) return false;
+    return current.chatId !== previous.chatId;
+  }
+
   /**
    * Formatea la fecha del separador al estilo WhatsApp
    * Retorna: "Hoy", "Ayer", o fecha formateada

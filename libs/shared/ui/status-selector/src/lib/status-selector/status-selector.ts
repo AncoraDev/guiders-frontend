@@ -80,6 +80,11 @@ export class StatusSelector {
     this.error.set(null);
     const goingOnline = !this.isOnline();
 
+    // Gesto del usuario: Chrome solo pide permiso de escritorio aquí.
+    if (goingOnline) {
+      this.requestDesktopNotificationPermission();
+    }
+
     // Feedback inmediato — el botón no se queda en "…"
     this.currentStatus.set(goingOnline ? 'online' : 'offline');
     this.isUpdating.set(true);
@@ -109,5 +114,12 @@ export class StatusSelector {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe();
+  }
+
+  /** Pedir permiso de Notification API (solo en el click de Conectado). */
+  private requestDesktopNotificationPermission(): void {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission !== 'default') return;
+    void Notification.requestPermission();
   }
 }

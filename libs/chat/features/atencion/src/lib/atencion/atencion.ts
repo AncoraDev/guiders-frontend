@@ -64,6 +64,8 @@ import {
 const MINE_ACTIVE_MS = 48 * 60 * 60 * 1000;
 /** Polling silencioso para colas (presencia/unread van por WebSocket). */
 const POLL_MS = 4000;
+const VISITOR_HISTORY_CHAT_LIMIT = 10;
+const VISITOR_HISTORY_MSG_LIMIT = 50;
 /** Saludo por defecto al CTA "Saludar" (En la web). */
 const DEFAULT_GREETING = '¡Hola! ¿En qué puedo ayudarte?';
 const PREVIEW_MAX_CHARS = 80;
@@ -145,13 +147,16 @@ export class Atencion implements OnInit, OnDestroy {
       status === 'PENDING' || (!payload.commercialId && status !== 'ASSIGNED');
     if (!isPending) return;
 
+    this.chatService.webSocketService.joinRoom(payload.chatId);
+    this.unreadMessagesService.includeNotifyChat(payload.chatId);
+
     this.ngZone.run(() => {
       this.refreshAll(true);
     });
   };
 
-  /** Chats de Míos a los que estamos unidos por WS (para leave al salir de la cola). */
-  private wiredMineChatIds = new Set<string>();
+  /** Chats Pendientes + Míos unidos por WS (notificación de escritorio). */
+  private wiredQueueChatIds = new Set<string>();
 
   /**
    * Transferencia en Atención: el origen suelta sala; el destino refresca Míos.
@@ -196,6 +201,10 @@ export class Atencion implements OnInit, OnDestroy {
   readonly activeCola = signal<AtencionCola>('mios');
   /** Desconectado = solo lectura: no atender, no saludar, no escribir. */
   readonly isPresenceConnected = signal(false);
+  /** Permiso de Notification API para el aviso de escritorio. */
+  readonly desktopPermission = signal<NotificationPermission | 'unsupported'>(
+    'default'
+  );
   /** Saludo del perfil; vacío = DEFAULT_GREETING. */
   private readonly greetingMessage = signal<string | null>(null);
   private readonly mineCannedReplies = signal<CannedReply[]>([]);
@@ -499,6 +508,13 @@ export class Atencion implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((connected) => this.isPresenceConnected.set(connected));
 
+    this.refreshDesktopPermission();
+    const onWindowFocus = () => this.refreshDesktopPermission();
+    window.addEventListener('focus', onWindowFocus);
+    this.destroyRef.onDestroy(() =>
+      window.removeEventListener('focus', onWindowFocus)
+    );
+
     this.chatService.messages$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((mapMsgs) => {
@@ -563,6 +579,24 @@ export class Atencion implements OnInit, OnDestroy {
   selectCola(cola: AtencionCola): void {
     this.activeCola.set(cola);
     this.clearSelectedChat();
+  }
+
+  refreshDesktopPermission(): void {
+    this.desktopPermission.set(this.unreadMessagesService.desktopPermission());
+  }
+
+  enableDesktopNotifications(): void {
+    void this.unreadMessagesService.requestDesktopPermission().then((permission) => {
+      this.desktopPermission.set(permission);
+      if (permission === 'granted') {
+        this.toastService.success('Avisos de escritorio activados');
+        this.unreadMessagesService.testNotification();
+      }
+    });
+  }
+
+  testDesktopNotification(): void {
+    this.unreadMessagesService.testNotification();
   }
 
   onCloseChat(): void {
@@ -1057,7 +1091,7 @@ export class Atencion implements OnInit, OnDestroy {
   private releaseChatRealtime(chatId: string): void {
     this.chatService.webSocketService.leaveRoom(chatId);
     this.unreadMessagesService.unregisterChat(chatId);
-    this.wiredMineChatIds.delete(chatId);
+    this.wiredQueueChatIds.delete(chatId);
     this.presenceByChat.update((map) => {
       if (!(chatId in map)) return map;
       const next = { ...map };
@@ -1179,18 +1213,23 @@ export class Atencion implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((state) => {
         if (state === 'connected') {
-          this.wireMineRealtime(this.mineItems());
+          this.wireQueueRealtime(this.pendingItems(), this.mineItems());
         }
       });
 
-    // El visitante envía el formulario en el widget: recargar el hilo abierto
-    // para pintar la tarjeta editable (no esperar a que el comercial cambie de chat).
     this.chatService.webSocketService.messageReceived$
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         filter((message): message is Message => !!message),
       )
       .subscribe((message) => {
+        if (
+          message.queue === 'pendientes' ||
+          this.pendingItems().some((item) => item.chatId === message.chatId)
+        ) {
+          this.notifiedPendingChatIds.add(message.chatId);
+        }
+
         const chatId = this.selectedChat()?.chatId;
         if (!chatId || message.chatId !== chatId) {
           return;
@@ -1216,32 +1255,44 @@ export class Atencion implements OnInit, OnDestroy {
     );
   }
 
-  private wireMineRealtime(mine: AtencionListItem[]): void {
-    const chatIds = mine
-      .map((m) => m.chatId)
+  private wireMineRealtime(_mine?: AtencionListItem[]): void {
+    this.wireQueueRealtime(this.pendingItems(), this.mineItems());
+  }
+
+  /**
+   * Une salas de Pendientes y Míos para message:new + notificación de escritorio.
+   */
+  private wireQueueRealtime(
+    pending: AtencionListItem[],
+    mine: AtencionListItem[]
+  ): void {
+    const queueItems = [...pending, ...mine];
+    const chatIds = queueItems
+      .map((item) => item.chatId)
       .filter((id): id is string => !!id);
     const nextIds = new Set(chatIds);
 
-    // Salas que ya no están en Míos (transferidos, cerrados, etc.)
-    for (const prevId of this.wiredMineChatIds) {
+    for (const prevId of this.wiredQueueChatIds) {
       if (!nextIds.has(prevId)) {
         this.releaseChatRealtime(prevId);
       }
     }
 
-    this.wiredMineChatIds = nextIds;
+    this.wiredQueueChatIds = nextIds;
     this.unreadMessagesService.syncNotifyChats(chatIds);
 
     if (chatIds.length === 0) return;
 
     this.unreadMessagesService.registerChatsVisitors(
-      mine
-        .filter((m) => m.chatId)
-        .map((m) => ({ chatId: m.chatId!, visitorId: m.visitorId }))
+      queueItems
+        .filter((item) => item.chatId)
+        .map((item) => ({ chatId: item.chatId!, visitorId: item.visitorId }))
     );
     this.chatService.webSocketService.joinMultipleRooms(chatIds);
-    this.unreadMessagesService.refreshUnreadCounts(chatIds);
-    chatIds.forEach((chatId) => this.loadChatPresence(chatId));
+    this.unreadMessagesService.refreshUnreadCounts(
+      mine.map((item) => item.chatId).filter((id): id is string => !!id)
+    );
+    chatIds.forEach((id) => this.loadChatPresence(id));
   }
 
   private loadChatPresence(chatId: string): void {
@@ -1501,6 +1552,7 @@ export class Atencion implements OnInit, OnDestroy {
     this.selectedChat.set(resolved);
     if (!resolved) return;
 
+    this.messages.set([]);
     this.chatService.selectChat(resolved.chatId);
     this.unreadMessagesService.setActiveChat(resolved.chatId);
     // Asegurar sala WS del chat abierto (message:new)
@@ -1613,25 +1665,116 @@ export class Atencion implements OnInit, OnDestroy {
   }
 
   private loadMessages(chatId: string, options?: { silent?: boolean }): void {
-    if (!options?.silent) {
+    if (options?.silent) {
+      this.refreshActiveChatMessages(chatId);
+      return;
+    }
+
+    const visitorId = this.selectedChat()?.visitorId;
+    if (visitorId && visitorId !== 'unknown') {
+      this.loadVisitorThread(visitorId, chatId);
+      return;
+    }
+
+    this.loadSingleChatMessages(chatId, false);
+  }
+
+  /** Recarga solo el chat abierto y conserva el historial de otros chats. */
+  private refreshActiveChatMessages(chatId: string): void {
+    this.chatService
+      .getMessages(chatId, { limit: VISITOR_HISTORY_MSG_LIMIT })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (fresh) => {
+          const historical = this.messages().filter((m) => m.chatId !== chatId);
+          this.messages.set(this.mergeVisitorMessages([historical, fresh]));
+        },
+      });
+  }
+
+  /**
+   * Hilo único: mensajes de los últimos chats del visitante, más antiguos primero.
+   * Enviar / WS siguen solo en currentChatId.
+   */
+  private loadVisitorThread(visitorId: string, currentChatId: string): void {
+    this.messagesLoading.set(true);
+    this.visitorsService
+      .getVisitorChats(visitorId, undefined, VISITOR_HISTORY_CHAT_LIMIT)
+      .pipe(
+        map((res) => this.collectVisitorChatIds(res, currentChatId)),
+        catchError(() => of([currentChatId])),
+        switchMap((chatIds) => {
+          if (chatIds.length === 0) return of([] as Message[]);
+          return forkJoin(
+            chatIds.map((id) =>
+              this.chatService
+                .getMessages(id, { limit: VISITOR_HISTORY_MSG_LIMIT })
+                .pipe(catchError(() => of([] as Message[])))
+            )
+          ).pipe(map((groups) => this.mergeVisitorMessages(groups)));
+        }),
+        finalize(() => this.messagesLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (messages) => this.messages.set(messages),
+        error: () => this.toastService.error('Error al cargar mensajes'),
+      });
+  }
+
+  private collectVisitorChatIds(
+    res: { chats?: Array<Chat & { id?: string; lastMessageDate?: Date | string }> } | null,
+    currentChatId: string
+  ): string[] {
+    const chats = [...(res?.chats ?? [])];
+    chats.sort((a, b) => {
+      const aMs = new Date(
+        a.lastMessageDate ?? a.updatedAt ?? a.createdAt ?? 0
+      ).getTime();
+      const bMs = new Date(
+        b.lastMessageDate ?? b.updatedAt ?? b.createdAt ?? 0
+      ).getTime();
+      return bMs - aMs;
+    });
+    const ids = chats
+      .map((chat) => chat.chatId || chat.id)
+      .filter((id): id is string => !!id);
+    if (!ids.includes(currentChatId)) {
+      ids.unshift(currentChatId);
+    }
+    return [...new Set(ids)].slice(0, VISITOR_HISTORY_CHAT_LIMIT);
+  }
+
+  private mergeVisitorMessages(groups: Message[][]): Message[] {
+    const byId = new Map<string, Message>();
+    for (const group of groups) {
+      for (const message of group) {
+        const id = message.messageId;
+        if (!id || byId.has(id)) continue;
+        byId.set(id, message);
+      }
+    }
+    return [...byId.values()].sort((a, b) => {
+      const aMs = new Date(a.sentAt).getTime();
+      const bMs = new Date(b.sentAt).getTime();
+      return aMs - bMs;
+    });
+  }
+
+  private loadSingleChatMessages(chatId: string, silent: boolean): void {
+    if (!silent) {
       this.messagesLoading.set(true);
     }
-    // getMessages (no V2): sincroniza el historial en ChatService para que
-    // message:new del WebSocket se añada al mismo array y el panel se actualice.
     this.chatService
-      .getMessages(chatId, { limit: 50 })
+      .getMessages(chatId, { limit: VISITOR_HISTORY_MSG_LIMIT })
       .pipe(
         finalize(() => {
-          if (!options?.silent) {
-            this.messagesLoading.set(false);
-          }
+          if (!silent) this.messagesLoading.set(false);
         }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
-        next: (messages) => {
-          this.messages.set(messages);
-        },
+        next: (messages) => this.messages.set(messages),
         error: () => this.toastService.error('Error al cargar mensajes'),
       });
   }
@@ -1954,6 +2097,12 @@ export class Atencion implements OnInit, OnDestroy {
     if (this.notifiedPendingChatIds.has(chatId)) return;
     this.notifiedPendingChatIds.add(chatId);
     this.toastService.info(`Nuevo mensaje de ${visitorName}`);
+    this.unreadMessagesService.notifyVisitorSpeech({
+      chatId,
+      body: `Nuevo mensaje de ${visitorName}`,
+      visitorName,
+      queue: 'pendientes',
+    });
   }
 
   private enrichRowsWithContacts(visitorIds: string[]): void {

@@ -64,6 +64,31 @@
   width: 100%;
 }
 
+.atencion__notify-banner {
+  width: 100%;
+  border: 1px solid var(--color-border-default, #d4d4d8);
+  background: var(--color-surface-secondary, #f8fafc);
+  color: var(--color-text-primary, #111);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-surface-tertiary, #eef2f7);
+  }
+}
+
+.atencion__notify-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-text-secondary, #64748b);
+}
+
 .atencion__refresh {
   border: none;
   background: transparent;
