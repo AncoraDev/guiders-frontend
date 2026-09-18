@@ -108,6 +108,12 @@ export class App {
               route: '/usuarios',
             },
             {
+              id: 'captacion',
+              label: 'Captación',
+              icon: 'user-plus' as const,
+              route: '/captacion',
+            },
+            {
               id: 'integraciones',
               label: 'Integraciones',
               icon: 'layers' as const,

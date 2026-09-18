@@ -1,0 +1,304 @@
+@use '../../../../../../shared/design-tokens/src/lib/tokens-vars' as tokens;
+
+:host {
+  display: block;
+  height: 100%;
+  overflow: auto;
+}
+
+.captacion-page {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-lg;
+  padding: tokens.$spacing-xl;
+}
+
+.captacion-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: tokens.$spacing-lg;
+  flex-wrap: wrap;
+}
+
+.captacion-header__actions {
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-md;
+}
+
+.captacion-title {
+  margin: 0 0 tokens.$spacing-xs;
+  font-size: tokens.$font-size-lg;
+  font-weight: tokens.$font-weight-semibold;
+  color: tokens.$color-text-primary;
+}
+
+.captacion-subtitle,
+.captacion-hint {
+  margin: 0;
+  max-width: 68ch;
+  font-size: tokens.$font-size-sm;
+  color: tokens.$color-text-secondary;
+  line-height: 1.5;
+}
+
+.captacion-toggle,
+.captacion-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: tokens.$spacing-xs;
+  font-size: tokens.$font-size-sm;
+  color: tokens.$color-text-primary;
+  white-space: nowrap;
+}
+
+.captacion-button {
+  padding: tokens.$spacing-xs tokens.$spacing-md;
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$color-surface-primary;
+  color: tokens.$color-text-primary;
+  font-family: inherit;
+  font-size: tokens.$font-size-sm;
+  cursor: pointer;
+  transition: tokens.$transition-normal;
+
+  &:hover:not(:disabled) {
+    background: tokens.$color-surface-secondary;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+
+.captacion-button--primary {
+  border-color: transparent;
+  background: tokens.$color-primary-600;
+  color: #fff;
+  font-weight: tokens.$font-weight-medium;
+}
+
+.captacion-errors {
+  padding: tokens.$spacing-md;
+  border: 1px solid tokens.$color-error-600;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$color-surface-secondary;
+  font-size: tokens.$font-size-sm;
+  color: tokens.$color-text-primary;
+
+  ul {
+    margin: tokens.$spacing-xs 0 0;
+    padding-left: tokens.$spacing-lg;
+  }
+}
+
+.captacion-errors__title {
+  margin: 0;
+  font-weight: tokens.$font-weight-medium;
+  color: tokens.$color-error-600;
+}
+
+.captacion-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: tokens.$spacing-lg;
+  align-items: start;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.captacion-editor {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-md;
+  min-width: 0;
+}
+
+.captacion-card {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-sm;
+  padding: tokens.$spacing-md;
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$color-surface-primary;
+}
+
+.captacion-card--warning {
+  border-color: tokens.$color-warning-600;
+}
+
+.captacion-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: tokens.$spacing-sm;
+}
+
+.captacion-card__title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-xs;
+  font-size: tokens.$font-size-base;
+  font-weight: tokens.$font-weight-medium;
+  color: tokens.$color-text-primary;
+}
+
+.captacion-card__actions {
+  display: flex;
+  gap: tokens.$spacing-xs;
+
+  button {
+    width: 28px;
+    height: 28px;
+    border: 1px solid tokens.$color-border-subtle;
+    border-radius: tokens.$border-radius-sm;
+    background: tokens.$color-surface-primary;
+    color: tokens.$color-text-secondary;
+    cursor: pointer;
+  }
+}
+
+.captacion-tag {
+  padding: 2px tokens.$spacing-xs;
+  border-radius: tokens.$border-radius-sm;
+  background: tokens.$color-surface-secondary;
+  font-size: tokens.$font-size-xs;
+  font-weight: tokens.$font-weight-medium;
+  color: tokens.$color-text-secondary;
+}
+
+.captacion-tag--warning {
+  color: tokens.$color-warning-600;
+}
+
+.captacion-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: tokens.$font-size-xs;
+  color: tokens.$color-text-secondary;
+
+  input,
+  select,
+  textarea {
+    padding: tokens.$spacing-xs tokens.$spacing-sm;
+    border: 1px solid tokens.$color-border-subtle;
+    border-radius: tokens.$border-radius-sm;
+    background: tokens.$color-surface-primary;
+    color: tokens.$color-text-primary;
+    font-family: inherit;
+    font-size: tokens.$font-size-sm;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+}
+
+.captacion-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: tokens.$spacing-md;
+}
+
+.captacion-options {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-xs;
+}
+
+.captacion-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 200px) 28px;
+  gap: tokens.$spacing-xs;
+
+  input,
+  select {
+    padding: tokens.$spacing-xs tokens.$spacing-sm;
+    border: 1px solid tokens.$color-border-subtle;
+    border-radius: tokens.$border-radius-sm;
+    background: tokens.$color-surface-primary;
+    color: tokens.$color-text-primary;
+    font-family: inherit;
+    font-size: tokens.$font-size-sm;
+  }
+
+  button {
+    border: 1px solid tokens.$color-border-subtle;
+    border-radius: tokens.$border-radius-sm;
+    background: tokens.$color-surface-primary;
+    color: tokens.$color-text-secondary;
+    cursor: pointer;
+  }
+}
+
+.captacion-add {
+  display: flex;
+  gap: tokens.$spacing-xs;
+  flex-wrap: wrap;
+}
+
+.captacion-preview {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-sm;
+  padding: tokens.$spacing-md;
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$color-surface-secondary;
+  position: sticky;
+  top: tokens.$spacing-md;
+}
+
+.captacion-preview__card {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-xs;
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$color-surface-primary;
+}
+
+.captacion-preview__card--fixed {
+  border-style: dashed;
+}
+
+.captacion-preview__title {
+  margin: 0;
+  font-size: tokens.$font-size-sm;
+  font-weight: tokens.$font-weight-medium;
+  color: tokens.$color-text-primary;
+}
+
+.captacion-preview__body {
+  margin: 0;
+  font-size: tokens.$font-size-xs;
+  color: tokens.$color-text-secondary;
+  line-height: 1.5;
+}
+
+.captacion-preview__cta,
+.captacion-preview__option,
+.captacion-preview__input {
+  align-self: flex-start;
+  padding: 4px tokens.$spacing-sm;
+  border-radius: tokens.$border-radius-sm;
+  background: tokens.$color-surface-secondary;
+  font-size: tokens.$font-size-xs;
+  color: tokens.$color-text-primary;
+}
+
+.captacion-preview__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}

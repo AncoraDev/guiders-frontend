@@ -1,0 +1,315 @@
+<div class="captacion-page" data-testid="captacion-page">
+  <header class="captacion-header">
+    <div>
+      <h2 class="captacion-title">Captación sin agentes</h2>
+      <p class="captacion-subtitle">
+        Cuando no hay nadie conectado, el chat guía al visitante con estas preguntas
+        y acaba pidiéndole sus datos. Si no activas ningún guion, el chat se
+        comporta como siempre.
+      </p>
+    </div>
+    <div class="captacion-header__actions">
+      <label class="captacion-toggle">
+        <input
+          type="checkbox"
+          [checked]="enabled()"
+          (change)="enabled.set($any($event.target).checked)"
+        />
+        <span>{{ enabled() ? 'Guion activo' : 'Guion desactivado' }}</span>
+      </label>
+      <button
+        type="button"
+        class="captacion-button captacion-button--primary"
+        [disabled]="!canSave()"
+        (click)="save()"
+      >
+        {{ saving() ? 'Guardando…' : 'Guardar' }}
+      </button>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p class="captacion-hint">Cargando el guion…</p>
+  } @else {
+    @if (errors().length > 0) {
+      <div class="captacion-errors" role="alert">
+        <p class="captacion-errors__title">Revisa esto antes de guardar</p>
+        <ul>
+          @for (error of errors(); track error) {
+            <li>{{ error }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    <div class="captacion-layout">
+      <section class="captacion-editor">
+        <article class="captacion-card">
+          <h3 class="captacion-card__title">Tarjeta de inicio</h3>
+          <label class="captacion-field">
+            <span>Nombre interno del guion</span>
+            <input
+              type="text"
+              [value]="name()"
+              (input)="name.set($any($event.target).value)"
+            />
+          </label>
+          <label class="captacion-field">
+            <span>Título</span>
+            <input
+              type="text"
+              placeholder="Cuéntanos qué buscas y te lo preparamos"
+              [value]="introTitle()"
+              (input)="introTitle.set($any($event.target).value)"
+            />
+          </label>
+          <label class="captacion-field">
+            <span>Texto</span>
+            <textarea
+              rows="3"
+              placeholder="Habla del beneficio para el visitante, no de que no hay nadie: eso ya lo dice la cabecera del chat."
+              [value]="introBody()"
+              (input)="introBody.set($any($event.target).value)"
+            ></textarea>
+          </label>
+          <label class="captacion-field">
+            <span>Texto del botón</span>
+            <input
+              placeholder="Empezar, son 30 segundos"
+              type="text"
+              [value]="introCtaLabel()"
+              (input)="introCtaLabel.set($any($event.target).value)"
+            />
+          </label>
+          <label class="captacion-field">
+            <span>Paso inicial</span>
+            <select (change)="startStepId.set($any($event.target).value)">
+              <option value="" [selected]="!startStepId()">— Sin elegir —</option>
+              @for (step of steps(); track step.id) {
+                <option [value]="step.id" [selected]="startStepId() === step.id">
+                  {{ stepLabel(step.id) }} · {{ step.prompt || 'sin texto' }}
+                </option>
+              }
+            </select>
+          </label>
+        </article>
+
+        @for (step of steps(); track step.id; let index = $index) {
+          <article
+            class="captacion-card"
+            [class.captacion-card--warning]="isUnreachable(step.id)"
+          >
+            <header class="captacion-card__header">
+              <h3 class="captacion-card__title">
+                Paso {{ index + 1 }}
+                @if (startStepId() === step.id) {
+                  <span class="captacion-tag">inicio</span>
+                }
+                @if (isUnreachable(step.id)) {
+                  <span class="captacion-tag captacion-tag--warning">
+                    no se alcanza
+                  </span>
+                }
+              </h3>
+              <div class="captacion-card__actions">
+                <button type="button" (click)="moveStep(step.id, -1)" title="Subir">↑</button>
+                <button type="button" (click)="moveStep(step.id, 1)" title="Bajar">↓</button>
+                <button type="button" (click)="removeStep(step.id)" title="Eliminar">✕</button>
+              </div>
+            </header>
+
+            <label class="captacion-field">
+              <span>Tipo</span>
+              <select (change)="changeStepType(step.id, $any($event.target).value)">
+                <option value="message" [selected]="step.type === 'message'">
+                  Mensaje informativo
+                </option>
+                <option value="choice" [selected]="step.type === 'choice'">
+                  Pregunta con opciones
+                </option>
+                <option value="text" [selected]="step.type === 'text'">
+                  Pregunta abierta
+                </option>
+              </select>
+            </label>
+
+            <label class="captacion-field">
+              <span>Texto que ve el visitante</span>
+              <textarea
+                rows="2"
+                [value]="step.prompt"
+                (input)="updateStep(step.id, { prompt: $any($event.target).value })"
+              ></textarea>
+            </label>
+
+            @if (step.type === 'choice') {
+              <div class="captacion-options">
+                @for (option of step.options ?? []; track option.id) {
+                  <div class="captacion-option">
+                    <input
+                      type="text"
+                      placeholder="Texto de la opción"
+                      [value]="option.label"
+                      (input)="updateOption(step.id, option.id, { label: $any($event.target).value })"
+                    />
+                    <select
+                      (change)="updateOption(step.id, option.id, { next: parseTarget($any($event.target).value) })"
+                    >
+                      <option value="" [selected]="!option.next">
+                        Terminar y pedir datos
+                      </option>
+                      @for (target of steps(); track target.id) {
+                        @if (target.id !== step.id) {
+                          <option
+                            [value]="target.id"
+                            [selected]="option.next === target.id"
+                          >
+                            {{ stepLabel(target.id) }}
+                          </option>
+                        }
+                      }
+                    </select>
+                    <button
+                      type="button"
+                      (click)="removeOption(step.id, option.id)"
+                      title="Quitar opción"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                }
+                <button
+                  type="button"
+                  class="captacion-button"
+                  (click)="addOption(step.id)"
+                >
+                  Añadir opción
+                </button>
+              </div>
+            } @else {
+              @if (step.type === 'text') {
+                <div class="captacion-row">
+                  <label class="captacion-field">
+                    <span>Guardar en</span>
+                    <select
+                      (change)="updateStep(step.id, { field: $any($event.target).value })"
+                    >
+                      @for (field of leadFields; track field) {
+                        <option [value]="field" [selected]="step.field === field">
+                          {{ field }}
+                        </option>
+                      }
+                      @for (extra of extraFields; track extra) {
+                        <option [value]="extra" [selected]="step.field === extra">
+                          {{ extra }} (dato extra)
+                        </option>
+                      }
+                    </select>
+                  </label>
+                  <label class="captacion-field">
+                    <span>Validación</span>
+                    <select
+                      (change)="updateStep(step.id, { validation: $any($event.target).value })"
+                    >
+                      <option value="none" [selected]="(step.validation ?? 'none') === 'none'">
+                        Sin validar
+                      </option>
+                      <option value="email" [selected]="step.validation === 'email'">
+                        Email
+                      </option>
+                      <option value="phone" [selected]="step.validation === 'phone'">
+                        Teléfono
+                      </option>
+                    </select>
+                  </label>
+                  <label class="captacion-checkbox">
+                    <input
+                      type="checkbox"
+                      [checked]="step.required !== false"
+                      (change)="updateStep(step.id, { required: $any($event.target).checked })"
+                    />
+                    <span>Obligatorio</span>
+                  </label>
+                </div>
+              }
+
+              <label class="captacion-field">
+                <span>Siguiente paso</span>
+                <select
+                  (change)="updateStep(step.id, { next: parseTarget($any($event.target).value) })"
+                >
+                  <option value="" [selected]="!step.next">
+                    Terminar y pedir datos
+                  </option>
+                  @for (target of steps(); track target.id) {
+                    @if (target.id !== step.id) {
+                      <option
+                        [value]="target.id"
+                        [selected]="step.next === target.id"
+                      >
+                        {{ stepLabel(target.id) }}
+                      </option>
+                    }
+                  }
+                </select>
+              </label>
+            }
+          </article>
+        }
+
+        <div class="captacion-add">
+          <button type="button" class="captacion-button" (click)="addStep('message')">
+            + Mensaje
+          </button>
+          <button type="button" class="captacion-button" (click)="addStep('choice')">
+            + Opciones
+          </button>
+          <button type="button" class="captacion-button" (click)="addStep('text')">
+            + Pregunta abierta
+          </button>
+        </div>
+      </section>
+
+      <aside class="captacion-preview">
+        <h3 class="captacion-card__title">Vista previa</h3>
+        <p class="captacion-hint">
+          Recorrido eligiendo siempre la primera opción.
+        </p>
+
+        <div class="captacion-preview__card">
+          <p class="captacion-preview__title">{{ introTitle() || 'Título' }}</p>
+          <p class="captacion-preview__body">{{ introBody() || 'Texto de la tarjeta' }}</p>
+          <span class="captacion-preview__cta">{{ introCtaLabel() || 'Botón' }}</span>
+        </div>
+
+        @for (step of preview(); track step.id) {
+          <div class="captacion-preview__card">
+            <p class="captacion-preview__body">{{ step.prompt || 'Sin texto' }}</p>
+            @if (step.type === 'choice') {
+              <div class="captacion-preview__options">
+                @for (option of step.options ?? []; track option.id) {
+                  <span class="captacion-preview__option">
+                    {{ option.label || 'Opción' }}
+                  </span>
+                }
+              </div>
+            }
+            @if (step.type === 'text') {
+              <span class="captacion-preview__input">
+                Respuesta → {{ step.field }}
+              </span>
+            }
+          </div>
+        }
+
+        <div class="captacion-preview__card captacion-preview__card--fixed">
+          <p class="captacion-preview__title">¿Cómo te contactamos?</p>
+          <p class="captacion-preview__body">
+            Nombre, email o teléfono y la casilla de privacidad. Este paso final
+            siempre se muestra y no se puede quitar.
+          </p>
+        </div>
+      </aside>
+    </div>
+  }
+</div>

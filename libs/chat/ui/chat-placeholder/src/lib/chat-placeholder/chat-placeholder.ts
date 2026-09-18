@@ -18,6 +18,7 @@ import { CommonModule } from '@angular/common';
 import {
   Chat,
   ContactRequestStatus,
+  LeadCaptureAnswer,
   Message,
   PresenceStatus,
   User,
@@ -459,6 +460,33 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
   isContactInteractiveMessage(message: Message): boolean {
     const action = message.systemData?.action;
     return action === 'contact_request' || action === 'contact_submission';
+  }
+
+  /**
+   * Captación sin agentes: el lead ya está guardado, así que el hilo solo
+   * muestra el resumen de lo que contestó el visitante.
+   */
+  isLeadCaptureMessage(message: Message): boolean {
+    return message.systemData?.action === 'lead_capture_submission';
+  }
+
+  leadCaptureAnswers(message: Message): LeadCaptureAnswer[] {
+    return message.systemData?.answers ?? [];
+  }
+
+  leadCaptureContactLines(message: Message): string[] {
+    const data = message.systemData?.data;
+    if (!data) return [];
+    const name = [data.nombre, data.apellidos].filter(Boolean).join(' ').trim();
+    return [name, data.email, data.telefono, data.poblacion].filter(
+      (value): value is string => !!value && value.length > 0,
+    );
+  }
+
+  leadCaptureConsentLabel(message: Message): string {
+    return message.systemData?.acceptedMarketing
+      ? 'Aceptó la política de privacidad y las comunicaciones'
+      : 'Aceptó la política de privacidad';
   }
 
   private isHiddenContactMessage(message: Message): boolean {

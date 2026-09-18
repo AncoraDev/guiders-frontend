@@ -28,6 +28,14 @@ export type ContactRequestStatus =
   | 'confirmed'
   | 'cancelled';
 
+/** Respuesta del visitante en un paso del guion de captación. */
+export interface LeadCaptureAnswer {
+  stepId: string;
+  prompt: string;
+  answer: string;
+  field?: string;
+}
+
 export interface MessageSystemData {
   action?: string;
   fromUserId?: string;
@@ -40,6 +48,10 @@ export interface MessageSystemData {
   legal?: ContactFormLegalSnapshot;
   acceptedPrivacyPolicy?: boolean;
   acceptedMarketing?: boolean;
+  /** Captación sin agentes: guion recorrido y respuestas */
+  flowId?: string;
+  answers?: LeadCaptureAnswer[];
+  capturedWithoutAgent?: boolean;
 }
 
 export interface Message {

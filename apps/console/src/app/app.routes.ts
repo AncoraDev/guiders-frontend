@@ -25,6 +25,13 @@ export const appRoutes: Route[] = [
 		canActivate: [authGuard],
 	},
 	{
+		path: 'captacion',
+		loadChildren: () =>
+			import('@guiders-frontend/captacion').then((m) => m.captacionRoutes),
+		title: 'Captación',
+		canActivate: [authGuard],
+	},
+	{
 		path: 'usuarios',
 		loadChildren: () =>
 			import('@guiders-frontend/usuarios').then((m) => m.usuariosRoutes),

@@ -123,9 +123,45 @@
         @let system = isSystemMessage(message);
         @let transfer = isTransferMessage(message);
         @let contact = isContactInteractiveMessage(message);
+        @let leadCapture = isLeadCaptureMessage(message);
         @let isAIMessage = message.isAI || message.type === 'AI';
 
-        @if (contact) {
+        @if (leadCapture) {
+        <div class="guiders-chat-placeholder__lead-capture" role="note">
+          <p class="guiders-chat-placeholder__lead-capture-title">
+            <guiders-icon name="users" size="xs" />
+            Datos recogidos por el asistente
+          </p>
+          <p class="guiders-chat-placeholder__lead-capture-hint">
+            El visitante los dejó sin ningún comercial conectado. Ya están
+            guardados en su ficha.
+          </p>
+
+          @if (leadCaptureContactLines(message).length > 0) {
+          <ul class="guiders-chat-placeholder__lead-capture-contact">
+            @for (line of leadCaptureContactLines(message); track line) {
+            <li>{{ line }}</li>
+            }
+          </ul>
+          }
+
+          @if (leadCaptureAnswers(message).length > 0) {
+          <dl class="guiders-chat-placeholder__lead-capture-answers">
+            @for (answer of leadCaptureAnswers(message); track answer.stepId) {
+            <dt>{{ answer.prompt }}</dt>
+            <dd>{{ answer.answer }}</dd>
+            }
+          </dl>
+          }
+
+          <p class="guiders-chat-placeholder__lead-capture-consent">
+            {{ leadCaptureConsentLabel(message) }}
+          </p>
+          <span class="guiders-chat-placeholder__lead-capture-time">
+            {{ formatMessageTime(message.sentAt) }}
+          </span>
+        </div>
+        } @else if (contact) {
         <guiders-contact-request-card
           [variant]="contactCardVariant(message)"
           [requestId]="message.systemData?.requestId || message.messageId"

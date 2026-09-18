@@ -129,6 +129,12 @@
       "@guiders-frontend/conexiones": [
         "libs/chat/features/conexiones/src/index.ts"
       ],
+      "@guiders-frontend/captacion": [
+        "libs/chat/features/captacion/src/index.ts"
+      ],
+      "@guiders-frontend/lead-capture-flow-service": [
+        "libs/chat/data-access/lead-capture-flow-service/src/index.ts"
+      ],
       "@guiders-frontend/company-users-service": [
         "libs/chat/data-access/company-users-service/src/index.ts"
       ],
