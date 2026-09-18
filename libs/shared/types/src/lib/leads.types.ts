@@ -18,6 +18,10 @@ export interface LeadContactData {
   cp?: string; // Código postal
   provincia?: string;
   poblacion?: string;
+  // Consentimientos aceptados por el visitante en el formulario
+  acceptedPrivacyPolicy?: boolean;
+  acceptedMarketing?: boolean;
+  consentAcceptedAt?: string;
   // Campos adicionales
   additionalData?: Record<string, unknown>;
   extractedFromChatId?: string;
@@ -38,6 +42,8 @@ export interface SaveContactDataRequest {
   cp?: string;
   provincia?: string;
   poblacion?: string;
+  acceptedPrivacyPolicy?: boolean;
+  acceptedMarketing?: boolean;
   additionalData?: Record<string, unknown>;
   extractedFromChatId?: string;
 }

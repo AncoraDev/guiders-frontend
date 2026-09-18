@@ -208,6 +208,22 @@
             <span class="visitor-detail-panel__info-value">{{ contactData()?.poblacion }}</span>
           </div>
         }
+        @if (consentSummary()) {
+          <div class="visitor-detail-panel__info-item">
+            <span class="visitor-detail-panel__info-icon">
+              <svg width="14" height="14" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="currentColor">
+                <path d="M12 2L20 5V11C20 16 16.5 20.5 12 22C7.5 20.5 4 16 4 11V5L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="visitor-detail-panel__info-value">
+              {{ consentSummary() }}
+              @if (contactData()?.consentAcceptedAt) {
+                · {{ contactData()?.consentAcceptedAt | date: 'dd/MM/yyyy HH:mm' }}
+              }
+            </span>
+          </div>
+        }
         <div class="visitor-detail-panel__info-item">
           <span class="visitor-detail-panel__info-icon">
             <svg width="14" height="14" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="currentColor">

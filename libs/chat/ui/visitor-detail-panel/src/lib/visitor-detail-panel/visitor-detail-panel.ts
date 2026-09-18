@@ -130,6 +130,19 @@ export class VisitorDetailPanel {
     return this.formatRelativeTime(new Date(date));
   });
 
+  /**
+   * Resumen del consentimiento que aceptó el visitante en el formulario. Es
+   * null cuando no hay constancia, para no dar por hecho que lo rechazó.
+   */
+  readonly consentSummary = computed<string | null>(() => {
+    const contact = this.contactData();
+    if (contact?.acceptedPrivacyPolicy === undefined) return null;
+    if (!contact.acceptedPrivacyPolicy) return 'No aceptó la política de privacidad';
+    return contact.acceptedMarketing
+      ? 'Política de privacidad y comunicaciones aceptadas'
+      : 'Política de privacidad aceptada';
+  });
+
   readonly truncatedUrl = computed(() => {
     const url = this.visitor().currentUrl;
     if (!url) return null;

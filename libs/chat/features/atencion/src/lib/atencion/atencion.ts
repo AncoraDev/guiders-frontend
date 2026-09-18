@@ -619,10 +619,37 @@ export class Atencion implements OnInit, OnDestroy {
     this.saveVisitorContact(
       {
         ...event.data,
+        ...this.consentFromMessages(event.requestId),
         extractedFromChatId: this.selectedChat()?.chatId,
       },
       event.requestId,
     );
+  }
+
+  /**
+   * El visitante acepta las políticas en el formulario, así que los flags se
+   * leen del mensaje de envío para guardarlos junto a los datos del lead.
+   */
+  private consentFromMessages(
+    requestId: string,
+  ): Pick<
+    SaveContactDataRequest,
+    'acceptedPrivacyPolicy' | 'acceptedMarketing'
+  > {
+    for (const message of this.messages()) {
+      const systemData = message.systemData;
+      if (
+        systemData?.action !== 'contact_submission' ||
+        systemData.requestId !== requestId
+      ) {
+        continue;
+      }
+      return {
+        acceptedPrivacyPolicy: systemData.acceptedPrivacyPolicy,
+        acceptedMarketing: systemData.acceptedMarketing,
+      };
+    }
+    return {};
   }
 
   onSaveContactData(request: SaveContactDataRequest): void {
@@ -664,6 +691,13 @@ export class Atencion implements OnInit, OnDestroy {
             email: saved?.email ?? request.email,
             telefono: saved?.telefono ?? request.telefono,
             poblacion: saved?.poblacion ?? request.poblacion,
+            acceptedPrivacyPolicy:
+              saved?.acceptedPrivacyPolicy ?? request.acceptedPrivacyPolicy,
+            acceptedMarketing:
+              saved?.acceptedMarketing ?? request.acceptedMarketing,
+            consentAcceptedAt:
+              saved?.consentAcceptedAt ??
+              this.visitorContactData()?.consentAcceptedAt,
             extractedFromChatId:
               saved?.extractedFromChatId ?? request.extractedFromChatId,
             additionalData: saved?.additionalData ?? request.additionalData,
