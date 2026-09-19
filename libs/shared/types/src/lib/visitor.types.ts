@@ -72,6 +72,8 @@ export interface Visitor {
   isSelected?: boolean;
   isMe?: boolean; // Indica si este visitante es el propio usuario
   isInternal?: boolean; // Indica si este visitante es un usuario interno (empleado, admin, etc.)
+  /** El lead se captó con el guion, sin comercial conectado */
+  capturedWithoutAgent?: boolean;
 }
 
 // Interface para sesión de visitante

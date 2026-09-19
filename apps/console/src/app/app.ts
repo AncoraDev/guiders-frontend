@@ -10,6 +10,7 @@ import { ChatWidgetComponent } from '@guiders-frontend/chat/ui/chat-widget';
 import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service';
 import { ToastHostComponent } from '@guiders-frontend/shared/ui/toast';
 import { TransferNotificationService } from './transfer-notification.service';
+import { LeadContactService } from '@guiders-frontend/lead-contact-service';
 
 @Component({
   imports: [RouterModule, Sidebar, ChatWidgetComponent, ToastHostComponent],
@@ -26,6 +27,7 @@ export class App {
   private readonly environment = inject(ENVIRONMENT_TOKEN);
   private readonly destroyRef = inject(DestroyRef);
   private readonly transferNotifications = inject(TransferNotificationService);
+  private readonly leadContactService = inject(LeadContactService);
 
   protected title = 'console';
 
@@ -40,6 +42,8 @@ export class App {
   constructor() {
     // Toast global de transferencias (cualquier ruta de Console)
     this.transferNotifications.start();
+
+    this.leadContactService.refreshPendingCount();
 
     this.profileService
       .getUserProfile()
@@ -73,6 +77,7 @@ export class App {
   // Items de navegación específicos para console (usuario final)
   readonly sidebarItems = computed<SidebarItem[]>(() => {
     const totalUnread = this.unreadMessagesService.totalUnreadCount();
+    const pendingLeads = this.leadContactService.pendingCount();
 
     return [
       {
@@ -83,6 +88,18 @@ export class App {
         ...(totalUnread > 0 && {
           badge: {
             text: totalUnread > 99 ? '99+' : totalUnread.toString(),
+            variant: 'danger' as const
+          }
+        })
+      },
+      {
+        id: 'leads',
+        label: 'Leads',
+        icon: 'inbox',
+        route: '/leads',
+        ...(pendingLeads > 0 && {
+          badge: {
+            text: pendingLeads > 99 ? '99+' : pendingLeads.toString(),
             variant: 'danger' as const
           }
         })
@@ -99,16 +116,14 @@ export class App {
         icon: 'wifi',
         route: '/conexiones',
       },
-      {
-        // El comercial entra a trabajar los leads captados; el guion, que es
-        // configuración de la empresa, solo lo ve el admin dentro de la página.
-        id: 'captacion',
-        label: 'Captación',
-        icon: 'user-plus',
-        route: '/captacion',
-      },
       ...(this.isAdmin()
         ? [
+            {
+              id: 'captacion',
+              label: 'Captación',
+              icon: 'user-plus' as const,
+              route: '/captacion',
+            },
             {
               id: 'usuarios',
               label: 'Usuarios',

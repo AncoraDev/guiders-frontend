@@ -244,7 +244,16 @@
                     @switch (visitor.lifecycle) {
                       @case ('ANON') { <span class="tag tag--gray">Anónimo</span> }
                       @case ('ENGAGED') { <span class="tag tag--blue">Interesado</span> }
-                      @case ('LEAD') { <span class="tag tag--orange">Lead</span> }
+                      @case ('LEAD') {
+                        <span
+                          class="tag"
+                          [class.tag--orange]="!visitor.capturedWithoutAgent"
+                          [class.tag--auto]="visitor.capturedWithoutAgent"
+                          [title]="visitor.capturedWithoutAgent ? 'Captado por el asistente, sin comercial' : 'Lead captado por un comercial'"
+                        >
+                          {{ visitor.capturedWithoutAgent ? 'Lead automático' : 'Lead' }}
+                        </span>
+                      }
                       @case ('CONVERTED') { <span class="tag tag--green">Convertido</span> }
                       @default { <span class="tag tag--gray">{{ visitor.lifecycle }}</span> }
                     }

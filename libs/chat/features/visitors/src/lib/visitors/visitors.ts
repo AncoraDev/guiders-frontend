@@ -56,8 +56,9 @@ import {
   VisitorSortField,
   SortDirection,
   Chat,
+  PresenceChangedEvent,
+  readLeadCaptureTrace,
 } from '@guiders-frontend/shared/types';
-import { PresenceChangedEvent } from '@guiders-frontend/shared/types';
 import { LeadContactService } from '@guiders-frontend/lead-contact-service';
 import {
   getContactDisplayName,
@@ -1265,7 +1266,8 @@ export class VisitorsComponent implements OnInit, OnDestroy {
       (v, i) =>
         v.name !== current[i]?.name ||
         v.email !== current[i]?.email ||
-        v.phone !== current[i]?.phone
+        v.phone !== current[i]?.phone ||
+        v.capturedWithoutAgent !== current[i]?.capturedWithoutAgent
     );
     if (!changed) return;
 
@@ -1277,13 +1279,15 @@ export class VisitorsComponent implements OnInit, OnDestroy {
     if (!contact) return visitor;
 
     const contactName = getContactDisplayName(contact);
-    if (!contactName) return visitor;
+    const capturedWithoutAgent =
+      readLeadCaptureTrace(contact)?.capturedWithoutAgent === true;
 
     return {
       ...visitor,
-      name: contactName,
+      ...(contactName ? { name: contactName } : {}),
       email: contact.email || visitor.email,
       phone: contact.telefono || visitor.phone,
+      capturedWithoutAgent,
     };
   }
 
@@ -1339,6 +1343,8 @@ export class VisitorsComponent implements OnInit, OnDestroy {
       name: displayName,
       email: contact?.email || result.email,
       phone: contact?.telefono,
+      capturedWithoutAgent:
+        readLeadCaptureTrace(contact)?.capturedWithoutAgent === true,
       domain: result.domain ?? '',
       siteId: result.siteId,
       companyId: result.tenantId,

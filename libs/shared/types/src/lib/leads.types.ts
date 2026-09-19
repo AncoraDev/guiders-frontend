@@ -27,6 +27,22 @@ export interface LeadContactData {
   extractedFromChatId?: string;
   extractedAt: string;
   updatedAt: string;
+  followUpStatus?: LeadFollowUpStatus;
+  followUpAt?: string;
+  followUpBy?: string;
+}
+
+export const LEAD_FOLLOW_UP_STATUSES = [
+  'pending',
+  'contacted',
+  'dismissed',
+] as const;
+
+export type LeadFollowUpStatus = (typeof LEAD_FOLLOW_UP_STATUSES)[number];
+
+export interface ListContactDataFilters {
+  source?: 'assistant' | 'manual';
+  status?: LeadFollowUpStatus;
 }
 
 // Respuesta del guion tal como queda archivada en el lead: sin el `stepId` ni
@@ -64,6 +80,16 @@ export function readLeadCaptureTrace(
         !!answer && typeof answer.answer === 'string'
     ),
   };
+}
+
+/**
+ * Status persistido. Un documento viejo sin campo entra en Por tratar.
+ */
+export function resolveFollowUpStatus(
+  contact: Pick<LeadContactData, 'additionalData' | 'followUpStatus'> | null | undefined
+): LeadFollowUpStatus {
+  if (contact?.followUpStatus) return contact.followUpStatus;
+  return 'pending';
 }
 
 // Request para guardar datos de contacto

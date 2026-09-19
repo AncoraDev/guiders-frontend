@@ -1,5 +1,5 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import {
   Observable,
   catchError,
@@ -13,6 +13,9 @@ import {
 import {
   SaveContactDataRequest,
   LeadContactData,
+  LeadFollowUpStatus,
+  ListContactDataFilters,
+  resolveFollowUpStatus,
 } from '@guiders-frontend/shared/types';
 import { ENVIRONMENT_TOKEN } from '@guiders-frontend/auth/data-access/session';
 
@@ -27,6 +30,9 @@ export class LeadContactService {
   private readonly cacheByVisitorId = new Map<string, LeadContactData>();
   private readonly missIds = new Set<string>();
   private bulkLoaded = false;
+
+  /** Leads captados que el comercial aún no ha tratado. */
+  readonly pendingCount = signal(0);
 
   private get baseUrl(): string {
     return `${this.environment.api.baseUrl}/leads`;
@@ -89,23 +95,63 @@ export class LeadContactService {
       );
   }
 
-  listContactData(): Observable<LeadContactData[]> {
+  listContactData(
+    filters?: ListContactDataFilters
+  ): Observable<LeadContactData[]> {
+    let params = new HttpParams();
+    if (filters?.source) params = params.set('source', filters.source);
+    if (filters?.status) params = params.set('status', filters.status);
+
     return this.http
       .get<LeadContactData[]>(`${this.baseUrl}/contact-data`, {
+        params,
         withCredentials: true,
       })
       .pipe(
         tap((list) => {
-          this.bulkLoaded = true;
+          if (!filters?.source && !filters?.status) {
+            this.bulkLoaded = true;
+            this.pendingCount.set(
+              list.filter((contact) => resolveFollowUpStatus(contact) === 'pending')
+                .length
+            );
+          }
           for (const contact of list) {
             this.putCache(contact);
           }
+          if (filters?.status === 'pending' && !filters?.source) {
+            this.pendingCount.set(list.length);
+          }
         }),
         catchError(() => {
-          this.bulkLoaded = true;
+          if (!filters?.source && !filters?.status) {
+            this.bulkLoaded = true;
+          }
           return of([] as LeadContactData[]);
         })
       );
+  }
+
+  updateFollowUp(
+    visitorId: string,
+    status: LeadFollowUpStatus
+  ): Observable<LeadContactData> {
+    return this.http
+      .patch<LeadContactData>(
+        `${this.baseUrl}/contact-data/${visitorId}/follow-up`,
+        { status },
+        { withCredentials: true }
+      )
+      .pipe(
+        tap((saved) => {
+          this.putCache(saved);
+          this.refreshPendingCount();
+        })
+      );
+  }
+
+  refreshPendingCount(): void {
+    this.listContactData({ status: 'pending' }).subscribe();
   }
 
   /** Lectura síncrona de caché (tras ensureContacts / getContactData). */

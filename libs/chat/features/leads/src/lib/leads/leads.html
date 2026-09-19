@@ -1,0 +1,276 @@
+<div class="leads-page" data-testid="leads-page">
+  <div class="leads-grid bento-grid bento-grid--4-cols bento-grid--comfortable">
+    <div class="bento-card bento-card--4x3 leads-panel">
+      <div class="bento-card-header">
+        <h3 class="bento-card-title">Lista de Leads</h3>
+        <div class="header-actions">
+          <input
+            type="search"
+            class="leads-search"
+            placeholder="Buscar nombre, email, teléfono o respuesta"
+            aria-label="Buscar leads"
+            [value]="search()"
+            (input)="onSearch($any($event.target).value)"
+          />
+          @if (lastRefreshTime()) {
+            <span class="last-refresh-indicator">
+              Actualizado {{ timeSinceLastRefresh() }}
+            </span>
+          }
+          <button
+            type="button"
+            class="refresh-button"
+            (click)="onRefresh()"
+            [disabled]="loading() || refreshing()"
+            [class.refresh-button--loading]="refreshing()"
+            title="Refrescar lista de leads"
+          >
+            <svg width="18" height="18" stroke-width="1.8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21.8883 13.5C21.1645 18.3113 17.013 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C16.1006 2 19.6248 4.46819 21.1679 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path d="M17 8H21.4C21.7314 8 22 7.73137 22 7.4V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="bento-card-content leads-panel__content">
+        <div class="leads-panel__filters">
+          <div class="quick-filters">
+            <div class="quick-filters__list" role="tablist" aria-label="Estado de seguimiento">
+              @for (chip of statusChips; track chip.id) {
+                <button
+                  type="button"
+                  role="tab"
+                  class="quick-filters__chip"
+                  [class.quick-filters__chip--active]="statusFilter() === chip.id"
+                  [attr.aria-selected]="statusFilter() === chip.id"
+                  [disabled]="loading()"
+                  (click)="selectStatus(chip.id)"
+                >
+                  <span class="quick-filters__label">{{ chip.label }}</span>
+                  <span class="quick-filters__count">{{ statusCounts()[chip.id] }}</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="quick-filters">
+            <div class="quick-filters__list" role="group" aria-label="Origen">
+              @for (chip of originChips; track chip.id) {
+                <button
+                  type="button"
+                  class="quick-filters__chip"
+                  [class.quick-filters__chip--active]="originFilter() === chip.id"
+                  [attr.aria-pressed]="originFilter() === chip.id"
+                  [disabled]="loading()"
+                  (click)="selectOrigin(chip.id)"
+                >
+                  <span class="quick-filters__label">{{ chip.label }}</span>
+                </button>
+              }
+            </div>
+            <div class="quick-filters__list" role="group" aria-label="Periodo">
+              @for (chip of dateChips; track chip.id) {
+                <button
+                  type="button"
+                  class="quick-filters__chip"
+                  [class.quick-filters__chip--active]="dateRange() === chip.id"
+                  [attr.aria-pressed]="dateRange() === chip.id"
+                  [disabled]="loading()"
+                  (click)="selectDateRange(chip.id)"
+                >
+                  <span class="quick-filters__label">{{ chip.label }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        @if (error()) {
+          <div class="error-content">
+            <span class="error-text">{{ error() }}</span>
+            <button type="button" class="retry-button" (click)="onRefresh()">Reintentar</button>
+          </div>
+        } @else {
+          <div class="leads-panel__list-container">
+            <div class="leads-list">
+              <div class="leads-list__table-container">
+                @if (loading() && !hasAnyRows()) {
+                  <div class="leads-list__loading">
+                    <div class="loading-spinner"></div>
+                    <p>Cargando leads...</p>
+                  </div>
+                } @else if (filteredRows().length === 0) {
+                  <div class="leads-list__empty">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                      <path d="M4 5h16v14H4z"/>
+                      <path d="M8 9h8M8 13h5"/>
+                    </svg>
+                    <p>{{ emptyCopy() }}</p>
+                  </div>
+                } @else {
+                  <table class="leads-table" data-testid="leads-table">
+                    <thead>
+                      <tr>
+                        <th class="leads-table__header">
+                          <div class="header-content">Lead</div>
+                        </th>
+                        <th class="leads-table__header">
+                          <div class="header-content">Origen</div>
+                        </th>
+                        <th class="leads-table__header">
+                          <div class="header-content">Contacto</div>
+                        </th>
+                        <th class="leads-table__header">
+                          <div class="header-content">Respuestas</div>
+                        </th>
+                        <th class="leads-table__header">
+                          <div class="header-content">Captado</div>
+                        </th>
+                        <th class="leads-table__header">
+                          <div class="header-content">Acciones</div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of pagedRows(); track row.contact.id) {
+                        <tr
+                          class="leads-table__row"
+                          [class.leads-table__row--expanded]="expandedId() === row.contact.id"
+                          (click)="toggleRow(row)"
+                        >
+                          <td class="leads-table__cell leads-table__cell--lead">
+                            <div class="lead-cell">
+                              <guiders-avatar
+                                [userId]="row.contact.visitorId"
+                                [name]="row.displayName"
+                                size="small"
+                              />
+                              <div class="lead-cell__text">
+                                <span class="lead-cell__name">{{ row.displayName }}</span>
+                                <span class="lead-cell__id">{{ row.contact.email || row.contact.visitorId }}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td class="leads-table__cell">
+                            <span
+                              class="tag"
+                              [class.tag--accent]="row.fromAssistant"
+                              [class.tag--gray]="!row.fromAssistant"
+                            >
+                              {{ row.fromAssistant ? 'Automático' : 'Comercial' }}
+                            </span>
+                          </td>
+                          <td class="leads-table__cell">
+                            <div class="contact-cell">
+                              @if (row.contact.telefono) {
+                                <a
+                                  class="contact-cell__link"
+                                  [href]="'tel:' + row.contact.telefono"
+                                  (click)="$event.stopPropagation()"
+                                >
+                                  {{ row.contact.telefono }}
+                                </a>
+                              }
+                              @if (row.contact.email) {
+                                <span class="contact-cell__muted">{{ row.contact.email }}</span>
+                              }
+                              @if (!row.contact.telefono && !row.contact.email) {
+                                <span class="muted">—</span>
+                              }
+                            </div>
+                          </td>
+                          <td class="leads-table__cell">
+                            @if (row.previewAnswers.length) {
+                              <div class="preview-cell">
+                                @for (answer of row.previewAnswers; track $index) {
+                                  <span>{{ answer.answer }}</span>
+                                }
+                              </div>
+                            } @else {
+                              <span class="muted">—</span>
+                            }
+                          </td>
+                          <td class="leads-table__cell">
+                            {{ formatDateTime(row.contact.extractedAt) }}
+                          </td>
+                          <td class="leads-table__cell" (click)="$event.stopPropagation()">
+                            <div class="row-actions">
+                              @if (row.chatId) {
+                                <a
+                                  class="row-actions__link"
+                                  [routerLink]="['/atencion']"
+                                  [queryParams]="{ chat: row.chatId }"
+                                >
+                                  Abrir chat
+                                </a>
+                              }
+                              @if (statusFilter() === 'pending') {
+                                <button
+                                  type="button"
+                                  class="row-actions__btn"
+                                  [disabled]="updatingId() === row.contact.visitorId"
+                                  (click)="markFollowUp(row, 'contacted')"
+                                >
+                                  Contactado
+                                </button>
+                                <button
+                                  type="button"
+                                  class="row-actions__btn row-actions__btn--muted"
+                                  [disabled]="updatingId() === row.contact.visitorId"
+                                  (click)="markFollowUp(row, 'dismissed')"
+                                >
+                                  Descartar
+                                </button>
+                              } @else {
+                                <button
+                                  type="button"
+                                  class="row-actions__btn row-actions__btn--muted"
+                                  [disabled]="updatingId() === row.contact.visitorId"
+                                  (click)="markFollowUp(row, 'pending')"
+                                >
+                                  Por tratar
+                                </button>
+                              }
+                            </div>
+                          </td>
+                        </tr>
+                        @if (expandedId() === row.contact.id) {
+                          <tr class="leads-table__detail-row">
+                            <td class="leads-table__detail" colspan="6">
+                              @if (row.capture?.answers?.length) {
+                                <dl class="answers">
+                                  @for (answer of row.capture?.answers; track $index) {
+                                    <div class="answers__item">
+                                      <dt>{{ answer.prompt }}</dt>
+                                      <dd>{{ answer.answer }}</dd>
+                                    </div>
+                                  }
+                                </dl>
+                              } @else {
+                                <p class="detail-empty">Este lead no dejó respuestas del guion.</p>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="leads-panel__pagination">
+            <guiders-pagination
+              [config]="paginationConfig()"
+              [disabled]="loading()"
+              (pageChange)="onPageChange($event)"
+              (pageSizeChange)="onPageSizeChange($event)"
+            />
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>
