@@ -117,8 +117,14 @@ export function findUnreachableSteps(draft: LeadCaptureFlowDraft): string[] {
     .map((step) => step.id);
 }
 
-/** Camino que vería el visitante eligiendo siempre la primera opción. */
-export function previewPath(draft: LeadCaptureFlowDraft): LeadCaptureStep[] {
+/**
+ * Camino que vería el visitante. Sin `choices`, toma la primera opción de
+ * cada pregunta; con `choices`, respeta la opción pulsada en la vista previa.
+ */
+export function previewPath(
+  draft: LeadCaptureFlowDraft,
+  choices: Record<string, string> = {},
+): LeadCaptureStep[] {
   const byId = new Map(draft.steps.map((step) => [step.id, step]));
   const path: LeadCaptureStep[] = [];
   const seen = new Set<string>();
@@ -128,10 +134,14 @@ export function previewPath(draft: LeadCaptureFlowDraft): LeadCaptureStep[] {
     seen.add(current);
     const step = byId.get(current) as LeadCaptureStep;
     path.push(step);
-    current =
-      step.type === 'choice'
-        ? (step.options?.[0]?.next ?? null)
-        : (step.next ?? null);
+    if (step.type === 'choice') {
+      const picked =
+        step.options?.find((option) => option.id === choices[step.id]) ??
+        step.options?.[0];
+      current = picked?.next ?? null;
+    } else {
+      current = step.next ?? null;
+    }
   }
 
   return path;

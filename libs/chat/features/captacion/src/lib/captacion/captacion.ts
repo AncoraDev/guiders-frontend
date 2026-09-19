@@ -33,6 +33,27 @@ const DEFAULT_INTRO = {
   ctaLabel: 'Empezar, son 30 segundos',
 };
 
+const FIELD_LABELS: Record<string, string> = {
+  nombre: 'Nombre',
+  apellidos: 'Apellidos',
+  email: 'Email',
+  telefono: 'Teléfono',
+  poblacion: 'Población',
+  interes: 'Interés',
+  presupuesto: 'Presupuesto',
+  comentario: 'Comentario',
+};
+
+const STEP_TYPES: {
+  id: LeadCaptureStepType;
+  label: string;
+  hint: string;
+}[] = [
+  { id: 'message', label: 'Mensaje', hint: 'Solo informa, no pide respuesta' },
+  { id: 'choice', label: 'Opciones', hint: 'El visitante elige un camino' },
+  { id: 'text', label: 'Pregunta', hint: 'Escribe una respuesta libre' },
+];
+
 @Component({
   selector: 'lib-captacion',
   standalone: true,
@@ -51,6 +72,7 @@ export class Captacion implements OnInit {
   readonly leadFields = LEAD_CAPTURE_FIELDS;
   /** Respuestas que no encajan en la ficha y acaban en los datos extra del lead. */
   readonly extraFields = ['interes', 'presupuesto', 'comentario'];
+  readonly stepTypes = STEP_TYPES;
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -64,6 +86,10 @@ export class Captacion implements OnInit {
   readonly introCtaLabel = signal(DEFAULT_INTRO.ctaLabel);
   readonly startStepId = signal('');
   readonly steps = signal<LeadCaptureStep[]>([]);
+  readonly focusedStepId = signal<string | null>(null);
+  /** -1 = tarjeta de inicio, luego índice del camino, al final datos de contacto. */
+  readonly previewIndex = signal(-1);
+  readonly previewChoices = signal<Record<string, string>>({});
 
   readonly draft = computed<LeadCaptureFlowDraft>(() => ({
     name: this.name(),
@@ -80,7 +106,35 @@ export class Captacion implements OnInit {
   readonly unreachableStepIds = computed(() =>
     findUnreachableSteps(this.draft()),
   );
-  readonly preview = computed(() => previewPath(this.draft()));
+  readonly preview = computed(() =>
+    previewPath(this.draft(), this.previewChoices()),
+  );
+  readonly previewCurrent = computed(() => {
+    const index = this.previewIndex();
+    const path = this.preview();
+    if (index < 0 || index >= path.length) return null;
+    return path[index];
+  });
+  readonly previewRecap = computed(() => {
+    const index = Math.max(this.previewIndex(), 0);
+    return this.preview()
+      .slice(0, index)
+      .map((step) => ({
+        step,
+        answer: this.recapAnswer(step),
+      }));
+  });
+  readonly previewAtContact = computed(
+    () => this.previewIndex() >= this.preview().length && this.previewIndex() >= 0,
+  );
+  readonly previewProgress = computed(() => {
+    const total = this.preview().length + 1;
+    if (this.previewIndex() < 0) return { current: 0, total };
+    return {
+      current: Math.min(this.previewIndex() + 1, total),
+      total,
+    };
+  });
   readonly canSave = computed(
     () => this.errors().length === 0 && !this.saving() && !this.loading(),
   );
@@ -126,6 +180,56 @@ export class Captacion implements OnInit {
     return this.unreachableStepIds().includes(stepId);
   }
 
+  fieldLabel(field: string | undefined): string {
+    if (!field) return 'dato';
+    return FIELD_LABELS[field] ?? field;
+  }
+
+  typeLabel(type: LeadCaptureStepType): string {
+    return STEP_TYPES.find((item) => item.id === type)?.label ?? type;
+  }
+
+  typeHint(type: LeadCaptureStepType): string {
+    return STEP_TYPES.find((item) => item.id === type)?.hint ?? '';
+  }
+
+  selectedPreviewOption(step: LeadCaptureStep): string | undefined {
+    return this.previewChoices()[step.id] ?? step.options?.[0]?.id;
+  }
+
+  focusStep(stepId: string): void {
+    this.focusedStepId.set(stepId);
+  }
+
+  toggleEnabled(): void {
+    this.enabled.update((value) => !value);
+  }
+
+  startPreview(): void {
+    this.previewIndex.set(0);
+  }
+
+  continuePreview(): void {
+    this.previewIndex.update((index) => index + 1);
+  }
+
+  choosePreviewOption(stepId: string, optionId: string): void {
+    const choices = { ...this.previewChoices(), [stepId]: optionId };
+    this.previewChoices.set(choices);
+    const path = previewPath(this.draft(), choices);
+    const index = path.findIndex((step) => step.id === stepId);
+    this.previewIndex.set(index < 0 ? 0 : index + 1);
+  }
+
+  resetPreview(): void {
+    this.previewIndex.set(-1);
+    this.previewChoices.set({});
+  }
+
+  backPreview(): void {
+    this.previewIndex.update((index) => Math.max(index - 1, -1));
+  }
+
   addStep(type: LeadCaptureStepType): void {
     if (this.steps().length >= this.maxSteps) {
       this.toast.info(`El guion admite como máximo ${this.maxSteps} pasos`);
@@ -158,6 +262,8 @@ export class Captacion implements OnInit {
 
     this.steps.set([...linked, step]);
     if (!this.startStepId()) this.startStepId.set(id);
+    this.focusedStepId.set(id);
+    this.resetPreview();
   }
 
   removeStep(stepId: string): void {
@@ -177,6 +283,10 @@ export class Captacion implements OnInit {
     if (this.startStepId() === stepId) {
       this.startStepId.set(remaining[0]?.id ?? '');
     }
+    if (this.focusedStepId() === stepId) {
+      this.focusedStepId.set(remaining[0]?.id ?? null);
+    }
+    this.resetPreview();
   }
 
   moveStep(stepId: string, offset: number): void {
@@ -187,6 +297,7 @@ export class Captacion implements OnInit {
     const [moved] = steps.splice(index, 1);
     steps.splice(target, 0, moved);
     this.steps.set(steps);
+    this.resetPreview();
   }
 
   updateStep(stepId: string, patch: Partial<LeadCaptureStep>): void {
@@ -212,6 +323,7 @@ export class Captacion implements OnInit {
       required: type === 'text' ? (step.required ?? true) : undefined,
       next: type === 'choice' ? null : (step.next ?? null),
     });
+    this.resetPreview();
   }
 
   addOption(stepId: string): void {
@@ -286,6 +398,19 @@ export class Captacion implements OnInit {
           );
         },
       });
+  }
+
+  private recapAnswer(step: LeadCaptureStep): string {
+    if (step.type === 'choice') {
+      const optionId = this.previewChoices()[step.id];
+      const option =
+        step.options?.find((item) => item.id === optionId) ?? step.options?.[0];
+      return option?.label?.trim() || 'Opción';
+    }
+    if (step.type === 'text') {
+      return this.fieldLabel(step.field);
+    }
+    return 'Visto';
   }
 
   private nextId(prefix: string): string {

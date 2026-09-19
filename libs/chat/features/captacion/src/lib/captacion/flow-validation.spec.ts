@@ -162,4 +162,18 @@ describe('previewPath', () => {
 
     expect(previewPath(draft).map((step) => step.id)).toEqual(['uno', 'dos']);
   });
+
+  it('respeta la opción elegida en la vista previa', () => {
+    const draft = draftWith([
+      choiceStep('interes', [
+        { id: 'nuevo', label: 'Coche nuevo', next: 'modelo' },
+        { id: 'km0', label: 'Km 0', next: null },
+      ]),
+      messageStep('modelo', null),
+    ]);
+
+    expect(
+      previewPath(draft, { interes: 'km0' }).map((step) => step.id),
+    ).toEqual(['interes']);
+  });
 });
