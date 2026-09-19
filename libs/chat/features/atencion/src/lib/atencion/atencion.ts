@@ -912,10 +912,20 @@ export class Atencion implements OnInit, OnDestroy {
             [...pendingItems, ...mine, ...webItems].map((i) => i.visitorId)
           );
 
-          const contact = this.visitorContactData();
           const visitorId = this.selectedChat()?.visitorId;
+          const contact = this.visitorContactData();
           if (contact && visitorId) {
             this.applyContactDisplayName(visitorId, contact);
+          } else if (
+            visitorId &&
+            [...pendingItems, ...mine].some(
+              (item) =>
+                item.visitorId === visitorId &&
+                item.isLead &&
+                !this.visitorContactData()
+            )
+          ) {
+            this.loadVisitorContactData(visitorId);
           }
 
           // Deep-link ?chat=… (notificación, o un lead captado desde /captacion).
@@ -1286,6 +1296,15 @@ export class Atencion implements OnInit, OnDestroy {
         }
         const action = message.systemData?.action;
         const type = String(message.type || '').toUpperCase();
+        if (action === 'lead_capture_submission') {
+          const visitorId = this.selectedChat()?.visitorId;
+          if (visitorId) {
+            this.leadContactService.invalidate(visitorId);
+            this.loadVisitorContactData(visitorId);
+          }
+          this.loadMessages(chatId, { silent: true });
+          return;
+        }
         if (
           action === 'contact_submission' ||
           action === 'contact_cancellation' ||
@@ -1686,7 +1705,7 @@ export class Atencion implements OnInit, OnDestroy {
 
   private loadVisitorContactData(visitorId: string): void {
     this.leadContactService
-      .getContactData(visitorId)
+      .getContactData(visitorId, { force: true })
       .pipe(
         catchError(() => of(null)),
         takeUntilDestroyed(this.destroyRef)
@@ -1956,6 +1975,9 @@ export class Atencion implements OnInit, OnDestroy {
     const pageLabel = this.formatPageLabel(
       String(metadata['initialUrl'] ?? metadata['currentUrl'] ?? '')
     );
+    if (lastMessage?.systemData?.action === 'lead_capture_submission') {
+      this.leadContactService.invalidate(visitorId);
+    }
     const cached = this.leadContactService.peekCache(visitorId);
     return {
       id: `pending-${chatId}`,
@@ -1964,7 +1986,9 @@ export class Atencion implements OnInit, OnDestroy {
       subtitle: preview,
       preview,
       pageLabel,
-      isLead: this.contactMeetsLeadCriteria(cached),
+      isLead:
+        this.contactMeetsLeadCriteria(cached) ||
+        lastMessage?.systemData?.action === 'lead_capture_submission',
       chatId,
       visitorId,
       unreadCount: Number(

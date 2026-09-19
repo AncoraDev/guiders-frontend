@@ -46,12 +46,30 @@ export class LeadContactService {
   }
 
   /**
-   * Obtiene datos de contacto. 404 → null.
+   * Olvida un 404. El visitante pudo dejar sus datos después de la primera
+   * consulta, y un miss permanente dejaría la ficha vacía.
    */
-  getContactData(visitorId: string): Observable<LeadContactData | null> {
-    const cached = this.cacheByVisitorId.get(visitorId);
-    if (cached) return of(cached);
-    if (this.missIds.has(visitorId)) return of(null);
+  invalidate(visitorId: string): void {
+    this.missIds.delete(visitorId);
+  }
+
+  /**
+   * Obtiene datos de contacto. 404 → null.
+   * `force` ignora caché y miss: hace falta al abrir un chat que acaba de
+   * captarse, porque la cola pudo consultar al visitante cuando aún no tenía ficha.
+   */
+  getContactData(
+    visitorId: string,
+    options?: { force?: boolean }
+  ): Observable<LeadContactData | null> {
+    if (options?.force) {
+      this.cacheByVisitorId.delete(visitorId);
+      this.invalidate(visitorId);
+    } else {
+      const cached = this.cacheByVisitorId.get(visitorId);
+      if (cached) return of(cached);
+      if (this.missIds.has(visitorId)) return of(null);
+    }
 
     return this.http
       .get<LeadContactData>(`${this.baseUrl}/contact-data/${visitorId}`, {

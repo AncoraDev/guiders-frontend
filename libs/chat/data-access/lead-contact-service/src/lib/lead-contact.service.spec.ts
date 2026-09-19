@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { LeadContactService } from './lead-contact.service';
 import { ENVIRONMENT_TOKEN } from '@guiders-frontend/auth/data-access/session';
-import { Environment } from '@guiders-frontend/shared/types';
+import { Environment, LeadContactData } from '@guiders-frontend/shared/types';
 
 const mockEnvironment: Environment = {
   production: false,
@@ -65,5 +65,44 @@ describe('LeadContactService', () => {
     expect(req.request.method).toBe('GET');
     expect(req.request.withCredentials).toBe(true);
     req.flush({ name: 'John', email: 'john@example.com', phone: '+1234567890' });
+  });
+
+  it('un 404 no bloquea un force posterior', () => {
+    const visitorId = 'visitor-nuevo';
+    const saved = {
+      id: 'c1',
+      visitorId,
+      companyId: 'co',
+      nombre: 'Ana',
+      email: 'ana@test.com',
+      extractedAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+
+    let first: LeadContactData | null | undefined;
+    service.getContactData(visitorId).subscribe((data) => {
+      first = data;
+    });
+    httpMock
+      .expectOne('https://test-api.com/leads/contact-data/visitor-nuevo')
+      .flush('missing', { status: 404, statusText: 'Not Found' });
+    expect(first).toBeNull();
+
+    let second: LeadContactData | null | undefined;
+    service.getContactData(visitorId).subscribe((data) => {
+      second = data;
+    });
+    httpMock.expectNone('https://test-api.com/leads/contact-data/visitor-nuevo');
+    expect(second).toBeNull();
+
+    let forced: LeadContactData | null | undefined;
+    service.getContactData(visitorId, { force: true }).subscribe((data) => {
+      forced = data;
+    });
+    const retry = httpMock.expectOne(
+      'https://test-api.com/leads/contact-data/visitor-nuevo'
+    );
+    retry.flush(saved);
+    expect(forced).toEqual(saved);
   });
 });
