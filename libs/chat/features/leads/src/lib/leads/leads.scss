@@ -61,8 +61,7 @@
 }
 
 .bento-card-title {
-  @include tokens.typography('body-medium');
-  font-weight: tokens.$font-weight-semibold;
+  @include tokens.typography('heading-3xl');
   color: var(--color-text-primary);
   margin: 0;
 }
@@ -538,6 +537,21 @@
       var(--color-surface-primary)
     );
     color: var(--wl-color-primary, var(--color-accent));
+  }
+
+  &--pending {
+    background-color: var(--color-warning-bg, #fed7aa);
+    color: var(--color-warning-text, #c2410c);
+  }
+
+  &--contacted {
+    background-color: var(--color-success-bg, #d1fae5);
+    color: var(--color-success-text, #065f46);
+  }
+
+  &--dismissed {
+    background-color: var(--color-surface-tertiary);
+    color: var(--color-text-secondary);
   }
 }
 

@@ -55,6 +55,14 @@ const oldAssistant = contact({
   },
 });
 
+const contactedLead = contact({
+  id: '4',
+  nombre: 'Laura',
+  email: 'laura@laura.com',
+  extractedAt: '2026-09-19T10:00:00.000Z',
+  followUpStatus: 'contacted',
+});
+
 function createComponent(
   contacts: LeadContactData[],
   extras?: { updateFollowUp?: ReturnType<typeof vi.fn> },
@@ -89,6 +97,27 @@ describe('Leads', () => {
     const { listContactData } = createComponent([withAssistant, manualLead]);
 
     expect(listContactData).toHaveBeenCalledWith();
+  });
+
+  it('muestra todos los leads por defecto, del más reciente al más antiguo', () => {
+    const { component } = createComponent([
+      withAssistant,
+      manualLead,
+      contactedLead,
+    ]);
+
+    expect(component.filteredRows().map((row) => row.displayName)).toEqual([
+      'Laura',
+      'Ana Pérez',
+      'Luis',
+    ]);
+    expect(component.filteredRows().map((row) => row.followUpStatus)).toEqual([
+      'contacted',
+      'pending',
+      'pending',
+    ]);
+    expect(component.followUpLabel('pending')).toBe('Por contactar');
+    expect(component.followUpLabel('contacted')).toBe('Contactado');
   });
 
   it('agrupa automáticos y manuales en la misma cola', () => {

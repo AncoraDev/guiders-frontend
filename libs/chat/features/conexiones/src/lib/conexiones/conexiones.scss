@@ -63,8 +63,7 @@
 }
 
 .bento-card-title {
-  @include tokens.typography('body-medium');
-  font-weight: tokens.$font-weight-semibold;
+  @include tokens.typography('heading-3xl');
   color: var(--color-text-primary);
   margin: 0;
 }

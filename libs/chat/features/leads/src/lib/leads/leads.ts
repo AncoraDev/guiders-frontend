@@ -27,7 +27,6 @@ import {
   resolveFollowUpStatus,
 } from '@guiders-frontend/shared/types';
 
-export type LeadsStatusFilter = LeadFollowUpStatus;
 export type LeadsOriginFilter = 'all' | 'assistant' | 'manual';
 export type LeadsDateRange = '7d' | 'month' | 'all';
 
@@ -40,11 +39,6 @@ export interface LeadRow {
   previewAnswers: LeadCaptureTrace['answers'];
   followUpStatus: LeadFollowUpStatus;
   haystack: string;
-}
-
-interface StatusChip {
-  id: LeadsStatusFilter;
-  label: string;
 }
 
 interface OriginChip {
@@ -80,7 +74,6 @@ export class Leads implements OnInit {
   readonly refreshing = signal(false);
   readonly error = signal<string | null>(null);
   readonly search = signal('');
-  readonly statusFilter = signal<LeadsStatusFilter>('pending');
   readonly originFilter = signal<LeadsOriginFilter>('all');
   readonly dateRange = signal<LeadsDateRange>('all');
   readonly expandedId = signal<string | null>(null);
@@ -90,12 +83,6 @@ export class Leads implements OnInit {
   readonly pageSize = signal(20);
 
   private readonly rows = signal<LeadRow[]>([]);
-
-  readonly statusChips: StatusChip[] = [
-    { id: 'pending', label: 'Por tratar' },
-    { id: 'contacted', label: 'Contactados' },
-    { id: 'dismissed', label: 'Descartados' },
-  ];
 
   readonly originChips: OriginChip[] = [
     { id: 'all', label: 'Todos' },
@@ -113,31 +100,13 @@ export class Leads implements OnInit {
     const term = this.search().trim().toLowerCase();
     const range = this.dateRange();
     const origin = this.originFilter();
-    const status = this.statusFilter();
 
     return this.rows().filter((row) => {
-      if (row.followUpStatus !== status) return false;
       if (origin === 'assistant' && !row.fromAssistant) return false;
       if (origin === 'manual' && row.fromAssistant) return false;
       if (!this.inDateRange(row.contact.extractedAt, range)) return false;
       return !term || row.haystack.includes(term);
     });
-  });
-
-  readonly statusCounts = computed(() => {
-    const origin = this.originFilter();
-    const range = this.dateRange();
-    const term = this.search().trim().toLowerCase();
-    const counts = { pending: 0, contacted: 0, dismissed: 0 };
-
-    for (const row of this.rows()) {
-      if (origin === 'assistant' && !row.fromAssistant) continue;
-      if (origin === 'manual' && row.fromAssistant) continue;
-      if (!this.inDateRange(row.contact.extractedAt, range)) continue;
-      if (term && !row.haystack.includes(term)) continue;
-      counts[row.followUpStatus] += 1;
-    }
-    return counts;
   });
 
   readonly hasAnyRows = computed(() => this.rows().length > 0);
@@ -172,13 +141,6 @@ export class Leads implements OnInit {
   ngOnInit(): void {
     this.destroyRef.onDestroy(() => this.loadSub?.unsubscribe());
     this.reload();
-  }
-
-  selectStatus(status: LeadsStatusFilter): void {
-    if (this.statusFilter() === status) return;
-    this.statusFilter.set(status);
-    this.expandedId.set(null);
-    this.page.set(1);
   }
 
   selectOrigin(origin: LeadsOriginFilter): void {
@@ -248,15 +210,19 @@ export class Leads implements OnInit {
     });
   }
 
+  followUpLabel(status: LeadFollowUpStatus): string {
+    switch (status) {
+      case 'contacted':
+        return 'Contactado';
+      case 'dismissed':
+        return 'Descartado';
+      default:
+        return 'Por contactar';
+    }
+  }
+
   emptyCopy(): string {
-    const status = this.statusFilter();
-    if (status === 'pending') {
-      return 'No hay leads por tratar con estos filtros.';
-    }
-    if (status === 'contacted') {
-      return 'Aún no has marcado ningún lead como contactado.';
-    }
-    return 'No hay leads descartados con estos filtros.';
+    return 'No hay leads con estos filtros.';
   }
 
   reload(silent = false): void {

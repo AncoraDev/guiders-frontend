@@ -36,25 +36,6 @@
       <div class="bento-card-content leads-panel__content">
         <div class="leads-panel__filters">
           <div class="quick-filters">
-            <div class="quick-filters__list" role="tablist" aria-label="Estado de seguimiento">
-              @for (chip of statusChips; track chip.id) {
-                <button
-                  type="button"
-                  role="tab"
-                  class="quick-filters__chip"
-                  [class.quick-filters__chip--active]="statusFilter() === chip.id"
-                  [attr.aria-selected]="statusFilter() === chip.id"
-                  [disabled]="loading()"
-                  (click)="selectStatus(chip.id)"
-                >
-                  <span class="quick-filters__label">{{ chip.label }}</span>
-                  <span class="quick-filters__count">{{ statusCounts()[chip.id] }}</span>
-                </button>
-              }
-            </div>
-          </div>
-
-          <div class="quick-filters">
             <div class="quick-filters__list" role="group" aria-label="Origen">
               @for (chip of originChips; track chip.id) {
                 <button
@@ -119,6 +100,9 @@
                           <div class="header-content">Origen</div>
                         </th>
                         <th class="leads-table__header">
+                          <div class="header-content">Trato</div>
+                        </th>
+                        <th class="leads-table__header">
                           <div class="header-content">Contacto</div>
                         </th>
                         <th class="leads-table__header">
@@ -159,6 +143,16 @@
                               [class.tag--gray]="!row.fromAssistant"
                             >
                               {{ row.fromAssistant ? 'Automático' : 'Comercial' }}
+                            </span>
+                          </td>
+                          <td class="leads-table__cell">
+                            <span
+                              class="tag"
+                              [class.tag--pending]="row.followUpStatus === 'pending'"
+                              [class.tag--contacted]="row.followUpStatus === 'contacted'"
+                              [class.tag--dismissed]="row.followUpStatus === 'dismissed'"
+                            >
+                              {{ followUpLabel(row.followUpStatus) }}
                             </span>
                           </td>
                           <td class="leads-table__cell">
@@ -205,7 +199,7 @@
                                   Abrir chat
                                 </a>
                               }
-                              @if (statusFilter() === 'pending') {
+                              @if (row.followUpStatus === 'pending') {
                                 <button
                                   type="button"
                                   class="row-actions__btn"
@@ -229,7 +223,7 @@
                                   [disabled]="updatingId() === row.contact.visitorId"
                                   (click)="markFollowUp(row, 'pending')"
                                 >
-                                  Por tratar
+                                  Por contactar
                                 </button>
                               }
                             </div>
@@ -237,7 +231,7 @@
                         </tr>
                         @if (expandedId() === row.contact.id) {
                           <tr class="leads-table__detail-row">
-                            <td class="leads-table__detail" colspan="6">
+                            <td class="leads-table__detail" colspan="7">
                               @if (row.capture?.answers?.length) {
                                 <dl class="answers">
                                   @for (answer of row.capture?.answers; track $index) {
