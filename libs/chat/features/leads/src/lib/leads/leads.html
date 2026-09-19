@@ -100,6 +100,9 @@
                           <div class="header-content">Origen</div>
                         </th>
                         <th class="leads-table__header">
+                          <div class="header-content">Comercial</div>
+                        </th>
+                        <th class="leads-table__header">
                           <div class="header-content">Trato</div>
                         </th>
                         <th class="leads-table__header">
@@ -144,6 +147,13 @@
                             >
                               {{ row.fromAssistant ? 'Automático' : 'Comercial' }}
                             </span>
+                          </td>
+                          <td class="leads-table__cell">
+                            @if (row.capturedByLabel) {
+                              <span class="lead-cell__name">{{ row.capturedByLabel }}</span>
+                            } @else {
+                              <span class="muted">—</span>
+                            }
                           </td>
                           <td class="leads-table__cell">
                             <span
@@ -231,7 +241,7 @@
                         </tr>
                         @if (expandedId() === row.contact.id) {
                           <tr class="leads-table__detail-row">
-                            <td class="leads-table__detail" colspan="7">
+                            <td class="leads-table__detail" colspan="8">
                               @if (row.capture?.answers?.length) {
                                 <dl class="answers">
                                   @for (answer of row.capture?.answers; track $index) {

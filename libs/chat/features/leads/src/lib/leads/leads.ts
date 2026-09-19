@@ -38,6 +38,7 @@ export interface LeadRow {
   chatId: string | null;
   previewAnswers: LeadCaptureTrace['answers'];
   followUpStatus: LeadFollowUpStatus;
+  capturedByLabel: string | null;
   haystack: string;
 }
 
@@ -285,12 +286,14 @@ export class Leads implements OnInit {
           chatId: contact.extractedFromChatId ?? null,
           previewAnswers: (capture?.answers ?? []).slice(0, 2),
           followUpStatus,
+          capturedByLabel: contact.capturedByName?.trim() || null,
           haystack: [
             displayName,
             contact.email,
             contact.telefono,
             contact.poblacion,
             contact.alias,
+            contact.capturedByName,
             ...(capture?.answers.map((answer) => answer.answer) ?? []),
           ]
             .filter(Boolean)

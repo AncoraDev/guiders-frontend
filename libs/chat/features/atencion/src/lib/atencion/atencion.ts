@@ -621,6 +621,7 @@ export class Atencion implements OnInit, OnDestroy {
         ...event.data,
         ...this.consentFromMessages(event.requestId),
         extractedFromChatId: this.selectedChat()?.chatId,
+        attributeCapture: true,
       },
       event.requestId,
     );
@@ -701,6 +702,9 @@ export class Atencion implements OnInit, OnDestroy {
             extractedFromChatId:
               saved?.extractedFromChatId ?? request.extractedFromChatId,
             additionalData: saved?.additionalData ?? request.additionalData,
+            capturedBy: saved?.capturedBy,
+            capturedByName: saved?.capturedByName,
+            capturedAt: saved?.capturedAt,
             extractedAt:
               saved?.extractedAt ||
               this.visitorContactData()?.extractedAt ||

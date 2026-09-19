@@ -61,6 +61,8 @@ const contactedLead = contact({
   email: 'laura@laura.com',
   extractedAt: '2026-09-19T10:00:00.000Z',
   followUpStatus: 'contacted',
+  capturedBy: 'commercial-1',
+  capturedByName: 'Laura Pérez',
 });
 
 function createComponent(
@@ -118,6 +120,8 @@ describe('Leads', () => {
     ]);
     expect(component.followUpLabel('pending')).toBe('Por contactar');
     expect(component.followUpLabel('contacted')).toBe('Contactado');
+    expect(component.filteredRows()[0].capturedByLabel).toBe('Laura Pérez');
+    expect(component.filteredRows()[1].capturedByLabel).toBeNull();
   });
 
   it('agrupa automáticos y manuales en la misma cola', () => {

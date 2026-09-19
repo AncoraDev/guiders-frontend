@@ -30,6 +30,9 @@ export interface LeadContactData {
   followUpStatus?: LeadFollowUpStatus;
   followUpAt?: string;
   followUpBy?: string;
+  capturedBy?: string;
+  capturedByName?: string;
+  capturedAt?: string;
 }
 
 export const LEAD_FOLLOW_UP_STATUSES = [
@@ -109,6 +112,8 @@ export interface SaveContactDataRequest {
   acceptedMarketing?: boolean;
   additionalData?: Record<string, unknown>;
   extractedFromChatId?: string;
+  /** Confirma la solicitud: el backend atribuye el lead a este comercial */
+  attributeCapture?: boolean;
 }
 
 // Configuración de la integración LeadCars por empresa
