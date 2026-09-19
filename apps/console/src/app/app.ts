@@ -99,6 +99,14 @@ export class App {
         icon: 'wifi',
         route: '/conexiones',
       },
+      {
+        // El comercial entra a trabajar los leads captados; el guion, que es
+        // configuración de la empresa, solo lo ve el admin dentro de la página.
+        id: 'captacion',
+        label: 'Captación',
+        icon: 'user-plus',
+        route: '/captacion',
+      },
       ...(this.isAdmin()
         ? [
             {
@@ -106,12 +114,6 @@ export class App {
               label: 'Usuarios',
               icon: 'user' as const,
               route: '/usuarios',
-            },
-            {
-              id: 'captacion',
-              label: 'Captación',
-              icon: 'user-plus' as const,
-              route: '/captacion',
             },
             {
               id: 'integraciones',

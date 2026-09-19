@@ -14,9 +14,11 @@ import {
 import { CommonModule } from '@angular/common';
 import {
   Visitor,
+  LeadCaptureTrace,
   LeadContactData,
   SaveContactDataRequest,
   VisitorPageHistoryItem,
+  readLeadCaptureTrace,
 } from '@guiders-frontend/shared/types';
 import { ContactDataForm } from '@guiders-frontend/contact-data-form';
 import { ActivityStatCard } from '@guiders-frontend/activity-stat-card';
@@ -141,6 +143,15 @@ export class VisitorDetailPanel {
     return contact.acceptedMarketing
       ? 'Política de privacidad y comunicaciones aceptadas'
       : 'Política de privacidad aceptada';
+  });
+
+  /**
+   * Lo que contestó el visitante en el asistente de captación. Es el contexto
+   * con el que llamarle: sin esto la ficha solo enseña nombre y teléfono.
+   */
+  readonly leadCapture = computed<LeadCaptureTrace | null>(() => {
+    const trace = readLeadCaptureTrace(this.contactData());
+    return trace && trace.answers.length > 0 ? trace : null;
   });
 
   readonly truncatedUrl = computed(() => {

@@ -263,6 +263,26 @@
     }
   </div>
 
+  <!-- Respuestas del asistente de captación -->
+  @if (leadCapture(); as capture) {
+    <div class="visitor-detail-panel__section">
+      <div class="visitor-detail-panel__section-header">
+        <h5 class="visitor-detail-panel__section-title">Respuestas del asistente</h5>
+        @if (capture.capturedWithoutAgent) {
+          <span class="visitor-detail-panel__capture-badge">Sin agente</span>
+        }
+      </div>
+      <dl class="visitor-detail-panel__capture-list">
+        @for (answer of capture.answers; track $index) {
+          <div class="visitor-detail-panel__capture-item">
+            <dt class="visitor-detail-panel__capture-prompt">{{ answer.prompt }}</dt>
+            <dd class="visitor-detail-panel__capture-answer">{{ answer.answer }}</dd>
+          </div>
+        }
+      </dl>
+    </div>
+  }
+
   <!-- Activity Stats -->
   <div class="visitor-detail-panel__section">
     <h5 class="visitor-detail-panel__section-title">Actividad</h5>

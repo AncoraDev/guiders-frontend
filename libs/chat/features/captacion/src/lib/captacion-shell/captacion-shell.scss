@@ -1,0 +1,40 @@
+@use '../../../../../../shared/design-tokens/src/lib/tokens-vars' as tokens;
+
+:host {
+  display: block;
+  height: 100%;
+  overflow: auto;
+}
+
+.captacion-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.captacion-tabs {
+  display: flex;
+  gap: tokens.$spacing-xs;
+  padding: tokens.$spacing-md tokens.$spacing-xl 0;
+  border-bottom: 1px solid tokens.$color-border-subtle;
+}
+
+.captacion-tab {
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  font-family: tokens.$font-family-ui;
+  font-size: tokens.$font-size-sm;
+  font-weight: tokens.$font-weight-medium;
+  color: tokens.$color-text-secondary;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+
+  &:hover {
+    color: tokens.$color-text-primary;
+  }
+
+  &--active {
+    color: tokens.$color-text-primary;
+    border-bottom-color: tokens.$color-accent;
+  }
+}

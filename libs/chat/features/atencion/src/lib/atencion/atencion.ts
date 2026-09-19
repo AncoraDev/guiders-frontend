@@ -918,12 +918,16 @@ export class Atencion implements OnInit, OnDestroy {
             this.applyContactDisplayName(visitorId, contact);
           }
 
-          // Deep-link ?chat=… (p. ej. click en notificación)
+          // Deep-link ?chat=… (notificación, o un lead captado desde /captacion).
+          // También busca en Pendientes: el chat de una captación sin agente no
+          // está asignado a nadie, así que abrirlo implica reclamarlo.
           const chatParam = this.route.snapshot.queryParamMap.get('chat');
           if (chatParam && !this.selectedChat()) {
-            const item = mine.find((i) => i.chatId === chatParam);
+            const mineItem = mine.find((i) => i.chatId === chatParam);
+            const item =
+              mineItem ?? pendingItems.find((i) => i.chatId === chatParam);
             if (item) {
-              this.activeCola.set('mios');
+              this.activeCola.set(mineItem ? 'mios' : 'pendientes');
               this.openChat(item, item.rawChat ?? null);
             }
           }
@@ -2033,11 +2037,19 @@ export class Atencion implements OnInit, OnDestroy {
     );
   }
 
-  /** Pendientes solo si el visitante ya escribió (los vacíos de site-entry van a En la web). */
+  /**
+   * Pendientes solo si el visitante ya pidió algo (los vacíos de site-entry van
+   * a En la web). Dejar sus datos en el asistente de captación cuenta como
+   * pedirlo, aunque el mensaje que lo resume lo firme el sistema.
+   */
   private pendingHasVisitorMessage(row: Record<string, unknown>): boolean {
     const lastMessage = row['lastMessage'] as
       | (Message & { senderType?: string; sender?: { type?: string } })
       | undefined;
+    if (lastMessage?.systemData?.action === 'lead_capture_submission') {
+      return true;
+    }
+
     const preview = String(
       row['lastMessagePreview'] ??
         row['lastMessageContent'] ??
@@ -2212,6 +2224,7 @@ export class Atencion implements OnInit, OnDestroy {
     if (action === 'contact_request') return 'Solicitud de datos';
     if (action === 'contact_submission') return 'Datos recibidos';
     if (action === 'contact_cancellation') return 'Formulario cancelado';
+    if (action === 'lead_capture_submission') return 'Datos de contacto recibidos';
     const content = String(message?.content ?? '').trim();
     if (/solicitud de datos/i.test(content)) return 'Solicitud de datos';
     if (/datos de contacto enviados/i.test(content)) return 'Datos recibidos';

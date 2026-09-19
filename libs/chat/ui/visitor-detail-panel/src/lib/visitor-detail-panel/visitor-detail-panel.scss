@@ -410,6 +410,43 @@
   }
 }
 
+// === RESPUESTAS DEL ASISTENTE DE CAPTACIÓN ===
+
+.visitor-detail-panel__capture-badge {
+  font-family: tokens.$font-family-ui;
+  font-size: tokens.$font-size-xs;
+  color: var(--color-text-tertiary);
+  padding: 2px tokens.$spacing-xs;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: tokens.$border-radius-sm;
+}
+
+.visitor-detail-panel__capture-list {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-sm;
+  margin: 0;
+}
+
+.visitor-detail-panel__capture-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.visitor-detail-panel__capture-prompt {
+  font-family: tokens.$font-family-ui;
+  font-size: tokens.$font-size-xs;
+  color: var(--color-text-tertiary);
+}
+
+.visitor-detail-panel__capture-answer {
+  font-family: tokens.$font-family-ui;
+  font-size: tokens.$font-size-sm;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
 // === EMPTY CONTACT STATE ===
 
 .visitor-detail-panel__empty-contact {

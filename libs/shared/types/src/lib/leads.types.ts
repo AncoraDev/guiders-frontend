@@ -29,6 +29,43 @@ export interface LeadContactData {
   updatedAt: string;
 }
 
+// Respuesta del guion tal como queda archivada en el lead: sin el `stepId` ni
+// el `field` de LeadCaptureAnswer, que solo importan mientras se recorre
+export interface LeadCaptureTraceAnswer {
+  prompt: string;
+  answer: string;
+}
+
+// Rastro que deja el asistente de captación dentro de `additionalData`
+export interface LeadCaptureTrace {
+  flowId?: string;
+  /** El lead se recogió con el guion, sin ningún comercial conectado */
+  capturedWithoutAgent?: boolean;
+  answers: LeadCaptureTraceAnswer[];
+}
+
+/**
+ * Lee el rastro del asistente de captación. Devuelve null cuando el lead no
+ * vino del guion, para poder distinguirlo de uno recogido por un comercial.
+ */
+export function readLeadCaptureTrace(
+  contact: Pick<LeadContactData, 'additionalData'> | null | undefined
+): LeadCaptureTrace | null {
+  const raw = contact?.additionalData?.['leadCapture'];
+  if (!raw || typeof raw !== 'object') return null;
+
+  const trace = raw as Partial<LeadCaptureTrace>;
+  const answers = Array.isArray(trace.answers) ? trace.answers : [];
+  return {
+    flowId: trace.flowId,
+    capturedWithoutAgent: trace.capturedWithoutAgent === true,
+    answers: answers.filter(
+      (answer): answer is LeadCaptureTraceAnswer =>
+        !!answer && typeof answer.answer === 'string'
+    ),
+  };
+}
+
 // Request para guardar datos de contacto
 // NOTA: visitorId va en la URL del endpoint, NO en el body
 export interface SaveContactDataRequest {

@@ -1,0 +1,103 @@
+<div class="leads-page" data-testid="captacion-leads">
+  <header class="leads-header">
+    <div>
+      <h2 class="leads-title">Leads captados</h2>
+      <p class="leads-subtitle">
+        Datos que han dejado los visitantes, con lo que contestaron en el guion.
+        Los marcados como «sin agente» los recogió el asistente cuando no había
+        nadie conectado.
+      </p>
+    </div>
+  </header>
+
+  <div class="leads-filters">
+    <input
+      type="search"
+      class="leads-search"
+      placeholder="Buscar por nombre, email, teléfono o respuesta"
+      aria-label="Buscar leads"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+    <label class="leads-checkbox">
+      <input
+        type="checkbox"
+        [checked]="onlyAssistant()"
+        (change)="onlyAssistant.set($any($event.target).checked)"
+      />
+      <span>Solo captados sin agente ({{ assistantCount() }})</span>
+    </label>
+  </div>
+
+  @if (loading()) {
+    <p class="leads-hint">Cargando leads…</p>
+  } @else if (error()) {
+    <p class="leads-hint" role="alert">{{ error() }}</p>
+  } @else if (visibleRows().length === 0) {
+    <p class="leads-hint">
+      No hay leads que coincidan. Cuando un visitante complete el guion o un
+      comercial guarde sus datos, aparecerá aquí.
+    </p>
+  } @else {
+    <ul class="leads-list">
+      @for (row of visibleRows(); track row.contact.id) {
+        <li class="leads-item">
+          <button
+            type="button"
+            class="leads-row"
+            [attr.aria-expanded]="expandedId() === row.contact.id"
+            (click)="toggleRow(row)"
+          >
+            <span class="leads-row__name">
+              {{ row.displayName }}
+              @if (row.fromAssistant) {
+                <span class="leads-badge">Sin agente</span>
+              }
+            </span>
+            <span class="leads-row__contact">
+              @if (row.contact.telefono) {
+                <span>{{ row.contact.telefono }}</span>
+              }
+              @if (row.contact.email) {
+                <span>{{ row.contact.email }}</span>
+              }
+              @if (row.contact.poblacion) {
+                <span>{{ row.contact.poblacion }}</span>
+              }
+            </span>
+            <span class="leads-row__date">
+              {{ row.contact.extractedAt | date: 'dd/MM/yyyy HH:mm' }}
+            </span>
+          </button>
+
+          @if (expandedId() === row.contact.id) {
+            <div class="leads-detail">
+              @if (row.capture?.answers?.length) {
+                <dl class="leads-answers">
+                  @for (answer of row.capture?.answers; track $index) {
+                    <div class="leads-answer">
+                      <dt>{{ answer.prompt }}</dt>
+                      <dd>{{ answer.answer }}</dd>
+                    </div>
+                  }
+                </dl>
+              } @else {
+                <p class="leads-hint">Este lead no pasó por el guion.</p>
+              }
+
+              @if (row.chatId) {
+                <a
+                  class="leads-chat-link"
+                  [routerLink]="['/atencion']"
+                  [queryParams]="{ chat: row.chatId }"
+                >
+                  Abrir el chat
+                </a>
+              }
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>
