@@ -19,6 +19,24 @@ export interface ContactFormLegalSettings {
   marketingCheckboxLabel: string;
 }
 
+export type WidgetPositionPreset =
+  | 'bottom-right'
+  | 'bottom-left'
+  | 'top-right'
+  | 'top-left';
+
+export interface WidgetConfigSettings {
+  chatEnabled: boolean;
+  autoOpenChatOnMessage: boolean;
+  colorScheme: 'system' | 'light' | 'dark';
+  theme: 'default' | 'carbon';
+  position: {
+    desktop: WidgetPositionPreset;
+    mobileEnabled: boolean;
+    mobile: WidgetPositionPreset;
+  };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -242,6 +260,40 @@ export class ProfileService {
             'No se pudieron guardar los textos del formulario.';
           return throwError(() => new Error(message));
         })
+      );
+  }
+
+  getWidgetConfig(): Observable<WidgetConfigSettings> {
+    return this.http
+      .get<WidgetConfigSettings>(`${this.baseUrl}/me/company/widget-config`, {
+        withCredentials: true,
+      })
+      .pipe(
+        catchError((error) => {
+          const message =
+            error.error?.message ||
+            'No se pudo cargar la configuración del chat web.';
+          return throwError(() => new Error(message));
+        }),
+      );
+  }
+
+  updateWidgetConfig(
+    config: WidgetConfigSettings,
+  ): Observable<WidgetConfigSettings> {
+    return this.http
+      .put<WidgetConfigSettings>(
+        `${this.baseUrl}/me/company/widget-config`,
+        config,
+        { withCredentials: true },
+      )
+      .pipe(
+        catchError((error) => {
+          const message =
+            error.error?.message ||
+            'No se pudo guardar la configuración del chat web.';
+          return throwError(() => new Error(message));
+        }),
       );
   }
 }

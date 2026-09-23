@@ -72,6 +72,12 @@ Las features tienen además su propio `libs/**/AGENTS.md` (ver [AGENTS.md](../AG
 
 ---
 
+## Configuración (Console)
+
+- Chat web del pixel: `/settings/widget` (solo admin). API `GET/PUT /me/company/widget-config`. El plugin de WP no configura el widget.
+
+---
+
 ## Ops / servidor nuevo
 
 - [Frontend en un servidor nuevo](./ops/new-server/README.md) — secrets `STAGING_*`, plantillas `environment.prod.ts`

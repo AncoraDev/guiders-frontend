@@ -1,0 +1,135 @@
+<lib-settings-section-header
+  title="Chat web"
+  description="Cómo se ve y se comporta el widget en la web del cliente. El plugin de WordPress solo instala el pixel.">
+</lib-settings-section-header>
+
+@if (!isAdmin) {
+  <p class="widget-settings__denied">
+    Solo el administrador del concesionario puede cambiar el widget.
+  </p>
+} @else if (isLoading()) {
+  <p class="widget-settings__hint">Cargando…</p>
+} @else {
+  <lib-settings-row
+    label="Habilitar chat"
+    description="Si lo apagas, el pixel sigue midiendo visitas pero no muestra el widget.">
+    <label class="widget-settings__check">
+      <input
+        type="checkbox"
+        [ngModel]="chatEnabled()"
+        (ngModelChange)="chatEnabled.set($event)"
+        [disabled]="isSaving()"
+      />
+      Mostrar el chat en la web
+    </label>
+  </lib-settings-row>
+
+  <lib-settings-row
+    label="Auto-abrir al recibir mensaje"
+    description="Abre el widget cuando un comercial escribe y el visitante lo tiene cerrado.">
+    <label class="widget-settings__check">
+      <input
+        type="checkbox"
+        [ngModel]="autoOpenChatOnMessage()"
+        (ngModelChange)="autoOpenChatOnMessage.set($event)"
+        [disabled]="isSaving()"
+      />
+      Abrir el chat automáticamente
+    </label>
+  </lib-settings-row>
+
+  <lib-settings-row
+    label="Modo de color"
+    description="Claro, oscuro o el del sistema del visitante.">
+    <select
+      class="widget-settings__select"
+      [ngModel]="colorScheme()"
+      (ngModelChange)="colorScheme.set($event)"
+      [disabled]="isSaving()">
+      <option value="system">Sistema</option>
+      <option value="light">Claro</option>
+      <option value="dark">Oscuro</option>
+    </select>
+  </lib-settings-row>
+
+  <lib-settings-row
+    label="Tema visual"
+    description="Estilo del widget.">
+    <select
+      class="widget-settings__select"
+      [ngModel]="theme()"
+      (ngModelChange)="theme.set($event)"
+      [disabled]="isSaving()">
+      <option value="default">Por defecto</option>
+      <option value="carbon">Carbon</option>
+    </select>
+  </lib-settings-row>
+
+  <lib-settings-row
+    [stacked]="true"
+    label="Posición en escritorio"
+    description="Esquina donde aparece el botón del chat.">
+    <div class="widget-settings__presets">
+      @for (option of positionOptions; track option.id) {
+        <label class="widget-settings__preset">
+          <input
+            type="radio"
+            name="desktop-position"
+            [value]="option.id"
+            [ngModel]="desktopPosition()"
+            (ngModelChange)="desktopPosition.set($event)"
+            [disabled]="isSaving()"
+          />
+          {{ option.label }}
+        </label>
+      }
+    </div>
+  </lib-settings-row>
+
+  <lib-settings-row
+    label="Posición distinta en móvil"
+    description="Si no, el móvil usa la misma esquina que el escritorio.">
+    <label class="widget-settings__check">
+      <input
+        type="checkbox"
+        [ngModel]="mobileEnabled()"
+        (ngModelChange)="mobileEnabled.set($event)"
+        [disabled]="isSaving()"
+      />
+      Configurar móvil aparte
+    </label>
+  </lib-settings-row>
+
+  @if (mobileEnabled()) {
+    <lib-settings-row
+      [stacked]="true"
+      label="Posición en móvil"
+      description="Esquina del botón en pantallas pequeñas.">
+      <div class="widget-settings__presets">
+        @for (option of positionOptions; track option.id) {
+          <label class="widget-settings__preset">
+            <input
+              type="radio"
+              name="mobile-position"
+              [value]="option.id"
+              [ngModel]="mobilePosition()"
+              (ngModelChange)="mobilePosition.set($event)"
+              [disabled]="isSaving()"
+            />
+            {{ option.label }}
+          </label>
+        }
+      </div>
+    </lib-settings-row>
+  }
+
+  <div class="widget-settings__actions">
+    <button
+      type="button"
+      class="widget-settings__save"
+      [disabled]="isSaving() || !isDirty()"
+      (click)="save()">
+      {{ isSaving() ? 'Guardando...' : 'Guardar' }}
+    </button>
+  </div>
+}

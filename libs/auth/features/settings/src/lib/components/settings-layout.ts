@@ -37,6 +37,11 @@ export class SettingsLayoutComponent {
     ];
     if (this.userService.hasRole('admin')) {
       workspaceItems.push({
+        id: 'widget',
+        label: 'Chat web',
+        route: 'widget',
+      });
+      workspaceItems.push({
         id: 'contact-form',
         label: 'Formulario de contacto',
         route: 'contact-form',
