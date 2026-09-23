@@ -1,0 +1,36 @@
+<lib-settings-section-header
+  title="Avisos de captación"
+  description="Cuando un visitante termina el asistente, además de guardar el lead se puede enviar un resumen por correo.">
+</lib-settings-section-header>
+
+@if (!isAdmin) {
+  <p class="lead-capture-notify-settings__denied">
+    Solo el administrador del concesionario puede cambiar este email.
+  </p>
+} @else if (isLoading()) {
+  <p class="lead-capture-notify-settings__hint">Cargando…</p>
+} @else {
+  <lib-settings-row
+    [stacked]="true"
+    label="Email de comunicaciones"
+    description="Déjalo vacío si no quieres recibir el aviso. El lead se guarda igual.">
+    <input
+      type="email"
+      class="lead-capture-notify-settings__input"
+      placeholder="avisos@concesionario.com"
+      [ngModel]="email()"
+      (ngModelChange)="email.set($event)"
+      [disabled]="isSaving()"
+    />
+  </lib-settings-row>
+
+  <div class="lead-capture-notify-settings__actions">
+    <button
+      type="button"
+      class="lead-capture-notify-settings__save"
+      [disabled]="isSaving() || !isDirty()"
+      (click)="save()">
+      {{ isSaving() ? 'Guardando...' : 'Guardar' }}
+    </button>
+  </div>
+}

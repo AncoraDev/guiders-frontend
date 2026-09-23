@@ -13,6 +13,10 @@ export interface UploadAvatarResponse {
   message: string;
 }
 
+export interface LeadCaptureNotifySettings {
+  email: string;
+}
+
 export interface ContactFormLegalSettings {
   privacyPolicyUrl: string;
   privacyCheckboxLabel: string;
@@ -260,6 +264,41 @@ export class ProfileService {
             'No se pudieron guardar los textos del formulario.';
           return throwError(() => new Error(message));
         })
+      );
+  }
+
+  getLeadCaptureNotify(): Observable<LeadCaptureNotifySettings> {
+    return this.http
+      .get<LeadCaptureNotifySettings>(
+        `${this.baseUrl}/me/company/lead-capture-notify`,
+        { withCredentials: true },
+      )
+      .pipe(
+        catchError((error) => {
+          const message =
+            error.error?.message ||
+            'No se pudo cargar el email de avisos de captación.';
+          return throwError(() => new Error(message));
+        }),
+      );
+  }
+
+  updateLeadCaptureNotify(
+    settings: LeadCaptureNotifySettings,
+  ): Observable<LeadCaptureNotifySettings> {
+    return this.http
+      .put<LeadCaptureNotifySettings>(
+        `${this.baseUrl}/me/company/lead-capture-notify`,
+        settings,
+        { withCredentials: true },
+      )
+      .pipe(
+        catchError((error) => {
+          const message =
+            error.error?.message ||
+            'No se pudo guardar el email de avisos de captación.';
+          return throwError(() => new Error(message));
+        }),
       );
   }
 

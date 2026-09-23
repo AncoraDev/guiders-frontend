@@ -46,6 +46,14 @@ export const settingsRoutes: Route[] = [
         title: 'Formulario de contacto · Configuración',
       },
       {
+        path: 'lead-capture-notify',
+        loadComponent: () =>
+          import('./sections/lead-capture-notify-settings').then(
+            (m) => m.LeadCaptureNotifySettingsComponent,
+          ),
+        title: 'Avisos de captación · Configuración',
+      },
+      {
         path: 'privacy',
         loadComponent: () => import('./sections/privacy-settings').then(m => m.PrivacySettingsComponent),
         title: 'Privacidad · Configuración',

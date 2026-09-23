@@ -46,6 +46,11 @@ export class SettingsLayoutComponent {
         label: 'Formulario de contacto',
         route: 'contact-form',
       });
+      workspaceItems.push({
+        id: 'lead-capture-notify',
+        label: 'Avisos de captación',
+        route: 'lead-capture-notify',
+      });
     }
     return [
       {
