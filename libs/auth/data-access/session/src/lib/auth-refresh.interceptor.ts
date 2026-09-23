@@ -23,6 +23,13 @@ export const authRefreshInterceptor: HttpInterceptorFn = (req, next) => {
       // Solo 401 = sesión inválida/expirada.
       // 403 suele ser autorización (roles) y no se arregla con refresh.
       if (error.status === 401) {
+        if (
+          req.url.includes('/leads/admin/leadcars') ||
+          req.url.includes('/leads/admin/test-connection') ||
+          /\/leads\/admin\/config\/[^/]+\/test/.test(req.url)
+        ) {
+          return throwError(() => error);
+        }
         return handleAuthError(req, next, authRefreshService, error);
       }
 

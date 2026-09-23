@@ -55,23 +55,11 @@
   </div>
   }
 
-  <!-- Test Result -->
-  @if (testResult()) {
-  <div
-    class="alert"
-    [class.alert--success]="testResult()?.success"
-    [class.alert--error]="!testResult()?.success"
-  >
-    <span class="alert__icon">{{ testResult()?.success ? '✓' : '✗' }}</span>
-    <span class="alert__message">{{ testResult()?.message }}</span>
-  </div>
-  }
-
   <!-- LeadCars Data Load Error -->
   @if (leadCarsDataError()) {
   <div class="alert alert--error">
     <span class="alert__icon">⚠️</span>
-    <span class="alert__message">{{ leadCarsDataError() }}</span>
+    <pre class="alert__message alert__message--pre">{{ leadCarsDataError() }}</pre>
   </div>
   }
 
@@ -180,12 +168,64 @@
         </p>
       </div>
 
+      <div class="connection-test">
+        <button
+          type="button"
+          class="btn btn--secondary"
+          (click)="onTestConnection()"
+          [disabled]="testing()"
+        >
+          @if (testing()) {
+          <span class="btn-spinner"></span>
+          Probando conexión… } @else { Probar conexión }
+        </button>
+        <p class="form-hint">
+          Debe aparecer debajo el resultado (ok o el error exacto de LeadCars).
+        </p>
+        @if (testing() || testResult()) {
+        <div
+          id="leadcars-connection-result"
+          class="connection-result"
+          [class.connection-result--ok]="testResult()?.success"
+          [class.connection-result--ko]="!!testResult() && !testResult()?.success"
+          [class.connection-result--pending]="testing()"
+        >
+          @if (testing() && !testResult()) {
+          <div class="connection-result__header">
+            <span class="btn-spinner"></span>
+            <strong>Llamando a LeadCars…</strong>
+          </div>
+          } @else if (testResult()) {
+          <div class="connection-result__header">
+            <span class="connection-result__icon">{{
+              testResult()?.success ? '✓' : '✗'
+            }}</span>
+            <strong>{{
+              testResult()?.success
+                ? 'Conexión correcta'
+                : 'Error de conexión con LeadCars'
+            }}</strong>
+          </div>
+          <pre class="connection-result__body">{{ testResult()?.message }}</pre>
+          @if (!testResult()?.success) {
+          <button
+            type="button"
+            class="btn btn--secondary"
+            (click)="copyTestError()"
+          >
+            {{ testErrorCopied() ? 'Copiado' : 'Copiar error para el proveedor' }}
+          </button>
+          } }
+        </div>
+        }
+      </div>
+
       <!-- Concesionario — obligatorio -->
       <div class="form-group">
         <label for="concesionarioId"
           >Concesionario <span class="field-required">*</span></label
         >
-        @if (concesionarios().length > 0) {
+        @if (concesionarioOptions().length > 0) {
         <select
           id="concesionarioId"
           formControlName="concesionarioId"
@@ -193,10 +233,13 @@
           [class.form-control--error]="form.get('concesionarioId')?.invalid && form.get('concesionarioId')?.touched"
         >
           <option [ngValue]="null">-- Seleccionar concesionario --</option>
-          @for (conc of concesionarios(); track conc.id) {
+          @for (conc of concesionarioOptions(); track conc.id) {
           <option [ngValue]="conc.id">{{ conc.nombre || 'Concesionario #' + conc.id }}</option>
           }
         </select>
+        @if (loadingLeadCarsData()) {
+        <p class="form-hint">Cargando lista de concesionarios desde LeadCars…</p>
+        }
         } @else {
         <input
           type="number"
@@ -232,10 +275,10 @@
             Sede
             <span class="field-optional">(opcional)</span>
           </label>
-          @if (sedes().length > 0) {
+          @if (sedeOptions().length > 0) {
           <select id="sedeId" formControlName="sedeId" class="form-control">
             <option [ngValue]="null">-- Sin sede específica --</option>
-            @for (sede of sedes(); track sede.id) {
+            @for (sede of sedeOptions(); track sede.id) {
             <option [ngValue]="sede.id">{{ sede.nombre || 'Sede #' + sede.id }}</option>
             }
           </select>
@@ -268,14 +311,14 @@
             Campaña
             <span class="field-optional">(opcional)</span>
           </label>
-          @if (campanas().length > 0) {
+          @if (campanaOptions().length > 0) {
           <select
             id="campanaId"
             formControlName="campanaId"
             class="form-control"
           >
             <option [ngValue]="null">-- Sin campaña específica --</option>
-            @for (camp of campanas(); track camp.id) {
+            @for (camp of campanaOptions(); track camp.id) {
             <option [ngValue]="camp.id">
               {{ camp.nombre || 'Campaña #' + camp.id }}{{ camp.codigo ? ' (' + camp.codigo + ')' : '' }}
             </option>
@@ -304,17 +347,20 @@
 
       <div class="form-group">
         <label for="tipoLeadDefault">Tipo de Lead por Defecto</label>
-        @if (tiposLead().length > 0) {
+        @if (tipoLeadOptions().length > 0) {
         <select
           id="tipoLeadDefault"
           formControlName="tipoLeadDefault"
           class="form-control"
         >
           <option [ngValue]="null">-- Sin tipo específico --</option>
-          @for (tipo of tiposLead(); track tipo.id) {
+          @for (tipo of tipoLeadOptions(); track tipo.id) {
           <option [ngValue]="tipo.id">{{ tipo.nombre || 'Tipo #' + tipo.id }}</option>
           }
         </select>
+        @if (loadingLeadCarsData()) {
+        <p class="form-hint">Cargando tipos de lead desde LeadCars…</p>
+        }
         } @else {
         <input
           type="number"
@@ -369,6 +415,142 @@
         Guardando... } @else { {{ hasConfig() ? 'Guardar cambios' : 'Crear
         configuración' }} }
       </button>
+    </div>
+  </form>
+
+  <form
+    [formGroup]="testLeadForm"
+    (ngSubmit)="onSendTestLead()"
+    class="config-form test-lead-form"
+  >
+    <div class="form-section">
+      <h3>Enviar lead de prueba</h3>
+      <p class="section-description">
+        Crea un lead en LeadCars con los datos que indiques, usando el
+        concesionario y tipo de lead de la configuración. Luego puedes
+        contrastar con el concesionario si ha llegado.
+      </p>
+      @if (form.get('useSandbox')?.value) {
+      <p class="test-lead-warning">
+        El interruptor de Sandbox está activo: el lead irá a
+        <strong>apisandbox.leadcars.es</strong>, no al LeadCars real del
+        concesionario. Sandbox acepta altas si el token es válido para ese
+        entorno (el de producción suele no servir).
+      </p>
+      } @else {
+      <p class="test-lead-warning test-lead-warning--prod">
+        Se enviará a <strong>producción</strong> (api.leadcars.es). El
+        concesionario debería verlo en su LeadCars real.
+      </p>
+      }
+
+      <div class="form-row form-row--optional-fields">
+        <div class="form-group">
+          <label for="testLeadNombre"
+            >Nombre <span class="field-required">*</span></label
+          >
+          <input
+            id="testLeadNombre"
+            type="text"
+            formControlName="nombre"
+            class="form-control"
+            [class.form-control--error]="testLeadForm.get('nombre')?.invalid && testLeadForm.get('nombre')?.touched"
+          />
+        </div>
+        <div class="form-group">
+          <label for="testLeadApellidos">Apellidos</label>
+          <input
+            id="testLeadApellidos"
+            type="text"
+            formControlName="apellidos"
+            class="form-control"
+          />
+        </div>
+      </div>
+
+      <div class="form-row form-row--optional-fields">
+        <div class="form-group">
+          <label for="testLeadEmail">Email</label>
+          <input
+            id="testLeadEmail"
+            type="email"
+            formControlName="email"
+            class="form-control"
+            [class.form-control--error]="testLeadForm.get('email')?.invalid && testLeadForm.get('email')?.touched"
+          />
+        </div>
+        <div class="form-group">
+          <label for="testLeadTelefono">Teléfono</label>
+          <input
+            id="testLeadTelefono"
+            type="tel"
+            formControlName="telefono"
+            class="form-control"
+          />
+        </div>
+      </div>
+      <p class="form-hint">Hace falta email o teléfono (al menos uno).</p>
+
+      <div class="form-group">
+        <label for="testLeadProvincia">Provincia</label>
+        <input
+          id="testLeadProvincia"
+          type="text"
+          formControlName="provincia"
+          class="form-control"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="testLeadComentario">Comentario</label>
+        <textarea
+          id="testLeadComentario"
+          formControlName="comentario"
+          class="form-control"
+          rows="3"
+        ></textarea>
+        <p class="form-hint">
+          El concesionario verá este texto en LeadCars. Concesionario y tipo se
+          toman de la configuración de arriba.
+        </p>
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn--secondary"
+        [disabled]="sendingTestLead() || testLeadForm.invalid"
+      >
+        @if (sendingTestLead()) {
+        <span class="btn-spinner"></span>
+        Enviando a LeadCars… } @else { Enviar lead de prueba }
+      </button>
+
+      @if (testLeadResult()) {
+      <div
+        class="connection-result"
+        [class.connection-result--ok]="testLeadResult()?.success"
+        [class.connection-result--ko]="!!testLeadResult() && !testLeadResult()?.success"
+      >
+        <div class="connection-result__header">
+          <span class="connection-result__icon">{{
+            testLeadResult()?.success ? '✓' : '✗'
+          }}</span>
+          <strong>{{
+            testLeadResult()?.success
+              ? 'Lead enviado a LeadCars'
+              : 'No se pudo enviar el lead'
+          }}</strong>
+        </div>
+        <pre class="connection-result__body">{{ testLeadResult()?.message }}</pre>
+        <button
+          type="button"
+          class="btn btn--secondary"
+          (click)="copyTestLeadResult()"
+        >
+          {{ testLeadErrorCopied() ? 'Copiado' : 'Copiar resultado' }}
+        </button>
+      </div>
+      }
     </div>
   </form>
   }

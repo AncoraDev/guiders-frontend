@@ -12,6 +12,14 @@ import { redirectToBffLogin } from './redirect-to-login';
  */
 let redirectingToLogin = false;
 
+function isExternalProviderRequest(url: string): boolean {
+  return (
+    url.includes('/leads/admin/leadcars') ||
+    url.includes('/leads/admin/test-connection') ||
+    /\/leads\/admin\/config\/[^/]+\/test/.test(url)
+  );
+}
+
 /**
  * Global HTTP error boundary interceptor.
  *
@@ -41,7 +49,7 @@ export const globalErrorInterceptor: HttpInterceptorFn = (req, next) => {
         return throwError(() => error);
       }
 
-      if (error.status === 401) {
+      if (error.status === 401 && !isExternalProviderRequest(req.url)) {
         if (!redirectingToLogin) {
           redirectingToLogin = true;
           console.warn(

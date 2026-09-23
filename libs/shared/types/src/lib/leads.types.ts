@@ -182,6 +182,12 @@ export interface LeadCarsConfig {
 
   // Tipo de lead por defecto (ID numérico de GET /tipos)
   tipoLeadDefault?: number;
+
+  /** Etiquetas semánticas para mostrar en el formulario (el ID sigue siendo la fuente de verdad). */
+  concesionarioNombre?: string;
+  sedeNombre?: string;
+  campanaNombre?: string;
+  tipoLeadNombre?: string;
 }
 
 // Request para crear/actualizar configuración LeadCars
@@ -227,10 +233,43 @@ export interface LeadCarsSyncRecord {
   updatedAt: string;
 }
 
+// Detalle técnico de un test de conexión con LeadCars
+export interface TestConnectionDetails {
+  httpStatus?: number;
+  endpoint?: string;
+  environment?: 'sandbox' | 'production';
+  providerMessage?: string;
+  providerBody?: string;
+}
+
 // Respuesta de test de conexión
 export interface TestConnectionResponse {
   success: boolean;
   message: string;
+  details?: TestConnectionDetails;
+}
+
+export interface SendTestLeadRequest {
+  nombre: string;
+  apellidos?: string;
+  email?: string;
+  telefono?: string;
+  provincia?: string;
+  comentario?: string;
+  clienteToken?: string;
+  useSandbox?: boolean;
+  concesionarioId?: number;
+  sedeId?: number;
+  campanaCode?: string;
+  tipoLeadDefault?: number;
+}
+
+export interface SendTestLeadResponse {
+  success: boolean;
+  message: string;
+  environment?: 'sandbox' | 'production';
+  leadId?: number;
+  referencia?: string;
 }
 
 // Valores por defecto para LeadCars

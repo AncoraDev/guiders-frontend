@@ -1,12 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, BehaviorSubject, catchError, of, tap, throwError } from 'rxjs';
+import { Observable, BehaviorSubject, catchError, of, tap, throwError, map } from 'rxjs';
 import { ENVIRONMENT_TOKEN } from '@guiders-frontend/auth/data-access/session';
 import {
   LeadCarsCompanyConfig,
   LeadCarsSyncRecord,
   CreateLeadCarsConfigRequest,
   TestConnectionResponse,
+  SendTestLeadRequest,
+  SendTestLeadResponse,
   LeadCarsConcesionario,
   LeadCarsSede,
   LeadCarsCampana,
@@ -177,26 +179,63 @@ export class LeadsService {
    * POST /api/v1/leads/admin/config/:configId/test
    */
   testConnection(configId: string): Observable<TestConnectionResponse> {
-    this.savingSubject.next(true);
-    this.errorSubject.next(null);
-
     return this.http
       .post<TestConnectionResponse>(
         `${this.baseUrl}/config/${configId}/test`,
         {},
         this.getHttpOptions()
+      );
+  }
+
+  /**
+   * Probar conexión con el token del formulario (aún sin config guardada).
+   * POST /api/v1/leads/admin/test-connection
+   */
+  testConnectionWithCredentials(params: {
+    clienteToken: string;
+    useSandbox?: boolean;
+  }): Observable<TestConnectionResponse> {
+    return this.http
+      .post<{
+        success: boolean;
+        error?: string;
+        validationErrors?: string[];
+      }>(
+        `${this.baseUrl}/test-connection`,
+        {
+          crmType: 'leadcars',
+          config: {
+            clienteToken: params.clienteToken,
+            useSandbox: !!params.useSandbox,
+            concesionarioId: 1,
+            tipoLeadDefault: 1,
+          },
+        },
+        this.getHttpOptions()
       )
       .pipe(
-        tap(() => {
-          this.savingSubject.next(false);
-        }),
-        catchError((error) => {
-          console.error('Error al probar conexion CRM:', error);
-          this.errorSubject.next('Error al probar la conexion');
-          this.savingSubject.next(false);
-          throw error;
-        })
+        map((response) => ({
+          success: response.success,
+          message:
+            response.error ||
+            response.validationErrors?.join('; ') ||
+            (response.success
+              ? 'Conexión con LeadCars establecida correctamente'
+              : 'No se pudo establecer conexión con LeadCars'),
+        }))
       );
+  }
+
+  /**
+   * Enviar un lead de prueba a LeadCars.
+   * POST /api/v1/leads/admin/leadcars/test-lead
+   */
+  sendTestLead(payload: SendTestLeadRequest): Observable<SendTestLeadResponse> {
+    return this.http.post<SendTestLeadResponse>(
+      `${this.baseUrl}/leadcars/test-lead`,
+      payload,
+      this.getHttpOptions(),
+    );
   }
 
   /**
