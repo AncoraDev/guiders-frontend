@@ -1,5 +1,6 @@
-// Servidor nuevo: copia docs/ops/new-server/environment.admin.prod.example.ts
-// y sustituye __DOMAIN__ antes del primer build de producción.
+// Copia a apps/admin/src/environments/environment.prod.ts
+// Sustituye __DOMAIN__ antes del primer build de prod.
+
 interface Environment {
   production: boolean;
   auth: {
@@ -18,14 +19,14 @@ interface Environment {
 export const environment: Environment = {
   production: true,
   auth: {
-    authority: 'https://guiders-auth.ancoradual.com/realms/guiders',
+    authority: 'https://auth.__DOMAIN__/realms/guiders',
     clientId: 'admin',
     scope: 'openid profile email',
-    secureRoutes: ['https://guiders-api.ancoradual.com/api'],
+    secureRoutes: ['https://api.__DOMAIN__/api'],
   },
   api: {
-    baseUrl: 'https://guiders-api.ancoradual.com/api',
+    baseUrl: 'https://api.__DOMAIN__/api',
   },
-  consoleUrl: 'https://guiders-console.ancoradual.com',
+  consoleUrl: 'https://console.__DOMAIN__',
   version: '0.0.0-local',
 };

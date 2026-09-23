@@ -199,6 +199,10 @@ jobs:
         run: |
           set -e
           if [ -z "$VPN_TARGET_HOST" ]; then echo "❌ Falta STAGING_SSH_HOST"; exit 1; fi
+          if [ -z "$WG_PK" ]; then
+            echo "Sin WireGuard: SSH directo a STAGING_SSH_HOST."
+            exit 0
+          fi
           VPN_SERVER_IP=""
           for server_ip in 10.0.0.1 10.0.0.254; do
             if timeout 3 ping -c 1 -W 2 "$server_ip" >/dev/null 2>&1; then VPN_SERVER_IP="$server_ip"; break; fi

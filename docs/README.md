@@ -72,6 +72,13 @@ Las features tienen además su propio `libs/**/AGENTS.md` (ver [AGENTS.md](../AG
 
 ---
 
+## Ops / servidor nuevo
+
+- [Frontend en un servidor nuevo](./ops/new-server/README.md) — secrets `STAGING_*`, plantillas `environment.prod.ts`
+- Mapa DNS/nginx y bootstrap del VPS: `guiders-backend/docs/ops/new-server/`
+
+---
+
 ## Desarrollo, migraciones y reports
 
 Carpeta [`development/`](./development/) — staging deploy, migration/implementation summaries, audits, verification.
