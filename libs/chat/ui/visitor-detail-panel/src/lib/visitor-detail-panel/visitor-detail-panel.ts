@@ -154,6 +154,12 @@ export class VisitorDetailPanel {
     return trace && trace.answers.length > 0 ? trace : null;
   });
 
+  /** Comentario que dejó el visitante en el formulario del asistente. */
+  readonly captureComment = computed<string | null>(() => {
+    const value = this.contactData()?.additionalData?.['comentario'];
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+  });
+
   readonly truncatedUrl = computed(() => {
     const url = this.visitor().currentUrl;
     if (!url) return null;

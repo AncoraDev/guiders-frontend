@@ -14,6 +14,7 @@ export interface ContactRequestPayload {
   email?: string;
   telefono?: string;
   poblacion?: string;
+  comentarios?: string;
 }
 
 export interface ContactFormLegalSnapshot {

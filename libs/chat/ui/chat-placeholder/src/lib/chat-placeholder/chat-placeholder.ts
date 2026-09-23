@@ -478,9 +478,13 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
     const data = message.systemData?.data;
     if (!data) return [];
     const name = [data.nombre, data.apellidos].filter(Boolean).join(' ').trim();
-    return [name, data.email, data.telefono, data.poblacion].filter(
-      (value): value is string => !!value && value.length > 0,
-    );
+    return [
+      name,
+      data.email,
+      data.telefono,
+      data.poblacion,
+      data.comentarios,
+    ].filter((value): value is string => !!value && value.length > 0);
   }
 
   leadCaptureConsentLabel(message: Message): string {
