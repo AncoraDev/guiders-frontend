@@ -199,6 +199,55 @@ export class Atencion implements OnInit, OnDestroy {
     });
   };
 
+  private readonly onVisitorPageChanged = (data: unknown): void => {
+    const event = data as {
+      visitorId?: string;
+      currentPage?: string;
+      timestamp?: string;
+    };
+    const visitorId = event.visitorId;
+    const url = event.currentPage?.trim();
+    if (!visitorId || !url) return;
+    if (this.selectedChat()?.visitorId !== visitorId) return;
+
+    this.ngZone.run(() => {
+      const occurredAt = event.timestamp || new Date().toISOString();
+      const current = this.pageHistory();
+      if (
+        current.some(
+          (page) => page.url === url && page.occurredAt === occurredAt,
+        )
+      ) {
+        return;
+      }
+      if (current[0]?.url === url) {
+        return;
+      }
+
+      let path = '/';
+      try {
+        path = url.startsWith('http') ? new URL(url).pathname : url.split('?')[0];
+      } catch {
+        path = url;
+      }
+
+      const nextTotal = this.pageHistoryTotal() + 1;
+      const item: VisitorPageHistoryItem = {
+        url,
+        path,
+        occurredAt,
+        index: nextTotal,
+      };
+      this.pageHistory.set([item, ...current]);
+      this.pageHistoryTotal.set(nextTotal);
+
+      const profile = this.visitorProfile();
+      if (profile) {
+        this.visitorProfile.set({ ...profile, currentUrl: url });
+      }
+    });
+  };
+
   readonly activeCola = signal<AtencionCola>('mios');
   /** Desconectado = solo lectura: no atender, no saludar, no escribir. */
   readonly isPresenceConnected = signal(false);
@@ -552,6 +601,10 @@ export class Atencion implements OnInit, OnDestroy {
     this.chatService.webSocketService.off(
       'chat:commercial-assigned',
       this.onCommercialAssigned,
+    );
+    this.chatService.webSocketService.off(
+      'visitor:page-changed',
+      this.onVisitorPageChanged,
     );
     this.unreadMessagesService.setActiveChat(null);
     this.chatService.selectChat(null);
@@ -1326,6 +1379,11 @@ export class Atencion implements OnInit, OnDestroy {
     this.chatService.webSocketService.on(
       'chat:commercial-assigned',
       this.onCommercialAssigned,
+    );
+
+    this.chatService.webSocketService.on(
+      'visitor:page-changed',
+      this.onVisitorPageChanged,
     );
   }
 
