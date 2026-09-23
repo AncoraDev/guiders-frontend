@@ -5,7 +5,8 @@
         <div class="bento-card-heading">
           <h3 class="bento-card-title">Guion de captación</h3>
           <p class="bento-card-subtitle">
-            Cuando no hay nadie conectado, el chat guía al visitante y acaba pidiendo sus datos.
+            Cuando no hay nadie conectado, el chat guía al visitante. Cada rama
+            puede pedir datos de contacto o cerrarse sin formulario.
           </p>
         </div>
         <div class="header-actions">
@@ -182,6 +183,12 @@
                             (click)="$event.stopPropagation()"
                           >
                             <option value="" [selected]="!option.next">Pedir datos de contacto</option>
+                            <option
+                              [value]="endTarget"
+                              [selected]="option.next === endTarget"
+                            >
+                              Terminar sin pedir datos
+                            </option>
                             @for (target of steps(); track target.id) {
                               @if (target.id !== step.id) {
                                 <option [value]="target.id" [selected]="option.next === target.id">
@@ -264,6 +271,12 @@
                         (click)="$event.stopPropagation()"
                       >
                         <option value="" [selected]="!step.next">Pedir datos de contacto</option>
+                        <option
+                          [value]="endTarget"
+                          [selected]="step.next === endTarget"
+                        >
+                          Terminar sin pedir datos
+                        </option>
                         @for (target of steps(); track target.id) {
                           @if (target.id !== step.id) {
                             <option [value]="target.id" [selected]="step.next === target.id">
@@ -385,13 +398,23 @@
                 <div class="chat-card chat-card--contact">
                   <p class="chat-intro__title">¿Cómo te contactamos?</p>
                   <p class="chat-intro__body">
-                    Nombre, email o teléfono y la casilla de privacidad. Este cierre siempre está.
+                    Nombre, email o teléfono y la casilla de privacidad.
                   </p>
                   <div class="chat-fields">
                     <span></span>
                     <span></span>
                     <span class="chat-fields__wide"></span>
                   </div>
+                </div>
+              }
+
+              @if (previewAtEnd()) {
+                <div class="chat-card">
+                  <p class="chat-intro__title">Fin del guion</p>
+                  <p class="chat-intro__body">
+                    Esta rama termina aquí. El visitante no verá el formulario de
+                    contacto.
+                  </p>
                 </div>
               }
 

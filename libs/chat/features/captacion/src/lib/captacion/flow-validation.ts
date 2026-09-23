@@ -2,6 +2,7 @@ import {
   LeadCaptureStep,
   MAX_LEAD_CAPTURE_OPTIONS,
   MAX_LEAD_CAPTURE_STEPS,
+  isLeadCaptureStepRef,
 } from '@guiders-frontend/lead-capture-flow-service';
 
 export interface LeadCaptureFlowDraft {
@@ -74,7 +75,7 @@ export function validateLeadCaptureFlow(draft: LeadCaptureFlowDraft): string[] {
 
   for (const step of draft.steps) {
     for (const target of targetsOf(step)) {
-      if (target !== null && !ids.has(target)) {
+      if (isLeadCaptureStepRef(target) && !ids.has(target)) {
         errors.push(
           `${stepLabel(draft, step)}: apunta a un paso que ya no existe.`,
         );
@@ -108,7 +109,9 @@ export function findUnreachableSteps(draft: LeadCaptureFlowDraft): string[] {
     const step = byId.get(current);
     if (!step) continue;
     for (const target of targetsOf(step)) {
-      if (target !== null && !reachable.has(target)) queue.push(target);
+      if (isLeadCaptureStepRef(target) && !reachable.has(target)) {
+        queue.push(target);
+      }
     }
   }
 
@@ -138,9 +141,9 @@ export function previewPath(
       const picked =
         step.options?.find((option) => option.id === choices[step.id]) ??
         step.options?.[0];
-      current = picked?.next ?? null;
+      current = isLeadCaptureStepRef(picked?.next) ? picked.next : null;
     } else {
-      current = step.next ?? null;
+      current = isLeadCaptureStepRef(step.next) ? step.next : null;
     }
   }
 
@@ -166,7 +169,7 @@ function findCycle(draft: LeadCaptureFlowDraft): string | null {
     visiting.add(stepId);
     const step = byId.get(stepId);
     for (const target of step ? targetsOf(step) : []) {
-      if (target === null) continue;
+      if (!isLeadCaptureStepRef(target)) continue;
       const cycleAt = walk(target);
       if (cycleAt) return cycleAt;
     }

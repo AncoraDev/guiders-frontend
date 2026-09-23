@@ -17,6 +17,15 @@ export type LeadCaptureField = (typeof LEAD_CAPTURE_FIELDS)[number];
 export const MAX_LEAD_CAPTURE_STEPS = 20;
 export const MAX_LEAD_CAPTURE_OPTIONS = 5;
 
+/** Cierre del guion sin el formulario de contacto. `null` sigue pidiendo datos. */
+export const LEAD_CAPTURE_END = '__end__';
+
+export function isLeadCaptureStepRef(
+  next: string | null | undefined,
+): next is string {
+  return typeof next === 'string' && next.length > 0 && next !== LEAD_CAPTURE_END;
+}
+
 export interface LeadCaptureOption {
   id: string;
   label: string;

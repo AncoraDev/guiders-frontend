@@ -75,6 +75,17 @@ describe('validateLeadCaptureFlow', () => {
     );
   });
 
+  it('acepta un cierre sin pedir datos de contacto', () => {
+    const draft = draftWith([
+      choiceStep('interes', [
+        { id: 'info', label: 'Solo información', next: '__end__' },
+        { id: 'llamar', label: 'Que me llamen', next: null },
+      ]),
+    ]);
+
+    expect(validateLeadCaptureFlow(draft)).toEqual([]);
+  });
+
   it('avisa de referencias a pasos borrados', () => {
     const draft = draftWith([messageStep('uno', 'fantasma')]);
 
@@ -174,6 +185,20 @@ describe('previewPath', () => {
 
     expect(
       previewPath(draft, { interes: 'km0' }).map((step) => step.id),
+    ).toEqual(['interes']);
+  });
+
+  it('para si la opción cierra el guion sin pedir datos', () => {
+    const draft = draftWith([
+      choiceStep('interes', [
+        { id: 'info', label: 'Solo información', next: '__end__' },
+        { id: 'llamar', label: 'Que me llamen', next: 'cierre' },
+      ]),
+      messageStep('cierre', null),
+    ]);
+
+    expect(
+      previewPath(draft, { interes: 'info' }).map((step) => step.id),
     ).toEqual(['interes']);
   });
 });

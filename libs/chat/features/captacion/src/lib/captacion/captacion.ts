@@ -12,6 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs/operators';
 import { ToastService } from '@guiders-frontend/shared/ui/toast';
 import {
+  LEAD_CAPTURE_END,
   LEAD_CAPTURE_FIELDS,
   LeadCaptureFlowService,
   LeadCaptureStep,
@@ -124,17 +125,40 @@ export class Captacion implements OnInit {
         answer: this.recapAnswer(step),
       }));
   });
+  readonly previewExit = computed(() => {
+    const path = this.preview();
+    const last = path[path.length - 1];
+    if (!last) return null;
+    if (last.type === 'choice') {
+      const optionId = this.previewChoices()[last.id];
+      const option =
+        last.options?.find((item) => item.id === optionId) ?? last.options?.[0];
+      return option?.next ?? null;
+    }
+    return last.next ?? null;
+  });
   readonly previewAtContact = computed(
-    () => this.previewIndex() >= this.preview().length && this.previewIndex() >= 0,
+    () =>
+      this.previewIndex() >= this.preview().length &&
+      this.previewIndex() >= 0 &&
+      this.previewExit() !== LEAD_CAPTURE_END,
+  );
+  readonly previewAtEnd = computed(
+    () =>
+      this.previewIndex() >= this.preview().length &&
+      this.previewIndex() >= 0 &&
+      this.previewExit() === LEAD_CAPTURE_END,
   );
   readonly previewProgress = computed(() => {
-    const total = this.preview().length + 1;
+    const extra = this.previewExit() === LEAD_CAPTURE_END ? 0 : 1;
+    const total = this.preview().length + extra;
     if (this.previewIndex() < 0) return { current: 0, total };
     return {
       current: Math.min(this.previewIndex() + 1, total),
       total,
     };
   });
+  readonly endTarget = LEAD_CAPTURE_END;
   readonly canSave = computed(
     () => this.errors().length === 0 && !this.saving() && !this.loading(),
   );
@@ -361,7 +385,7 @@ export class Captacion implements OnInit {
     });
   }
 
-  /** `null` en el desplegable significa terminar el guion e ir a los datos. */
+  /** Vacío = pedir contacto. `__end__` = cerrar sin formulario. */
   parseTarget(value: string): string | null {
     return value === '' ? null : value;
   }
