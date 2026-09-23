@@ -11,6 +11,42 @@
   color: var(--color-text-tertiary);
 }
 
+.lead-capture-notify-settings__help {
+  margin: 0 0 tokens.$spacing-lg;
+  padding: tokens.$spacing-md;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: tokens.$border-radius-sm;
+  background: var(--color-bg-secondary);
+  font-size: tokens.$font-size-sm;
+  color: var(--color-text-secondary);
+
+  p {
+    margin: 0 0 tokens.$spacing-sm;
+  }
+
+  ol {
+    margin: 0 0 tokens.$spacing-sm;
+    padding-left: tokens.$spacing-lg;
+  }
+
+  li + li {
+    margin-top: tokens.$spacing-xs;
+  }
+
+  a {
+    color: var(--color-text-primary);
+  }
+
+  code {
+    font-size: 0.95em;
+  }
+}
+
+.lead-capture-notify-settings__help-note {
+  margin: 0;
+  color: var(--color-text-tertiary);
+}
+
 .lead-capture-notify-settings__input {
   width: 100%;
   box-sizing: border-box;
@@ -35,9 +71,12 @@
 .lead-capture-notify-settings__actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: tokens.$spacing-sm;
   margin-top: tokens.$spacing-md;
 }
 
+.lead-capture-notify-settings__test,
 .lead-capture-notify-settings__save {
   display: inline-flex;
   align-items: center;

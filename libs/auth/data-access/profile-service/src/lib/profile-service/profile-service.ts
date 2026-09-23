@@ -15,6 +15,10 @@ export interface UploadAvatarResponse {
 
 export interface LeadCaptureNotifySettings {
   email: string;
+  from?: string;
+  apiKey?: string;
+  apiKeyConfigured?: boolean;
+  apiKeyLast4?: string | null;
 }
 
 export interface ContactFormLegalSettings {
@@ -297,6 +301,25 @@ export class ProfileService {
           const message =
             error.error?.message ||
             'No se pudo guardar el email de avisos de captación.';
+          return throwError(() => new Error(message));
+        }),
+      );
+  }
+
+  testLeadCaptureNotify(
+    settings: LeadCaptureNotifySettings,
+  ): Observable<{ sent: true }> {
+    return this.http
+      .post<{ sent: true }>(
+        `${this.baseUrl}/me/company/lead-capture-notify/test`,
+        settings,
+        { withCredentials: true },
+      )
+      .pipe(
+        catchError((error) => {
+          const message =
+            error.error?.message ||
+            'No se pudo enviar el email de prueba.';
           return throwError(() => new Error(message));
         }),
       );

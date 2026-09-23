@@ -1,34 +1,92 @@
 <lib-settings-section-header
   title="Avisos de captación"
-  description="Cuando un visitante termina el asistente, además de guardar el lead se puede enviar un resumen por correo.">
+  description="Cuando el equipo comercial no está conectado y un visitante termina el asistente, Guiders guarda el lead y puede avisarte por correo.">
 </lib-settings-section-header>
 
 @if (!isAdmin) {
   <p class="lead-capture-notify-settings__denied">
-    Solo el administrador del concesionario puede cambiar este email.
+    Solo el administrador del concesionario puede configurar estos avisos.
   </p>
 } @else if (isLoading()) {
   <p class="lead-capture-notify-settings__hint">Cargando…</p>
 } @else {
+  <div class="lead-capture-notify-settings__help">
+    <p>
+      El aviso sale con <strong>tu cuenta de Resend</strong>, no con la de Guiders.
+      Así el correo llega desde tu dominio y a la bandeja que tú elijas.
+    </p>
+    <ol>
+      <li>
+        Crea una cuenta en
+        <a href="https://resend.com" target="_blank" rel="noopener noreferrer">resend.com</a>
+        y verifica tu dominio.
+      </li>
+      <li>Copia la API key (empieza por <code>re_</code>) y pégala abajo.</li>
+      <li>
+        Pon el email donde quieres recibir el resumen de cada lead cualificado
+        cuando no hay comerciales en Atención.
+      </li>
+    </ol>
+    <p class="lead-capture-notify-settings__help-note">
+      Si dejas algún campo vacío, el lead se guarda igual: solo deja de enviarse el correo.
+    </p>
+  </div>
+
   <lib-settings-row
     [stacked]="true"
-    label="Email de comunicaciones"
-    description="Déjalo vacío si no quieres recibir el aviso. El lead se guarda igual.">
+    label="Email de avisos"
+    description="Bandeja que recibe el resumen. Vacío = no enviar.">
     <input
       type="email"
       class="lead-capture-notify-settings__input"
       placeholder="avisos@concesionario.com"
       [ngModel]="email()"
       (ngModelChange)="email.set($event)"
-      [disabled]="isSaving()"
+      [disabled]="isSaving() || isTesting()"
+    />
+  </lib-settings-row>
+
+  <lib-settings-row
+    [stacked]="true"
+    label="Remitente (Resend)"
+    description="Debe ser un remitente verificado en tu cuenta. Ejemplo: Guiders &lt;no-reply@concesionario.com&gt;">
+    <input
+      type="text"
+      class="lead-capture-notify-settings__input"
+      placeholder="Guiders <no-reply@concesionario.com>"
+      [ngModel]="from()"
+      (ngModelChange)="from.set($event)"
+      [disabled]="isSaving() || isTesting()"
+    />
+  </lib-settings-row>
+
+  <lib-settings-row
+    [stacked]="true"
+    label="API key de Resend"
+    [description]="apiKeyHint()">
+    <input
+      type="password"
+      autocomplete="new-password"
+      class="lead-capture-notify-settings__input"
+      placeholder="re_…"
+      [ngModel]="apiKey()"
+      (ngModelChange)="apiKey.set($event)"
+      [disabled]="isSaving() || isTesting()"
     />
   </lib-settings-row>
 
   <div class="lead-capture-notify-settings__actions">
     <button
       type="button"
+      class="lead-capture-notify-settings__test"
+      [disabled]="isSaving() || isTesting() || !canTest()"
+      (click)="testConnection()">
+      {{ isTesting() ? 'Enviando prueba...' : 'Probar conexión' }}
+    </button>
+    <button
+      type="button"
       class="lead-capture-notify-settings__save"
-      [disabled]="isSaving() || !isDirty()"
+      [disabled]="isSaving() || isTesting() || !isDirty()"
       (click)="save()">
       {{ isSaving() ? 'Guardando...' : 'Guardar' }}
     </button>

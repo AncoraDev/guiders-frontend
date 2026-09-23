@@ -37,11 +37,38 @@ export class LeadCaptureNotifySettingsComponent {
   readonly isAdmin = this.userService.hasRole('admin');
   readonly isLoading = signal(true);
   readonly isSaving = signal(false);
+  readonly isTesting = signal(false);
   readonly savedEmail = signal('');
+  readonly savedFrom = signal('');
+  readonly apiKeyConfigured = signal(false);
+  readonly apiKeyLast4 = signal<string | null>(null);
   readonly email = signal('');
+  readonly from = signal('');
+  readonly apiKey = signal('');
+
+  readonly apiKeyHint = computed(() => {
+    const last4 = this.apiKeyLast4();
+    if (this.apiKeyConfigured() && last4) {
+      return `Ya hay una clave guardada (termina en ${last4}). Déjalo vacío para no cambiarla.`;
+    }
+    if (this.apiKeyConfigured()) {
+      return 'Ya hay una clave guardada. Déjalo vacío para no cambiarla.';
+    }
+    return 'Pega la API key de Resend. No se vuelve a mostrar después de guardar.';
+  });
 
   readonly isDirty = computed(
-    () => this.email().trim() !== this.savedEmail().trim(),
+    () =>
+      this.email().trim() !== this.savedEmail().trim() ||
+      this.from().trim() !== this.savedFrom().trim() ||
+      this.apiKey().trim().length > 0,
+  );
+
+  readonly canTest = computed(
+    () =>
+      this.email().trim().length > 0 &&
+      this.from().trim().length > 0 &&
+      (this.apiKey().trim().length > 0 || this.apiKeyConfigured()),
   );
 
   constructor() {
@@ -55,35 +82,97 @@ export class LeadCaptureNotifySettingsComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (settings) => {
-          this.savedEmail.set(settings.email ?? '');
-          this.email.set(settings.email ?? '');
+          this.applySaved(settings);
           this.isLoading.set(false);
         },
         error: (err) => {
           this.isLoading.set(false);
-          this.toast.error(err?.message ?? 'No se pudo cargar el email de avisos');
+          this.toast.error(
+            err?.message ?? 'No se pudo cargar la configuración de avisos',
+          );
+        },
+      });
+  }
+
+  testConnection(): void {
+    if (!this.isAdmin || this.isTesting() || this.isSaving()) return;
+
+    const email = this.email().trim();
+    const apiKey = this.apiKey().trim();
+    if (!email || (!apiKey && !this.apiKeyConfigured())) {
+      this.toast.error(
+        'Indica un email de destino y la API key de Resend para probar la conexión',
+      );
+      return;
+    }
+
+    this.isTesting.set(true);
+    this.profileService
+      .testLeadCaptureNotify({
+        email,
+        from: this.from().trim(),
+        apiKey,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.isTesting.set(false);
+          this.toast.success(`Email de prueba enviado a ${email}`);
+        },
+        error: (err) => {
+          this.isTesting.set(false);
+          this.toast.error(err?.message ?? 'No se pudo enviar el email de prueba');
         },
       });
   }
 
   save(): void {
-    if (!this.isAdmin || this.isSaving() || !this.isDirty()) return;
+    if (!this.isAdmin || this.isSaving() || this.isTesting() || !this.isDirty())
+      return;
+
+    if (
+      (this.apiKey().trim() || this.apiKeyConfigured()) &&
+      !this.email().trim()
+    ) {
+      this.toast.error(
+        'Indica un email de destino además de la API key de Resend',
+      );
+      return;
+    }
 
     this.isSaving.set(true);
     this.profileService
-      .updateLeadCaptureNotify({ email: this.email().trim() })
+      .updateLeadCaptureNotify({
+        email: this.email().trim(),
+        from: this.from().trim(),
+        apiKey: this.apiKey().trim(),
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (settings) => {
-          this.savedEmail.set(settings.email ?? '');
-          this.email.set(settings.email ?? '');
+          this.applySaved(settings);
+          this.apiKey.set('');
           this.isSaving.set(false);
-          this.toast.success('Email de avisos guardado');
+          this.toast.success('Avisos de captación guardados');
         },
         error: (err) => {
           this.isSaving.set(false);
-          this.toast.error(err?.message ?? 'No se pudo guardar el email');
+          this.toast.error(err?.message ?? 'No se pudo guardar la configuración');
         },
       });
+  }
+
+  private applySaved(settings: {
+    email?: string;
+    from?: string;
+    apiKeyConfigured?: boolean;
+    apiKeyLast4?: string | null;
+  }): void {
+    this.savedEmail.set(settings.email ?? '');
+    this.savedFrom.set(settings.from ?? '');
+    this.email.set(settings.email ?? '');
+    this.from.set(settings.from ?? '');
+    this.apiKeyConfigured.set(!!settings.apiKeyConfigured);
+    this.apiKeyLast4.set(settings.apiKeyLast4 ?? null);
   }
 }
