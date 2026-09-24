@@ -66,6 +66,11 @@
   &:disabled {
     opacity: 0.7;
   }
+
+  &--masked {
+    letter-spacing: 0.06em;
+    color: var(--color-text-secondary);
+  }
 }
 
 .lead-capture-notify-settings__actions {

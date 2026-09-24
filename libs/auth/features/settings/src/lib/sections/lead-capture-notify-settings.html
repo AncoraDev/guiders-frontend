@@ -65,12 +65,15 @@
     label="API key de Resend"
     [description]="apiKeyHint()">
     <input
-      type="password"
-      autocomplete="new-password"
+      type="text"
+      autocomplete="off"
+      spellcheck="false"
       class="lead-capture-notify-settings__input"
+      [class.lead-capture-notify-settings__input--masked]="isMaskedApiKey()"
       placeholder="re_…"
       [ngModel]="apiKey()"
       (ngModelChange)="apiKey.set($event)"
+      (focus)="onApiKeyFocus()"
       [disabled]="isSaving() || isTesting()"
     />
   </lib-settings-row>

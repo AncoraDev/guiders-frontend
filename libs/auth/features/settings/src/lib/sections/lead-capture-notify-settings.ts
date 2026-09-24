@@ -48,27 +48,27 @@ export class LeadCaptureNotifySettingsComponent {
 
   readonly apiKeyHint = computed(() => {
     const last4 = this.apiKeyLast4();
+    if (this.isMaskedApiKey()) {
+      return `Clave guardada (termina en ${last4}). Pulsa el campo para pegar otra.`;
+    }
     if (this.apiKeyConfigured() && last4) {
-      return `Ya hay una clave guardada (termina en ${last4}). Déjalo vacío para no cambiarla.`;
+      return `Había una clave que termina en ${last4}. Pega la nueva o deja el campo para no cambiarla.`;
     }
-    if (this.apiKeyConfigured()) {
-      return 'Ya hay una clave guardada. Déjalo vacío para no cambiarla.';
-    }
-    return 'Pega la API key de Resend. No se vuelve a mostrar después de guardar.';
+    return 'Pega la API key de Resend (re_…). Tras guardar solo se ven los últimos 4.';
   });
 
   readonly isDirty = computed(
     () =>
       this.email().trim() !== this.savedEmail().trim() ||
       this.from().trim() !== this.savedFrom().trim() ||
-      this.apiKey().trim().length > 0,
+      this.incomingApiKey().length > 0,
   );
 
   readonly canTest = computed(
     () =>
       this.email().trim().length > 0 &&
       this.from().trim().length > 0 &&
-      (this.apiKey().trim().length > 0 || this.apiKeyConfigured()),
+      (this.incomingApiKey().length > 0 || this.apiKeyConfigured()),
   );
 
   constructor() {
@@ -98,7 +98,7 @@ export class LeadCaptureNotifySettingsComponent {
     if (!this.isAdmin || this.isTesting() || this.isSaving()) return;
 
     const email = this.email().trim();
-    const apiKey = this.apiKey().trim();
+    const apiKey = this.incomingApiKey();
     if (!email || (!apiKey && !this.apiKeyConfigured())) {
       this.toast.error(
         'Indica un email de destino y la API key de Resend para probar la conexión',
@@ -131,7 +131,7 @@ export class LeadCaptureNotifySettingsComponent {
       return;
 
     if (
-      (this.apiKey().trim() || this.apiKeyConfigured()) &&
+      (this.incomingApiKey() || this.apiKeyConfigured()) &&
       !this.email().trim()
     ) {
       this.toast.error(
@@ -145,13 +145,12 @@ export class LeadCaptureNotifySettingsComponent {
       .updateLeadCaptureNotify({
         email: this.email().trim(),
         from: this.from().trim(),
-        apiKey: this.apiKey().trim(),
+        apiKey: this.incomingApiKey(),
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (settings) => {
           this.applySaved(settings);
-          this.apiKey.set('');
           this.isSaving.set(false);
           this.toast.success('Avisos de captación guardados');
         },
@@ -174,5 +173,31 @@ export class LeadCaptureNotifySettingsComponent {
     this.from.set(settings.from ?? '');
     this.apiKeyConfigured.set(!!settings.apiKeyConfigured);
     this.apiKeyLast4.set(settings.apiKeyLast4 ?? null);
+    this.apiKey.set(this.maskApiKey(settings.apiKeyLast4 ?? null));
+  }
+
+  onApiKeyFocus(): void {
+    if (this.isMaskedApiKey()) {
+      this.apiKey.set('');
+    }
+  }
+
+  private incomingApiKey(): string {
+    if (this.isMaskedApiKey()) {
+      return '';
+    }
+    return this.apiKey().trim();
+  }
+
+  isMaskedApiKey(): boolean {
+    const last4 = this.apiKeyLast4();
+    return !!last4 && this.apiKey() === this.maskApiKey(last4);
+  }
+
+  private maskApiKey(last4: string | null): string {
+    if (!last4) {
+      return '';
+    }
+    return `re_••••••••${last4}`;
   }
 }
