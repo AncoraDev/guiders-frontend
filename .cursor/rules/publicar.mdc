@@ -1,0 +1,22 @@
+---
+description: Publicar en el VPS es commit, push y luego git pull en el servidor
+alwaysApply: true
+---
+
+# Publicar en producción
+
+Publicar es siempre este proceso. No copiar archivos al servidor ni editar código allí.
+
+1. Commit en `main` y push.
+2. En el VPS, como `deploy`: `git pull --ff-only` y reiniciar solo esa aplicación.
+
+| Aplicación | Directorio | Después del pull |
+|------------|------------|------------------|
+| API | `/var/www/guiders-backend` | `npm run build` y `pm2 restart guiders-backend` |
+| Área de proveedor | `/var/www/guiders-leadcars-demo` | `pm2 restart guiders-leadcars-demo` |
+| Demo | `/var/www/guiders-sdk` | Nada. nginx sirve `demo/app` |
+| Console y Admin | `/var/www/guiders-frontend-src` | Compilar y mover el enlace `current` |
+
+No sustituir `.env` ni `.env.production`. No ejecutar `typeorm:migrate:run` completo.
+
+Detalle: `guiders-backend/docs/ops/new-server/publish.md`.

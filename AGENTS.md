@@ -4,6 +4,10 @@ Instructions for AI coding agents working in this Angular 20 + Nx 21 monorepo.
 
 📚 **Documentation index**: [`docs/README.md`](docs/README.md)
 
+## Publicar en producción
+
+Commit en `main`, push, y en el VPS `git pull --ff-only` más reinicio. No copiar archivos al servidor ni editar código allí. Console y Admin se compilan en `/var/www/guiders-frontend-src` y se enlazan en `current`. Detalle: `guiders-backend/docs/ops/new-server/publish.md`.
+
 ## Build/Lint/Test Commands
 
 ### Development Servers
