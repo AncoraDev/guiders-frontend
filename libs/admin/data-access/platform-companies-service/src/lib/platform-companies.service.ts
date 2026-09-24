@@ -18,6 +18,7 @@ import {
   PlatformUpdateUserRequest,
   PlatformUserMutationResponse,
   PlatformUsersListResponse,
+  PlatformSdkRelease,
 } from './platform-companies.types';
 
 @Injectable({ providedIn: 'root' })
@@ -152,6 +153,13 @@ export class PlatformCompaniesService {
     return this.http.patch<PlatformConsoleBrand>(
       `${this.environment.api.baseUrl}/v2/companies/${companyId}/white-label`,
       { branding: { brandName }, consoleTheme },
+      { withCredentials: true },
+    );
+  }
+
+  listSdkReleases(): Observable<PlatformSdkRelease[]> {
+    return this.http.get<PlatformSdkRelease[]>(
+      `${this.environment.api.baseUrl}/platform/sdk-releases`,
       { withCredentials: true },
     );
   }

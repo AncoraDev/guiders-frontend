@@ -1,0 +1,126 @@
+@use '../../../../../../shared/design-tokens/src/lib/tokens-vars' as tokens;
+
+:host {
+  display: block;
+  height: 100%;
+  overflow: auto;
+}
+
+.versions {
+  padding: tokens.$spacing-xl;
+  max-width: 960px;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-lg;
+}
+
+h1 {
+  margin: 0;
+  font-size: tokens.$font-size-2xl;
+}
+
+h2 {
+  margin: 0;
+  font-size: tokens.$font-size-lg;
+  font-weight: tokens.$font-weight-medium;
+}
+
+h3 {
+  margin: 0;
+  font-size: tokens.$font-size-sm;
+  font-weight: tokens.$font-weight-medium;
+  color: tokens.$color-text-secondary;
+}
+
+.muted {
+  margin: 0;
+  color: tokens.$color-text-secondary;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.5;
+}
+
+.error {
+  margin: 0;
+  color: var(--color-error-text);
+  font-size: tokens.$font-size-sm;
+}
+
+code,
+pre {
+  font-family: ui-monospace, monospace;
+}
+
+code {
+  font-size: tokens.$font-size-xs;
+}
+
+.version {
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  padding: tokens.$spacing-md;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-md;
+}
+
+.version__head {
+  display: flex;
+  align-items: baseline;
+  gap: tokens.$spacing-sm;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0 0.45em;
+  border-radius: 999px;
+  background: tokens.$color-surface-secondary;
+  border: 1px solid tokens.$color-border-subtle;
+  font-size: tokens.$font-size-xs;
+  font-weight: tokens.$font-weight-medium;
+  line-height: 1.45;
+}
+
+.notes,
+.snippet {
+  margin: 0;
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$color-surface-secondary;
+  font-size: tokens.$font-size-xs;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.version__channels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: tokens.$spacing-lg;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.channel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: tokens.$spacing-sm;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border-radius: tokens.$border-radius-md;
+  font-size: tokens.$font-size-sm;
+  font-weight: tokens.$font-weight-medium;
+  border: 1px solid tokens.$color-border-subtle;
+  cursor: pointer;
+  text-decoration: none;
+  background: transparent;
+  color: tokens.$color-text-primary;
+}

@@ -80,6 +80,12 @@ export class App {
       icon: 'file-text',
       route: '/api',
     },
+    {
+      id: 'sdk-versions',
+      label: 'Versiones',
+      icon: 'tag',
+      route: '/versiones',
+    },
   ]);
 
   onSidebarItemClick(item: SidebarItem): void {

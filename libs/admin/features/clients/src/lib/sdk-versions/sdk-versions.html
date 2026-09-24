@@ -1,0 +1,91 @@
+<section class="versions">
+  <header class="versions__intro">
+    <h1>Versiones del SDK</h1>
+    <p class="muted">
+      De la más reciente a la más antigua. Solo se descarga la última. WordPress
+      se actualiza solo con el ZIP. En una web normal se sustituye
+      <code>guiders-sdk.min.js</code> y se cambia el <code>?v=</code> del
+      fragmento para que el navegador no use la copia vieja.
+    </p>
+  </header>
+
+  @if (loading()) {
+    <p class="muted">Cargando versiones…</p>
+  } @else if (error()) {
+    <p class="error">{{ error() }}</p>
+  } @else if (releases().length === 0) {
+    <p class="muted">No hay versiones publicadas.</p>
+  } @else {
+    @for (release of releases(); track release.version; let first = $first) {
+      <article class="version">
+        <header class="version__head">
+          <h2>{{ release.version }}</h2>
+          @if (release.prerelease) {
+            <span class="badge">Previa</span>
+          }
+          @if (formatDate(release.publishedAt)) {
+            <time class="muted">{{ formatDate(release.publishedAt) }}</time>
+          }
+        </header>
+
+        <pre class="notes">{{ release.notes || 'Sin descripción.' }}</pre>
+
+        @if (first) {
+        <div class="version__channels">
+          <div class="channel">
+            <h3>WordPress</h3>
+            @if (release.wordpressZipUrl) {
+              <a
+                class="btn btn--ghost"
+                [href]="release.wordpressZipUrl"
+                target="_blank"
+                rel="noopener"
+                >Descargar ZIP</a
+              >
+              <p class="muted">
+                Para instalar a mano. Los sitios que ya tienen el plugin siguen
+                avisando de la actualización por su cuenta.
+                @if (release.prerelease) {
+                  Las previas no se instalan solas.
+                }
+              </p>
+            } @else {
+              <p class="muted">Esta versión no tiene ZIP.</p>
+            }
+          </div>
+
+          <div class="channel">
+            <h3>Web normal</h3>
+            @if (release.webScriptUrl) {
+              <a
+                class="btn btn--ghost"
+                [href]="release.webScriptUrl"
+                target="_blank"
+                rel="noopener"
+                >Descargar guiders-sdk.min.js</a
+              >
+            } @else {
+              <p class="muted">
+                En esta versión el script va dentro del ZIP, en
+                <code>assets/js/guiders-sdk.min.js</code>.
+              </p>
+            }
+            <pre class="snippet">{{ snippet(release.version) }}</pre>
+            <button
+              type="button"
+              class="btn btn--ghost"
+              (click)="copySnippet(release.version)"
+            >
+              {{
+                copiedVersion() === release.version
+                  ? 'Copiado'
+                  : 'Copiar fragmento'
+              }}
+            </button>
+          </div>
+        </div>
+        }
+      </article>
+    }
+  }
+</section>

@@ -16,6 +16,12 @@ export const appRoutes: Route[] = [
     canActivate: [adminGuard],
   },
   {
+    path: 'versiones',
+    loadChildren: () =>
+      import('@guiders-frontend/clients').then((m) => m.sdkVersionsRoutes),
+    canActivate: [adminGuard],
+  },
+  {
     path: 'users',
     loadChildren: () =>
       import('@guiders-frontend/clients').then((m) => m.platformUsersRoutes),

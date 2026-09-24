@@ -142,3 +142,12 @@ export interface PlatformSetUserActiveRequest {
 export interface PlatformUserMutationResponse {
   userId: string;
 }
+
+export interface PlatformSdkRelease {
+  version: string;
+  publishedAt: string | null;
+  prerelease: boolean;
+  notes: string;
+  wordpressZipUrl: string | null;
+  webScriptUrl: string | null;
+}
