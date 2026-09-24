@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize, forkJoin } from 'rxjs';
 import {
@@ -36,6 +36,7 @@ interface SiteForm {
 export class ClientDetail implements OnInit {
   private readonly platform = inject(PlatformCompaniesService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly company = signal<PlatformCompanyDetail | null>(null);
   readonly apiKeys = signal<PlatformApiKey[]>([]);
@@ -46,6 +47,7 @@ export class ClientDetail implements OnInit {
   readonly formName = signal('');
   readonly formSites = signal<SiteForm[]>([]);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly saveError = signal<string | null>(null);
   readonly saveOk = signal(false);
 
@@ -96,6 +98,31 @@ export class ClientDetail implements OnInit {
         },
         error: (err: unknown) => {
           this.error.set(this.mapError(err, 'Cliente no encontrado'));
+        },
+      });
+  }
+
+  onDelete(): void {
+    const company = this.company();
+    if (!company) return;
+    const ok = confirm(
+      `¿Eliminar ${company.companyName}?\n\nSe borran la empresa, sus usuarios y el admin de Keycloak. Los chats y los leads se quedan.`,
+    );
+    if (!ok) return;
+
+    this.deleting.set(true);
+    this.saveError.set(null);
+    this.platform
+      .deleteCompany(company.id)
+      .pipe(finalize(() => this.deleting.set(false)))
+      .subscribe({
+        next: () => {
+          void this.router.navigate(['/clients']);
+        },
+        error: (err: unknown) => {
+          this.saveError.set(
+            this.mapError(err, 'No se pudo eliminar el cliente'),
+          );
         },
       });
   }

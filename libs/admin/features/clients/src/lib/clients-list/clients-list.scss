@@ -155,6 +155,11 @@
 
 .clients-table__actions {
   text-align: right;
+  white-space: nowrap;
+
+  .btn + .btn {
+    margin-left: tokens.$spacing-xs;
+  }
 }
 
 .btn {
@@ -183,6 +188,11 @@
 
   &--ghost {
     border-color: tokens.$color-border-subtle;
+  }
+
+  &--danger {
+    border-color: rgba(220, 38, 38, 0.35);
+    color: #b91c1c;
   }
 
   &--sm {

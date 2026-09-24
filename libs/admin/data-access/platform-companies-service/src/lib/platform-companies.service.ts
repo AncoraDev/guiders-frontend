@@ -65,6 +65,12 @@ export class PlatformCompaniesService {
     );
   }
 
+  deleteCompany(companyId: string): Observable<{ ok: true }> {
+    return this.http.delete<{ ok: true }>(`${this.baseUrl}/${companyId}`, {
+      withCredentials: true,
+    });
+  }
+
   listApiKeys(companyId: string): Observable<PlatformApiKey[]> {
     return this.http.get<PlatformApiKey[]>(
       `${this.baseUrl}/${companyId}/api-keys`,

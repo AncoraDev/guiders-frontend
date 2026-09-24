@@ -54,6 +54,7 @@ export class ClientsList implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly search = signal('');
+  readonly deletingId = signal<string | null>(null);
 
   private readonly statsByCompanyId = computed(() => {
     const map = new Map<string, CompanyUserStats>();
@@ -103,7 +104,26 @@ export class ClientsList implements OnInit {
           this.users.set(users.users ?? []);
         },
         error: (err: unknown) => {
-          this.error.set(this.mapError(err));
+          this.error.set(this.mapError(err, 'Error al cargar clientes'));
+        },
+      });
+  }
+
+  onDelete(company: PlatformCompanySummary): void {
+    const ok = confirm(
+      `¿Eliminar ${company.companyName}?\n\nSe borran la empresa, sus usuarios y el admin de Keycloak. Los chats y los leads se quedan.`,
+    );
+    if (!ok) return;
+
+    this.deletingId.set(company.id);
+    this.error.set(null);
+    this.platform
+      .deleteCompany(company.id)
+      .pipe(finalize(() => this.deletingId.set(null)))
+      .subscribe({
+        next: () => this.load(),
+        error: (err: unknown) => {
+          this.error.set(this.mapError(err, 'No se pudo eliminar el cliente'));
         },
       });
   }
@@ -136,13 +156,23 @@ export class ClientsList implements OnInit {
     return [...known, ...extras];
   }
 
-  private mapError(err: unknown): string {
+  private mapError(err: unknown, fallback: string): string {
     if (err instanceof HttpErrorResponse) {
       if (err.status === 403 || err.status === 401) {
         return 'No tienes permisos de plataforma (superadmin).';
       }
-      return err.error?.message || err.message || 'Error al cargar clientes';
+      const body = err.error as { message?: string | string[] } | string | null;
+      if (typeof body === 'string' && body.trim()) return body;
+      if (body && typeof body === 'object') {
+        if (typeof body.message === 'string' && body.message.trim()) {
+          return body.message;
+        }
+        if (Array.isArray(body.message) && body.message[0]) {
+          return String(body.message[0]);
+        }
+      }
+      return err.message || fallback;
     }
-    return 'Error al cargar clientes';
+    return fallback;
   }
 }

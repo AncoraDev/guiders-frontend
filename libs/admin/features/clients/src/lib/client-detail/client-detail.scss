@@ -25,9 +25,16 @@
   }
 }
 
-.client-detail__header h1 {
-  margin: 0;
-  font-size: tokens.$font-size-2xl;
+.client-detail__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: tokens.$spacing-md;
+
+  h1 {
+    margin: 0;
+    font-size: tokens.$font-size-2xl;
+  }
 }
 
 .field {
@@ -221,6 +228,11 @@
 
   &--ghost {
     border-color: tokens.$color-border-subtle;
+  }
+
+  &--danger {
+    border-color: rgba(220, 38, 38, 0.35);
+    color: #b91c1c;
   }
 
   &--sm {

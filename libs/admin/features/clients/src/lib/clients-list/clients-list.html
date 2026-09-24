@@ -81,6 +81,14 @@
                 <a [routerLink]="['/clients', c.id]" class="btn btn--ghost btn--sm"
                   >Editar</a
                 >
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  (click)="onDelete(c)"
+                  [disabled]="deletingId() === c.id"
+                >
+                  Eliminar
+                </button>
               </td>
             </tr>
           }
