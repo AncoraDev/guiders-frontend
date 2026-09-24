@@ -145,7 +145,8 @@
   gap: tokens.$spacing-sm;
   flex-wrap: wrap;
 
-  input {
+  input,
+  select {
     flex: 1;
     min-width: 200px;
     padding: tokens.$spacing-sm tokens.$spacing-md;
@@ -154,6 +155,11 @@
     font-size: tokens.$font-size-base;
     background: tokens.$color-surface-primary;
     color: tokens.$color-text-primary;
+  }
+
+  select {
+    flex: 0 0 auto;
+    min-width: 8rem;
   }
 }
 

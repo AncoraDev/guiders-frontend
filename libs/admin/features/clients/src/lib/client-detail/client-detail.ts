@@ -14,6 +14,7 @@ import {
   PlatformApiKey,
   PlatformCompaniesService,
   PlatformCompanyDetail,
+  PlatformIntegrationApiKey,
 } from '@guiders-frontend/platform-companies-service';
 
 interface SiteForm {
@@ -37,6 +38,7 @@ export class ClientDetail implements OnInit {
 
   readonly company = signal<PlatformCompanyDetail | null>(null);
   readonly apiKeys = signal<PlatformApiKey[]>([]);
+  readonly integrationKeys = signal<PlatformIntegrationApiKey[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -50,6 +52,11 @@ export class ClientDetail implements OnInit {
   readonly creatingKey = signal(false);
   readonly keyError = signal<string | null>(null);
   readonly lastCreatedKey = signal<string | null>(null);
+  readonly integrationKeyName = signal('LeadCars');
+  readonly integrationKeyEnvironment = signal<'live' | 'test'>('live');
+  readonly creatingIntegrationKey = signal(false);
+  readonly integrationKeyError = signal<string | null>(null);
+  readonly lastCreatedIntegrationKey = signal<string | null>(null);
   readonly copyFeedback = signal<string | null>(null);
 
   private companyId = '';
@@ -76,6 +83,7 @@ export class ClientDetail implements OnInit {
           this.company.set(company);
           this.hydrateForm(company);
           this.apiKeys.set(apiKeys);
+          this.loadIntegrationKeys();
         },
         error: (err: unknown) => {
           this.error.set(this.mapError(err, 'Cliente no encontrado'));
@@ -165,6 +173,46 @@ export class ClientDetail implements OnInit {
           this.keyError.set(this.mapError(err, 'No se pudo crear la API key'));
         },
       });
+  }
+
+  createIntegrationApiKey(): void {
+    this.integrationKeyError.set(null);
+    this.lastCreatedIntegrationKey.set(null);
+    const name = this.integrationKeyName().trim();
+    if (!name) {
+      this.integrationKeyError.set('Indica un nombre');
+      return;
+    }
+    this.creatingIntegrationKey.set(true);
+    this.platform
+      .createIntegrationApiKey(
+        this.companyId,
+        name,
+        this.integrationKeyEnvironment(),
+      )
+      .pipe(finalize(() => this.creatingIntegrationKey.set(false)))
+      .subscribe({
+        next: (res) => {
+          this.lastCreatedIntegrationKey.set(res.token);
+          this.loadIntegrationKeys();
+        },
+        error: (err: unknown) => {
+          this.integrationKeyError.set(
+            this.mapError(err, 'No se pudo crear la API key de integración'),
+          );
+        },
+      });
+  }
+
+  private loadIntegrationKeys(): void {
+    this.platform.listIntegrationApiKeys(this.companyId).subscribe({
+      next: (keys) => this.integrationKeys.set(keys),
+      error: (err: unknown) => {
+        this.integrationKeyError.set(
+          this.mapError(err, 'No se pudieron cargar las API keys de integración'),
+        );
+      },
+    });
   }
 
   async copy(value: string): Promise<void> {

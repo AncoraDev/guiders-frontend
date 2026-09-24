@@ -7,6 +7,8 @@ import {
   PlatformCompanyDetail,
   PlatformCompanySummary,
   PlatformCreateApiKeyResponse,
+  PlatformCreateIntegrationApiKeyResponse,
+  PlatformIntegrationApiKey,
   PlatformCreateCompanyRequest,
   PlatformCreateCompanyResponse,
   PlatformUpdateCompanyRequest,
@@ -75,6 +77,27 @@ export class PlatformCompaniesService {
     return this.http.post<PlatformCreateApiKeyResponse>(
       `${this.baseUrl}/${companyId}/api-keys`,
       { domain },
+      { withCredentials: true },
+    );
+  }
+
+  listIntegrationApiKeys(
+    companyId: string,
+  ): Observable<PlatformIntegrationApiKey[]> {
+    return this.http.get<PlatformIntegrationApiKey[]>(
+      `${this.baseUrl}/${companyId}/integration-api-keys`,
+      { withCredentials: true },
+    );
+  }
+
+  createIntegrationApiKey(
+    companyId: string,
+    name: string,
+    environment: 'live' | 'test',
+  ): Observable<PlatformCreateIntegrationApiKeyResponse> {
+    return this.http.post<PlatformCreateIntegrationApiKeyResponse>(
+      `${this.baseUrl}/${companyId}/integration-api-keys`,
+      { name, environment },
       { withCredentials: true },
     );
   }

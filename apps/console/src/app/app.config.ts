@@ -27,6 +27,11 @@ import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service
 import { ChatService } from '@guiders-frontend/chat-service';
 import { firstValueFrom } from 'rxjs';
 import { TransferNotificationService } from './transfer-notification.service';
+import {
+  EMBED_AFTER_AUTH_PATH,
+  EmbedBootstrapService,
+  EmbedModeService,
+} from '@guiders-frontend/embed';
 
 /**
  * Factory para inicializar el usuario y presencia del comercial al arrancar la aplicación.
@@ -40,8 +45,27 @@ function initializeApp() {
   const chatService = inject(ChatService);
   const environmentToken = inject(ENVIRONMENT_TOKEN);
   const transferNotifications = inject(TransferNotificationService);
+  const embedMode = inject(EmbedModeService);
+  const embedBootstrap = inject(EmbedBootstrapService);
 
   return async () => {
+    if (embedMode.isEmbed()) {
+      try {
+        await Promise.race([
+          embedBootstrap.whenAuthenticated(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('embed-auth-timeout')), 20000),
+          ),
+        ]);
+      } catch (embedError: unknown) {
+        console.warn(
+          '[AppInitializer] Iframe sin sesión de LeadCars. No se abre el login de Keycloak.',
+          embedError instanceof Error ? embedError.message : embedError,
+        );
+        return;
+      }
+    }
+
     // 1. Cargar el usuario — usa ensureSession$() para que el authGuard comparta
     //    el mismo observable cacheado (shareReplay refCount:false) y no lance
     //    una segunda petición a /me cuando active las rutas protegidas.
@@ -50,9 +74,11 @@ function initializeApp() {
       const user = await firstValueFrom(sessionService.ensureSession$());
       if (!user?.sub) {
         console.warn(
-          '[AppInitializer] ⚠️ Usuario sin sub — redirigiendo al login'
+          '[AppInitializer] ⚠️ Usuario sin sub — redirigiendo al login',
         );
-        redirectToBffLogin(environmentToken);
+        if (!embedMode.isEmbed()) {
+          redirectToBffLogin(environmentToken);
+        }
         return;
       }
       console.log('[AppInitializer] ✅ Usuario cargado:', user.sub);
@@ -60,7 +86,7 @@ function initializeApp() {
       // 1.1 Configurar usuario en UnreadMessagesService para filtrar mensajes propios
       console.log(
         '[AppInitializer] 📨 Configurando UnreadMessagesService con usuario:',
-        user.sub
+        user.sub,
       );
       unreadMessagesService.setCurrentUser(user.sub);
 
@@ -69,14 +95,14 @@ function initializeApp() {
         // Presencia manual: login queda Desconectado hasta que el comercial active el toggle.
         // Limpiar residual Redis de sesiones anteriores y NO auto-connect / auto-reconnect.
         console.log(
-          '[AppInitializer] ⚫ Presencia manual — asegurando offline al arrancar...'
+          '[AppInitializer] ⚫ Presencia manual — asegurando offline al arrancar...',
         );
         try {
           await firstValueFrom(presenceService.ensureOfflineOnBoot());
         } catch (offlineErr: unknown) {
           console.warn(
             '[AppInitializer] ⚠️ No se pudo forzar offline al arrancar:',
-            offlineErr instanceof Error ? offlineErr.message : offlineErr
+            offlineErr instanceof Error ? offlineErr.message : offlineErr,
           );
         }
 
@@ -111,7 +137,7 @@ function initializeApp() {
             webSocketService.welcome$.subscribe((event) => {
               console.log(
                 '[AppInitializer] 👋 Bienvenida del servidor:',
-                event.message
+                event.message,
               );
             });
 
@@ -119,20 +145,20 @@ function initializeApp() {
             webSocketService.error$.subscribe((event) => {
               console.error(
                 '[AppInitializer] ❌ Error WebSocket:',
-                event.message
+                event.message,
               );
             });
 
             // Cola PENDING: message:new y chat:created llegan a tenant:{companyId}
             if (user.companyId) {
               console.log(
-                `[AppInitializer] 🏢 Uniéndose a sala del tenant: tenant:${user.companyId}`
+                `[AppInitializer] 🏢 Uniéndose a sala del tenant: tenant:${user.companyId}`,
               );
               webSocketService.joinTenantPresenceRoom(user.companyId);
             }
 
             console.log(
-              '📡 [AppInitializer] Uniéndose a sala de presencia personal...'
+              '📡 [AppInitializer] Uniéndose a sala de presencia personal...',
             );
             console.log('   👤 Commercial ID:', user.sub);
             console.log('   🏷️  User Type: commercial');
@@ -146,13 +172,13 @@ function initializeApp() {
 
             console.log('');
             console.log(
-              '✅ [AppInitializer] Proceso de unión a sala de presencia completado'
+              '✅ [AppInitializer] Proceso de unión a sala de presencia completado',
             );
             console.log(
-              '🔔 [AppInitializer] Ahora recibirás eventos presence:changed filtrados'
+              '🔔 [AppInitializer] Ahora recibirás eventos presence:changed filtrados',
             );
             console.log(
-              '═══════════════════════════════════════════════════════════'
+              '═══════════════════════════════════════════════════════════',
             );
             console.log('');
 
@@ -163,19 +189,19 @@ function initializeApp() {
 
             // 6. Cargar chats y contadores de mensajes no leídos
             console.log(
-              '═══════════════════════════════════════════════════════════'
+              '═══════════════════════════════════════════════════════════',
             );
             console.log(
-              '📨 [AppInitializer] INICIALIZAR NOTIFICACIONES GLOBALES'
+              '📨 [AppInitializer] INICIALIZAR NOTIFICACIONES GLOBALES',
             );
             console.log(
-              '═══════════════════════════════════════════════════════════'
+              '═══════════════════════════════════════════════════════════',
             );
             console.log('📥 [AppInitializer] Cargando chats del comercial...');
 
             try {
               const chats = await firstValueFrom(
-                chatService.getCommercialChats(user.sub)
+                chatService.getCommercialChats(user.sub),
               );
               console.log(`✅ [AppInitializer] ${chats.length} chats cargados`);
 
@@ -184,36 +210,36 @@ function initializeApp() {
 
                 // 6.1 Unirse a salas de WebSocket para recibir mensajes en tiempo real
                 console.log(
-                  `📡 [AppInitializer] Uniéndose a ${chatIds.length} salas de chat...`
+                  `📡 [AppInitializer] Uniéndose a ${chatIds.length} salas de chat...`,
                 );
                 webSocketService.joinMultipleRooms(chatIds);
                 console.log(
-                  `✅ [AppInitializer] Suscrito a ${chatIds.length} chats para notificaciones en tiempo real`
+                  `✅ [AppInitializer] Suscrito a ${chatIds.length} chats para notificaciones en tiempo real`,
                 );
 
                 // 6.2 Refrescar contadores de mensajes no leídos
                 console.log(
-                  `🔄 [AppInitializer] Refrescando contadores de mensajes no leídos...`
+                  `🔄 [AppInitializer] Refrescando contadores de mensajes no leídos...`,
                 );
                 unreadMessagesService.refreshUnreadCounts(chatIds);
                 console.log(
-                  `✅ [AppInitializer] Contadores de mensajes no leídos inicializados`
+                  `✅ [AppInitializer] Contadores de mensajes no leídos inicializados`,
                 );
               } else {
                 console.log('ℹ️  [AppInitializer] No hay chats para cargar');
               }
 
               console.log(
-                '═══════════════════════════════════════════════════════════'
+                '═══════════════════════════════════════════════════════════',
               );
               console.log(
-                '✅ [AppInitializer] Notificaciones globales inicializadas'
+                '✅ [AppInitializer] Notificaciones globales inicializadas',
               );
               console.log(
-                '🔔 [AppInitializer] Badge y notificaciones funcionarán en todas las rutas'
+                '🔔 [AppInitializer] Badge y notificaciones funcionarán en todas las rutas',
               );
               console.log(
-                '═══════════════════════════════════════════════════════════'
+                '═══════════════════════════════════════════════════════════',
               );
               console.log('');
             } catch (error: unknown) {
@@ -221,13 +247,13 @@ function initializeApp() {
                 error instanceof Error ? error.message : 'Error desconocido';
               console.warn(
                 '⚠️  [AppInitializer] Error al cargar chats:',
-                errorMessage
+                errorMessage,
               );
               // No lanzar error para permitir que la app continúe
             }
           } else {
             console.warn(
-              '[AppInitializer] ⚠️ WebSocket no se conectó a tiempo'
+              '[AppInitializer] ⚠️ WebSocket no se conectó a tiempo',
             );
           }
         } catch (error: unknown) {
@@ -235,7 +261,7 @@ function initializeApp() {
             error instanceof Error ? error.message : 'Error desconocido';
           console.warn(
             '[AppInitializer] ⚠️ Error al inicializar WebSocket/chats:',
-            errorMessage
+            errorMessage,
           );
           // No lanzar error para permitir que la app continúe
         }
@@ -245,16 +271,28 @@ function initializeApp() {
         error instanceof Error ? error.message : 'Unknown error';
       console.warn(
         '[AppInitializer] ⚠️ No se pudo cargar el usuario:',
-        errorMessage
+        errorMessage,
       );
       // Sin cookie de Console (p. ej. sesión solo en Admin) → login de Console
       const isNotProvisioned =
         error instanceof HttpErrorResponse &&
         error.status === 403 &&
         (error.error as { reason?: string })?.reason === 'user_not_provisioned';
-      if (!isNotProvisioned) {
+      if (!isNotProvisioned && !embedMode.isEmbed()) {
         redirectToBffLogin(environmentToken);
       }
+    }
+  };
+}
+
+/** Handshake postMessage solo dentro del iframe de LeadCars. */
+function initializeEmbedHandshake() {
+  const embedMode = inject(EmbedModeService);
+  const embedBootstrap = inject(EmbedBootstrapService);
+
+  return () => {
+    if (embedMode.isEmbed()) {
+      embedBootstrap.bootstrap();
     }
   };
 }
@@ -287,7 +325,7 @@ export const appConfig: ApplicationConfig = {
         authRefreshInterceptor, // Refresh automático antes que el auth interceptor
         authInterceptor(),
         globalErrorInterceptor, // Captura 401 irrecuperables, 500, 503 y errores de red
-      ])
+      ]),
     ),
     provideAuth({
       config: {
@@ -304,8 +342,14 @@ export const appConfig: ApplicationConfig = {
     }),
     // Proporcionar el environment a las librerías
     { provide: ENVIRONMENT_TOKEN, useValue: environment },
+    { provide: EMBED_AFTER_AUTH_PATH, useValue: '/atencion' },
     // Ruta de cierre de Settings para la console
     { provide: SETTINGS_CLOSE_ROUTE, useValue: '/atencion' },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeEmbedHandshake,
+      multi: true,
+    },
     // Inicializar la aplicación (usuario + presencia comercial)
     {
       provide: APP_INITIALIZER,

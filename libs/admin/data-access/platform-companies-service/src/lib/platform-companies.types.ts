@@ -63,6 +63,26 @@ export interface PlatformCreateApiKeyResponse {
   apiKey: string;
 }
 
+export interface PlatformIntegrationApiKey {
+  id: string;
+  name: string;
+  tokenPrefix: string;
+  environment: 'live' | 'test' | string;
+  status: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+}
+
+export interface PlatformCreateIntegrationApiKeyResponse {
+  id: string;
+  name: string;
+  token: string;
+  tokenPrefix: string;
+  environment: string;
+  createdAt: string;
+}
+
 export interface PlatformUser {
   id: string;
   email: string;

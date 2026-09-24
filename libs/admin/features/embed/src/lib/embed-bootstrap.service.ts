@@ -1,14 +1,20 @@
-import { Injectable, inject, DestroyRef } from '@angular/core';
+import { Injectable, inject, DestroyRef, InjectionToken } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import {
   EmbedMessage,
   EMBED_PROTOCOL_VERSION,
   isEmbedMessage,
 } from '@guiders-frontend/types';
+import { ENVIRONMENT_TOKEN } from '@guiders-frontend/auth/data-access/session';
 import { EmbedAllowedOriginsService } from './embed-allowed-origins.service';
 
-const TARGET_PATH_AFTER_AUTH = '/embed/dashboard';
+/** Ruta tras el handshake. Admin: dashboard. Console: Atención. */
+export const EMBED_AFTER_AUTH_PATH = new InjectionToken<string>(
+  'EMBED_AFTER_AUTH_PATH',
+  { factory: () => '/embed/dashboard' },
+);
 
 /**
  * Servicio que orquesta el handshake postMessage con el parent window
@@ -32,14 +38,60 @@ export class EmbedBootstrapService {
   private readonly router = inject(Router);
   private readonly originsService = inject(EmbedAllowedOriginsService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly afterAuthPath = inject(EMBED_AFTER_AUTH_PATH);
+  private readonly environment = inject(ENVIRONMENT_TOKEN, { optional: true });
+
+  private bootstrapped = false;
+  private sessionReady: Promise<void> | null = null;
+  private resolveSession: (() => void) | null = null;
+  private rejectSession: ((error: unknown) => void) | null = null;
 
   /**
    * Inicializa el handshake. Idempotente — llamar múltiples veces
    * solo registra UN listener de `message`.
    */
   bootstrap(): void {
-    this.sendReadyMessage();
+    if (this.bootstrapped) return;
+    this.bootstrapped = true;
+    this.ensureSessionPromise();
+    const companyId = new URLSearchParams(window.location.search).get(
+      'companyId',
+    );
+    if (!companyId) {
+      this.registerMessageListener();
+      this.sendReadyMessage();
+      return;
+    }
+    void this.loadOriginsThenListen(companyId);
+  }
+
+  private async loadOriginsThenListen(companyId: string): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<{ origins: string[] }>(
+          this.apiUrl(
+            `/embed/allowed-origins?companyId=${encodeURIComponent(companyId)}`,
+          ),
+        ),
+      );
+      this.originsService.setAllowed(response.origins ?? []);
+    } catch (error: unknown) {
+      console.warn(
+        '[EmbedBootstrap] No se pudieron cargar los orígenes permitidos',
+        error,
+      );
+    }
     this.registerMessageListener();
+    this.sendReadyMessage();
+  }
+
+  /**
+   * Se resuelve cuando el parent entrega el token y la cookie de sesión
+   * queda establecida. Arranca el handshake si aún no se ha hecho.
+   */
+  whenAuthenticated(): Promise<void> {
+    this.bootstrap();
+    return this.ensureSessionPromise();
   }
 
   private sendReadyMessage(): void {
@@ -89,18 +141,34 @@ export class EmbedBootstrapService {
     }
 
     if (message.type === 'leadcars:v1:logout') {
-      // Story 3.2 scope: implement logout signal handling
-      // For now: silent no-op (logout already implemented in BFF logout endpoint)
+      this.logout();
       return;
     }
   }
 
+  private apiUrl(path: string): string {
+    const base = this.environment?.api?.baseUrl ?? '/api';
+    return `${base.replace(/\/$/, '')}${path}`;
+  }
+
+  private ensureSessionPromise(): Promise<void> {
+    if (!this.sessionReady) {
+      this.sessionReady = new Promise<void>((resolve, reject) => {
+        this.resolveSession = resolve;
+        this.rejectSession = reject;
+      });
+    }
+    return this.sessionReady;
+  }
+
   private authenticate(token: string, userId?: string): void {
+    this.ensureSessionPromise();
     this.http
       .post<{ sessionEstablished: boolean; expiresAt: string }>(
-        '/api/embed/authenticate-session',
+        this.apiUrl('/embed/authenticate-session'),
         { userId },
         {
+          withCredentials: true,
           headers: {
             Authorization: `Bearer ${token}`,
             Origin: window.location.origin,
@@ -113,11 +181,30 @@ export class EmbedBootstrapService {
       });
   }
 
+  private logout(): void {
+    this.http
+      .post(
+        this.apiUrl('/bff/auth/logout/embed'),
+        {},
+        { withCredentials: true },
+      )
+      .subscribe({
+        complete: () => {
+          window.location.assign(window.location.pathname);
+        },
+        error: () => {
+          window.location.assign(window.location.pathname);
+        },
+      });
+  }
+
   private readonly navigateAfterAuth = (): void => {
-    this.router.navigate([TARGET_PATH_AFTER_AUTH]);
+    this.resolveSession?.();
+    void this.router.navigate([this.afterAuthPath]);
   };
 
   private readonly handleAuthError = (err: unknown): void => {
     console.warn('[EmbedBootstrap] Authentication failed', err);
+    this.rejectSession?.(err);
   };
 }

@@ -12,6 +12,15 @@ import { redirectToBffLogin } from './redirect-to-login';
  */
 let redirectingToLogin = false;
 
+function isEmbedFrame(): boolean {
+  try {
+    if (window.self !== window.top) return true;
+    return new URLSearchParams(window.location.search).get('embed') === 'true';
+  } catch {
+    return true;
+  }
+}
+
 function isExternalProviderRequest(url: string): boolean {
   return (
     url.includes('/leads/admin/leadcars') ||
@@ -50,6 +59,13 @@ export const globalErrorInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       if (error.status === 401 && !isExternalProviderRequest(req.url)) {
+        if (isEmbedFrame()) {
+          console.warn(
+            '[GlobalErrorInterceptor] 401 en iframe. No se redirige al login de Keycloak.',
+            req.url,
+          );
+          return throwError(() => error);
+        }
         if (!redirectingToLogin) {
           redirectingToLogin = true;
           console.warn(
@@ -79,10 +95,15 @@ export const globalErrorInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       if (error.status === 500 || error.status === 503 || error.status === 0) {
-        console.error('[GlobalErrorInterceptor] HTTP error', error.status, req.url, error.message ?? error);
+        console.error(
+          '[GlobalErrorInterceptor] HTTP error',
+          error.status,
+          req.url,
+          error.message ?? error,
+        );
       }
 
       return throwError(() => error);
-    })
+    }),
   );
 };

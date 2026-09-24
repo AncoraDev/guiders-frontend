@@ -172,5 +172,81 @@
         </table>
       }
     </section>
+
+    <section class="panel">
+      <h2>API key de integración</h2>
+      <p class="muted">
+        Clave de servidor (prefijo gdr_live_ o gdr_test_) para LeadCars y otros
+        backends. El valor completo solo se muestra al crearla.
+      </p>
+
+      @if (lastCreatedIntegrationKey()) {
+        <div class="key-banner">
+          <span>Cópiala ahora:</span>
+          <code>{{ lastCreatedIntegrationKey() }}</code>
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            (click)="copy(lastCreatedIntegrationKey()!)"
+          >
+            Copiar
+          </button>
+        </div>
+      }
+
+      <div class="key-form">
+        <input
+          type="text"
+          placeholder="LeadCars"
+          [ngModel]="integrationKeyName()"
+          (ngModelChange)="integrationKeyName.set($event)"
+        />
+        <select
+          [ngModel]="integrationKeyEnvironment()"
+          (ngModelChange)="integrationKeyEnvironment.set($event)"
+        >
+          <option value="live">live</option>
+          <option value="test">test</option>
+        </select>
+        <button
+          type="button"
+          class="btn btn--primary"
+          (click)="createIntegrationApiKey()"
+          [disabled]="creatingIntegrationKey()"
+        >
+          {{ creatingIntegrationKey() ? 'Creando…' : 'Crear key' }}
+        </button>
+      </div>
+      @if (integrationKeyError()) {
+        <div class="error" role="alert">{{ integrationKeyError() }}</div>
+      }
+
+      @if (integrationKeys().length === 0) {
+        <p class="muted">No hay API keys de integración todavía.</p>
+      } @else {
+        <table class="keys-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Prefijo</th>
+              <th>Entorno</th>
+              <th>Estado</th>
+              <th>Creada</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (k of integrationKeys(); track k.id) {
+              <tr>
+                <td>{{ k.name }}</td>
+                <td class="mono">{{ k.tokenPrefix }}</td>
+                <td>{{ k.environment }}</td>
+                <td>{{ k.status }}</td>
+                <td>{{ k.createdAt ? (k.createdAt | date: 'short') : '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
   }
 </div>

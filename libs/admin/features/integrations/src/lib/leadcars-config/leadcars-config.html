@@ -234,7 +234,7 @@
         >
           <option [ngValue]="null">-- Seleccionar concesionario --</option>
           @for (conc of concesionarioOptions(); track conc.id) {
-          <option [ngValue]="conc.id">{{ conc.nombre || 'Concesionario #' + conc.id }}</option>
+          <option [ngValue]="conc.id">{{ conc.nombre ? conc.nombre + ' (' + conc.id + ')' : 'Concesionario #' + conc.id }}</option>
           }
         </select>
         @if (loadingLeadCarsData()) {

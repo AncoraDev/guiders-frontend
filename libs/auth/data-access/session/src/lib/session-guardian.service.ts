@@ -3,6 +3,7 @@ import { AuthRefreshService } from './auth-refresh.service';
 import { firstValueFrom } from 'rxjs';
 import { ENVIRONMENT_TOKEN } from './environment.token';
 import { resolveAuthApp, resolveAuthReturnUrl } from './resolve-auth-app';
+import { isEmbedContext } from './redirect-to-login';
 
 /**
  * Configuración del Session Guardian
@@ -294,6 +295,7 @@ export class SessionGuardianService implements OnDestroy {
    */
   private redirectToLogin(): void {
     if (typeof window === 'undefined') return;
+    if (isEmbedContext()) return;
 
     const currentApp = this.getCurrentApp();
     const returnUrl = encodeURIComponent(resolveAuthReturnUrl());

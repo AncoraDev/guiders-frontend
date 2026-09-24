@@ -72,6 +72,24 @@ describe('EmbedBootstrapService', () => {
       service.bootstrap();
       expect(messageListeners.length).toBeGreaterThan(0);
     });
+
+    it('debe cargar orígenes del companyId antes de anunciar ready', async () => {
+      window.history.replaceState({}, '', '/?embed=true&companyId=company-1');
+      service.bootstrap();
+      expect(messageListeners.length).toBe(0);
+
+      const req = httpMock.expectOne(
+        '/api/embed/allowed-origins?companyId=company-1',
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush({ origins: ['http://localhost:8090'] });
+      await vi.waitFor(() => {
+        expect(messageListeners.length).toBeGreaterThan(0);
+      });
+      expect(originsService.isAllowed('http://localhost:8090')).toBe(true);
+      expect(mockParentPostMessage).toHaveBeenCalled();
+      window.history.replaceState({}, '', '/');
+    });
   });
 
   describe('AC2 — Mensaje leadcars:v1:auth con origin válido', () => {

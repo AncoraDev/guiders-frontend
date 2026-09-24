@@ -4,6 +4,7 @@ import { Observable, BehaviorSubject, EMPTY, throwError } from 'rxjs';
 import { switchMap, catchError, tap, take, shareReplay, filter } from 'rxjs/operators';
 import { ENVIRONMENT_TOKEN } from './environment.token';
 import { resolveAuthApp, resolveAuthReturnUrl } from './resolve-auth-app';
+import { isEmbedContext } from './redirect-to-login';
 
 /**
  * Servicio que maneja el refresh automático de la sesión del BFF
@@ -149,6 +150,7 @@ export class AuthRefreshService implements OnDestroy {
    * Redirige al login cuando el refresh falla
    */
   private redirectToLogin(): void {
+    if (isEmbedContext()) return;
     const currentApp = this.getCurrentApp();
     const returnUrl = encodeURIComponent(resolveAuthReturnUrl());
     const bffBase = this.environment.api.baseUrl.startsWith('/')
