@@ -29,6 +29,9 @@ export class App {
   private readonly destroyRef = inject(DestroyRef);
   private readonly transferNotifications = inject(TransferNotificationService);
   private readonly leadContactService = inject(LeadContactService);
+  private readonly productBrand = inject(ProductBrandService);
+
+  readonly brandName = this.productBrand.name;
 
   protected title = 'console';
 
