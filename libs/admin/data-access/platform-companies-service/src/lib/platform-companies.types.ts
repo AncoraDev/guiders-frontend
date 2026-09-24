@@ -151,3 +151,29 @@ export interface PlatformSdkRelease {
   wordpressZipUrl: string | null;
   webScriptUrl: string | null;
 }
+
+export interface PlatformProvider {
+  id: string;
+  companyId: string;
+  name: string;
+  token: string;
+  tokenPrefix: string;
+  status: string;
+  demoAdminEmail: string;
+  demoAdminPassword: string;
+  createdAt: string;
+  clientCount: number;
+}
+
+export interface PlatformCreateProviderResponse {
+  id: string;
+  companyId: string;
+  name: string;
+  token: string;
+  tokenPrefix: string;
+}
+
+export interface PlatformProviderTokenResponse {
+  token: string;
+  tokenPrefix: string;
+}

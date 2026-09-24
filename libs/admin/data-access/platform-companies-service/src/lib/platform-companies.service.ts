@@ -19,6 +19,9 @@ import {
   PlatformUserMutationResponse,
   PlatformUsersListResponse,
   PlatformSdkRelease,
+  PlatformProvider,
+  PlatformCreateProviderResponse,
+  PlatformProviderTokenResponse,
 } from './platform-companies.types';
 
 @Injectable({ providedIn: 'root' })
@@ -172,6 +175,59 @@ export class PlatformCompaniesService {
 
   deleteUser(userId: string): Observable<void> {
     return this.http.delete<void>(`${this.usersUrl}/${userId}`, {
+      withCredentials: true,
+    });
+  }
+
+  private get providersUrl(): string {
+    return `${this.environment.api.baseUrl}/platform/providers`;
+  }
+
+  listProviders(): Observable<PlatformProvider[]> {
+    return this.http.get<PlatformProvider[]>(this.providersUrl, {
+      withCredentials: true,
+    });
+  }
+
+  createProvider(input: {
+    name: string;
+    demoAdminEmail: string;
+    demoAdminPassword: string;
+  }): Observable<PlatformCreateProviderResponse> {
+    return this.http.post<PlatformCreateProviderResponse>(
+      this.providersUrl,
+      input,
+      { withCredentials: true },
+    );
+  }
+
+  renameProvider(
+    id: string,
+    input: {
+      name: string;
+      demoAdminEmail: string;
+      demoAdminPassword: string;
+    },
+  ): Observable<{ id: string; name: string; demoAdminEmail: string }> {
+    return this.http.patch<{ id: string; name: string; demoAdminEmail: string }>(
+      `${this.providersUrl}/${id}`,
+      input,
+      { withCredentials: true },
+    );
+  }
+
+  regenerateProviderToken(
+    id: string,
+  ): Observable<PlatformProviderTokenResponse> {
+    return this.http.post<PlatformProviderTokenResponse>(
+      `${this.providersUrl}/${id}/token`,
+      {},
+      { withCredentials: true },
+    );
+  }
+
+  deleteProvider(id: string): Observable<{ ok: true }> {
+    return this.http.delete<{ ok: true }>(`${this.providersUrl}/${id}`, {
       withCredentials: true,
     });
   }

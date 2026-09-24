@@ -1,0 +1,87 @@
+<div class="providers-page">
+  <header class="providers-page__header">
+    <div>
+      <h1>Proveedores</h1>
+      <p class="providers-page__subtitle">
+        Alta y gestión de quien llama a la API de Guiders
+      </p>
+    </div>
+    <a routerLink="/proveedores/new" class="btn btn--primary">Nuevo proveedor</a>
+  </header>
+
+  <div class="providers-page__toolbar">
+    <input
+      type="search"
+      class="providers-page__search"
+      placeholder="Buscar por nombre, email o ID…"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+    />
+    <button type="button" class="btn btn--ghost" (click)="load()" [disabled]="loading()">
+      Actualizar
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="providers-page__error" role="alert">{{ error() }}</div>
+  }
+
+  @if (loading() && providers().length === 0) {
+    <p class="providers-page__empty">Cargando proveedores…</p>
+  } @else if (!loading() && filtered().length === 0) {
+    <p class="providers-page__empty">
+      No hay proveedores{{ search() ? ' que coincidan con la búsqueda' : '' }}.
+      <a routerLink="/proveedores/new">Crear el primero</a>
+    </p>
+  } @else {
+    <div class="providers-table-wrap">
+      <table class="providers-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email demo</th>
+            <th>Clientes</th>
+            <th>Creado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (provider of filtered(); track provider.id) {
+            <tr>
+              <td>
+                <a
+                  [routerLink]="['/proveedores', provider.id]"
+                  class="providers-table__name"
+                  >{{ provider.name }}</a
+                >
+                <div class="providers-table__id">{{ provider.id }}</div>
+              </td>
+              <td>
+                <span class="providers-table__email">{{
+                  provider.demoAdminEmail || '—'
+                }}</span>
+              </td>
+              <td>{{ provider.clientCount }}</td>
+              <td>{{ provider.createdAt | date: 'shortDate' }}</td>
+              <td class="providers-table__actions">
+                <a
+                  [routerLink]="['/proveedores', provider.id]"
+                  class="btn btn--ghost btn--sm"
+                  >Editar</a
+                >
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  (click)="onDelete(provider)"
+                  [disabled]="deletingId() === provider.id"
+                >
+                  Eliminar
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

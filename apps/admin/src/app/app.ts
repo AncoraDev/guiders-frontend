@@ -63,6 +63,12 @@ export class App {
 
   readonly sidebarItems = signal<SidebarItem[]>([
     {
+      id: 'providers',
+      label: 'Proveedores',
+      icon: 'layers',
+      route: '/proveedores',
+    },
+    {
       id: 'clients',
       label: 'Clientes',
       icon: 'building',

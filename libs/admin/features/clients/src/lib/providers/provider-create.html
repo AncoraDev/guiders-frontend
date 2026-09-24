@@ -1,0 +1,68 @@
+<div class="provider-form-page">
+  <header class="provider-form-page__header">
+    <a routerLink="/proveedores" class="back-link">← Proveedores</a>
+    <h1>Nuevo proveedor</h1>
+    <p>
+      Crea la empresa interna, el token de integración y el usuario con el que
+      entra en la demo de LeadCars.
+    </p>
+  </header>
+
+  @if (error()) {
+    <div class="provider-form-page__error" role="alert">{{ error() }}</div>
+  }
+
+  <form class="provider-form" (ngSubmit)="submit()">
+    <fieldset>
+      <legend>Proveedor</legend>
+      <label>
+        Nombre
+        <input
+          type="text"
+          required
+          [ngModel]="name()"
+          (ngModelChange)="name.set($event)"
+          name="name"
+          autocomplete="organization"
+        />
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Admin de la demo</legend>
+      <label>
+        Email
+        <input
+          type="email"
+          required
+          [ngModel]="demoAdminEmail()"
+          (ngModelChange)="demoAdminEmail.set($event)"
+          name="demoAdminEmail"
+          autocomplete="off"
+        />
+      </label>
+      <label>
+        Contraseña
+        <input
+          type="text"
+          required
+          minlength="8"
+          [ngModel]="demoAdminPassword()"
+          (ngModelChange)="demoAdminPassword.set($event)"
+          name="demoAdminPassword"
+          autocomplete="new-password"
+        />
+        <span class="field-hint">
+          Mín. 8 caracteres. Con estas claves entra en la demo de LeadCars.
+        </span>
+      </label>
+    </fieldset>
+
+    <div class="provider-form__actions">
+      <a routerLink="/proveedores" class="btn btn--ghost">Cancelar</a>
+      <button type="submit" class="btn btn--primary" [disabled]="saving()">
+        {{ saving() ? 'Creando…' : 'Crear proveedor' }}
+      </button>
+    </div>
+  </form>
+</div>

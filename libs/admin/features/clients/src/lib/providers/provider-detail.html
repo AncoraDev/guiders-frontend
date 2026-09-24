@@ -1,0 +1,148 @@
+<div class="provider-detail">
+  <a routerLink="/proveedores" class="back-link">← Proveedores</a>
+
+  @if (loading() && !provider()) {
+    <p class="muted">Cargando…</p>
+  } @else if (error() && !provider()) {
+    <div class="error" role="alert">{{ error() }}</div>
+  } @else if (provider()) {
+    <header class="provider-detail__header">
+      <div>
+        <h1>{{ provider()!.name }}</h1>
+        <p class="muted mono">{{ provider()!.id }}</p>
+      </div>
+      <button
+        type="button"
+        class="btn btn--danger"
+        (click)="onDelete()"
+        [disabled]="deleting()"
+      >
+        Eliminar proveedor
+      </button>
+    </header>
+
+    @if (error()) {
+      <div class="error" role="alert">{{ error() }}</div>
+    }
+
+    <section class="panel">
+      <h2>Datos del proveedor</h2>
+      <p class="muted">
+        {{ provider()!.clientCount }}
+        {{ provider()!.clientCount === 1 ? 'cliente' : 'clientes' }} · creado
+        {{ provider()!.createdAt | date: 'shortDate' }}
+      </p>
+
+      @if (saveError()) {
+        <div class="error" role="alert">{{ saveError() }}</div>
+      }
+      @if (saveOk()) {
+        <p class="ok">Proveedor actualizado</p>
+      }
+
+      <label class="field">
+        <span class="field__label">Nombre</span>
+        <input
+          class="field__input"
+          type="text"
+          [ngModel]="formName()"
+          (ngModelChange)="formName.set($event)"
+          [disabled]="saving()"
+          autocomplete="organization"
+        />
+      </label>
+
+      <label class="field">
+        <span class="field__label">Email de la demo</span>
+        <input
+          class="field__input"
+          type="email"
+          [ngModel]="formEmail()"
+          (ngModelChange)="formEmail.set($event)"
+          [disabled]="saving()"
+          autocomplete="off"
+        />
+      </label>
+
+      <label class="field">
+        <span class="field__label">Contraseña de la demo</span>
+        <input
+          class="field__input"
+          type="text"
+          [ngModel]="formPassword()"
+          (ngModelChange)="formPassword.set($event)"
+          [disabled]="saving()"
+          autocomplete="off"
+        />
+        <span class="field-hint">
+          Mín. 8 caracteres. Con estas claves entra en la demo de LeadCars.
+        </span>
+      </label>
+
+      <div class="panel__actions">
+        <button
+          type="button"
+          class="btn btn--primary"
+          (click)="save()"
+          [disabled]="saving()"
+        >
+          {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Token de integración</h2>
+      <p class="muted">
+        Clave de servidor para la demo. Estado: {{ statusLabel(provider()!.status) }}.
+      </p>
+
+      @if (tokenError()) {
+        <div class="error" role="alert">{{ tokenError() }}</div>
+      }
+      @if (copyFeedback()) {
+        <p class="muted">{{ copyFeedback() }}</p>
+      }
+
+      @if (!provider()!.token) {
+        <p class="muted">Sin token guardado. Regenera uno para verlo aquí.</p>
+      } @else {
+        <table class="keys-table">
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">{{ provider()!.token }}</td>
+              <td>{{ statusLabel(provider()!.status) }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--sm"
+                  (click)="copy(provider()!.token)"
+                >
+                  Copiar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      }
+
+      <div class="panel__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          (click)="regenerate()"
+          [disabled]="regenerating()"
+        >
+          {{ regenerating() ? 'Regenerando…' : 'Regenerar token' }}
+        </button>
+      </div>
+    </section>
+  }
+</div>
