@@ -18,8 +18,9 @@
       <span class="provider-name">{{ providerLabel() }}</span> llama a Guiders desde su servidor. La clave de
       integración va en la cabecera <code>x-api-key</code>
       (<code>gdr_live_…</code> o <code>gdr_test_…</code>). El
-      <code>companyId</code> del cuerpo es el UUID del cliente y tiene que
-      coincidir con esa clave.
+      <code>companyId</code> de comerciales y del iframe es el UUID que devolvió
+      el alta del cliente. La clave solo opera sobre la empresa a la que está
+      atada y sobre los clientes que ella ha creado.
     </p>
     <p class="muted">
       El comercial no entra por Keycloak. Entra cuando <span class="provider-name">{{ providerLabel() }}</span>
@@ -30,13 +31,112 @@
   <section class="panel">
     <div class="op">
       <span class="op__method">POST</span>
+      <code>/api/v2/integration/companies</code>
+    </div>
+    <h2>Crear un cliente</h2>
+    <p>
+      La misma alta que en el Admin de Guiders: empresa, sitio, dominio y admin
+      de Keycloak. La respuesta trae el <code>companyId</code> de esa empresa.
+      Las llamadas de comerciales y el login del iframe usan ese id. La clave
+      solo puede gestionar los clientes que ella ha creado.
+    </p>
+    <h3>Cuerpo</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Campo</th>
+          <th>Obligatorio</th>
+          <th>Qué es</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>companyName</code></td>
+          <td>Sí</td>
+          <td>Nombre de la empresa.</td>
+        </tr>
+        <tr>
+          <td><code>sites</code></td>
+          <td>Sí</td>
+          <td>
+            Al menos un sitio, con <code>name</code> y
+            <code>canonicalDomain</code>.
+          </td>
+        </tr>
+        <tr>
+          <td><code>admin</code></td>
+          <td>Sí</td>
+          <td>
+            <code>adminFirstName</code>, <code>adminLastName</code>,
+            <code>adminEmail</code> y <code>adminPassword</code> (mínimo 6).
+            Entra en Console por Keycloak.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <h3>Ejemplo</h3>
+    <pre><code>{{ companyExample() }}</code></pre>
+    <h3>Respuesta 201</h3>
+    <pre><code>{{ companyResponseExample() }}</code></pre>
+  </section>
+
+  <section class="panel">
+    <div class="op">
+      <span class="op__method">PATCH</span>
+      <code>{{ companyPatchPath() }}</code>
+    </div>
+    <h2>Actualizar un cliente</h2>
+    <p>
+      Cambia el nombre y los sitios. No cambia el admin de Keycloak. Si la clave
+      no creó ese cliente, responde 404.
+    </p>
+    <h3>Ejemplo</h3>
+    <pre><code>{{ companyUpdateExample() }}</code></pre>
+    <h3>Respuesta 200</h3>
+    <pre><code>{{ companyIdExample() }}</code></pre>
+  </section>
+
+  <section class="panel">
+    <div class="op">
+      <span class="op__method">POST</span>
+      <code>/api/v2/integration/companies/remove</code>
+    </div>
+    <h2>Eliminar un cliente</h2>
+    <p>
+      Borra la empresa, el admin de Keycloak, los comerciales y las claves de
+      integración de esa hija. Los chats, los mensajes y los leads se quedan. Si
+      no hay vínculo, responde 404.
+    </p>
+    <h3>Cuerpo</h3>
+    <pre><code>{{ companyIdExample() }}</code></pre>
+    <h3>Respuesta 200</h3>
+    <pre><code>{{ okExample() }}</code></pre>
+  </section>
+
+  <section class="panel">
+    <h2>Qué no hace esta clave</h2>
+    <ul>
+      <li>No borra chats, mensajes ni leads.</li>
+      <li>No cambia la marca, el tema ni los orígenes de embed. Eso lo activa el dueño en el Admin de Guiders.</li>
+      <li>No crea ni revoca la API key del widget.</li>
+      <li>No cambia el admin de Keycloak después del alta.</li>
+      <li>No opera sobre un cliente creado por otra clave.</li>
+      <li>
+        <code>active: false</code> en un comercial lo deja inactivo. No lo borra.
+        La contraseña del comercial no existe en Guiders.
+      </li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <div class="op">
+      <span class="op__method">POST</span>
       <code>/api/v2/integration/commercials/sync</code>
     </div>
-    <h2>Sincronizar un comercial</h2>
+    <h2>Crear un comercial</h2>
     <p>
-      Alta, cambio o baja. Si el id externo ya existe en esta empresa, Guiders
-      actualiza la cuenta. <code>active: false</code> la deja inactiva y no la
-      borra.
+      Alta de una cuenta nueva. El <code>externalUserId</code> no existe todavía
+      en esta empresa. La respuesta trae <code>created: true</code>.
     </p>
 
     <h3>Cuerpo</h3>
@@ -86,8 +186,8 @@
           <td><code>active</code></td>
           <td>No</td>
           <td>
-            Por defecto <code>true</code>. <code>false</code> da de baja al
-            comercial.
+            Por defecto <code>true</code>. <code>false</code> deja la cuenta
+            inactiva. No la borra.
           </td>
         </tr>
       </tbody>
@@ -124,6 +224,64 @@
       </tbody>
     </table>
     <pre><code>{{ syncResponseExample() }}</code></pre>
+  </section>
+
+  <section class="panel">
+    <div class="op">
+      <span class="op__method">POST</span>
+      <code>/api/v2/integration/commercials/sync</code>
+    </div>
+    <h2>Actualizar un comercial</h2>
+    <p>
+      El mismo cuerpo que el alta, con el <code>externalUserId</code> que ya
+      tiene. Guiders cambia nombre, apellidos, email, roles y
+      <code>active</code>. La respuesta trae <code>created: false</code>.
+      <code>active: false</code> deja la cuenta inactiva y no la borra. Guiders
+      no guarda la contraseña del proveedor.
+    </p>
+    <h3>Ejemplo</h3>
+    <pre><code>{{ syncExample() }}</code></pre>
+    <h3>Respuesta 200</h3>
+    <pre><code>{{ updateResponseExample() }}</code></pre>
+  </section>
+
+  <section class="panel">
+    <div class="op">
+      <span class="op__method">POST</span>
+      <code>/api/v2/integration/commercials/remove</code>
+    </div>
+    <h2>Eliminar un comercial</h2>
+    <p>
+      Borra el vínculo y la cuenta de Guiders de ese id externo. Los chats, los
+      mensajes y los leads se quedan. Si no hay vínculo, responde 404 y se puede
+      dar por borrado.
+    </p>
+    <h3>Cuerpo</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Campo</th>
+          <th>Obligatorio</th>
+          <th>Qué es</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>companyId</code></td>
+          <td>Sí</td>
+          <td>UUID del cliente de la clave.</td>
+        </tr>
+        <tr>
+          <td><code>externalUserId</code></td>
+          <td>Sí</td>
+          <td>Id del comercial en <span class="provider-name">{{ providerLabel() }}</span>.</td>
+        </tr>
+      </tbody>
+    </table>
+    <h3>Ejemplo</h3>
+    <pre><code>{{ removeExample() }}</code></pre>
+    <h3>Respuesta 200</h3>
+    <pre><code>{{ okExample() }}</code></pre>
   </section>
 
   <section class="panel">
@@ -240,8 +398,9 @@
         <tr>
           <td>403</td>
           <td>
-            El <code>companyId</code> no es el de la clave, el embed está
-            apagado, o el comercial no existe o está inactivo.
+            El <code>companyId</code> no es el de la clave ni de un cliente
+            que ella creó, el embed está apagado, o el comercial no existe o
+            está inactivo.
           </td>
         </tr>
         <tr>
@@ -252,8 +411,18 @@
           </td>
         </tr>
         <tr>
+          <td>404</td>
+          <td>
+            No hay vínculo de ese cliente, o
+            <code>commercials/remove</code> no encuentra ese comercial. Se
+            puede dar por borrado.
+          </td>
+        </tr>
+        <tr>
           <td>409</td>
-          <td>Ese email ya pertenece a otra cuenta.</td>
+          <td>
+            El dominio ya está en uso, o ese email ya pertenece a otra cuenta.
+          </td>
         </tr>
       </tbody>
     </table>

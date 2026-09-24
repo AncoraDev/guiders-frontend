@@ -33,6 +33,69 @@ export class ClientApiDocs {
   readonly authMessage = computed(() => `${this.providerSlug()}:v1:auth`);
   readonly logoutMessage = computed(() => `${this.providerSlug()}:v1:logout`);
 
+  companyExample(): string {
+    return JSON.stringify(
+      {
+        companyName: 'Concesionario Norte',
+        sites: [
+          {
+            name: 'Web',
+            canonicalDomain: 'norte.example',
+            domainAliases: [],
+          },
+        ],
+        admin: {
+          adminFirstName: 'Ana',
+          adminLastName: 'García',
+          adminEmail: 'ana@norte.example',
+          adminPassword: 'temporal1',
+        },
+      },
+      null,
+      2,
+    );
+  }
+
+  companyResponseExample(): string {
+    return JSON.stringify(
+      {
+        companyId: '<uuid de Guiders>',
+        adminUserId: '<uuid del admin>',
+      },
+      null,
+      2,
+    );
+  }
+
+  companyPatchPath(): string {
+    return '/api/v2/integration/companies/{companyId}';
+  }
+
+  companyIdExample(): string {
+    return '{ "companyId": "<uuid de Guiders>" }';
+  }
+
+  okExample(): string {
+    return '{ "ok": true }';
+  }
+
+  companyUpdateExample(): string {
+    return JSON.stringify(
+      {
+        companyName: 'Concesionario Norte',
+        sites: [
+          {
+            name: 'Web',
+            canonicalDomain: 'norte.example',
+            domainAliases: [],
+          },
+        ],
+      },
+      null,
+      2,
+    );
+  }
+
   syncExample(): string {
     return JSON.stringify(
       {
@@ -49,6 +112,17 @@ export class ClientApiDocs {
     );
   }
 
+  removeExample(): string {
+    return JSON.stringify(
+      {
+        companyId: '{companyId}',
+        externalUserId: `${this.providerSlug()}-commercial-42`,
+      },
+      null,
+      2,
+    );
+  }
+
   syncResponseExample(): string {
     return JSON.stringify(
       {
@@ -56,6 +130,19 @@ export class ClientApiDocs {
         externalUserId: `${this.providerSlug()}-commercial-42`,
         active: true,
         created: true,
+      },
+      null,
+      2,
+    );
+  }
+
+  updateResponseExample(): string {
+    return JSON.stringify(
+      {
+        userId: '<uuid de Guiders>',
+        externalUserId: `${this.providerSlug()}-commercial-42`,
+        active: true,
+        created: false,
       },
       null,
       2,
