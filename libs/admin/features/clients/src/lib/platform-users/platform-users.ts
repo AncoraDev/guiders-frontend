@@ -63,6 +63,7 @@ export class PlatformUsers implements OnInit {
   readonly search = signal('');
   readonly roleFilter = signal<QuickFilterId>('all');
   readonly companyFilter = signal<string>('all');
+  readonly providerFilter = signal('all');
 
   readonly panelOpen = signal(false);
   readonly panelMode = signal<PanelMode>('create');
@@ -90,6 +91,26 @@ export class PlatformUsers implements OnInit {
       map.set(c.id, c.companyName);
     }
     return map;
+  });
+
+  readonly companyById = computed(() => {
+    const map = new Map<string, PlatformCompanySummary>();
+    for (const company of this.companies()) {
+      map.set(company.id, company);
+    }
+    return map;
+  });
+
+  readonly providers = computed(() => {
+    const byId = new Map<string, string>();
+    for (const company of this.companies()) {
+      if (company.providerId && company.providerName) {
+        byId.set(company.providerId, company.providerName);
+      }
+    }
+    return [...byId.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
   });
 
   readonly panelTitle = computed(() =>
@@ -120,14 +141,26 @@ export class PlatformUsers implements OnInit {
       list = list.filter((u) => u.companyId === companyId);
     }
 
+    const providerId = this.providerFilter();
+    if (providerId === 'none') {
+      list = list.filter((u) => !this.providerOf(u.companyId));
+    } else if (providerId !== 'all') {
+      list = list.filter(
+        (u) => this.providerOf(u.companyId)?.id === providerId,
+      );
+    }
+
     if (q) {
       const names = this.companyNameById();
       list = list.filter((u) => {
         const companyName = names.get(u.companyId)?.toLowerCase() ?? '';
+        const providerName =
+          this.providerOf(u.companyId)?.name.toLowerCase() ?? '';
         return (
           u.name?.toLowerCase().includes(q) ||
           u.email?.toLowerCase().includes(q) ||
           companyName.includes(q) ||
+          providerName.includes(q) ||
           u.roles.some((r) => r.toLowerCase().includes(q))
         );
       });
@@ -191,6 +224,12 @@ export class PlatformUsers implements OnInit {
 
   companyName(companyId: string): string {
     return this.companyNameById().get(companyId) ?? companyId.slice(0, 8);
+  }
+
+  providerOf(companyId: string): { id: string; name: string } | null {
+    const company = this.companyById().get(companyId);
+    if (!company?.providerId || !company.providerName) return null;
+    return { id: company.providerId, name: company.providerName };
   }
 
   roleLabel(role: string): string {

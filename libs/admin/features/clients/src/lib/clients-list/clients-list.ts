@@ -54,7 +54,20 @@ export class ClientsList implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly search = signal('');
+  readonly providerFilter = signal('all');
   readonly deletingId = signal<string | null>(null);
+
+  readonly providers = computed(() => {
+    const byId = new Map<string, string>();
+    for (const company of this.companies()) {
+      if (company.providerId && company.providerName) {
+        byId.set(company.providerId, company.providerName);
+      }
+    }
+    return [...byId.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  });
 
   private readonly statsByCompanyId = computed(() => {
     const map = new Map<string, CompanyUserStats>();
@@ -76,11 +89,18 @@ export class ClientsList implements OnInit {
 
   readonly filtered = computed(() => {
     const q = this.search().trim().toLowerCase();
-    const list = this.companies();
+    const providerId = this.providerFilter();
+    let list = this.companies();
+    if (providerId === 'none') {
+      list = list.filter((c) => !c.providerId);
+    } else if (providerId !== 'all') {
+      list = list.filter((c) => c.providerId === providerId);
+    }
     if (!q) return list;
     return list.filter(
       (c) =>
         c.companyName.toLowerCase().includes(q) ||
+        (c.providerName ?? '').toLowerCase().includes(q) ||
         c.domains.some((d) => d.toLowerCase().includes(q)) ||
         c.id.toLowerCase().includes(q),
     );

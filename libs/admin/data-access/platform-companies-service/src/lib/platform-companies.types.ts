@@ -3,6 +3,8 @@ export interface PlatformCompanySummary {
   companyName: string;
   domains: string[];
   createdAt: string;
+  providerId: string | null;
+  providerName: string | null;
 }
 
 export interface PlatformCompanySite {
@@ -27,6 +29,8 @@ export interface PlatformCompanyDetail {
   sites: PlatformCompanySite[];
   createdAt: string;
   updatedAt: string;
+  providerId: string | null;
+  providerName: string | null;
 }
 
 export interface PlatformCreateCompanyRequest {

@@ -13,10 +13,21 @@
     <input
       type="search"
       class="clients-page__search"
-      placeholder="Buscar por nombre, dominio o ID…"
+      placeholder="Buscar por nombre, proveedor, dominio o ID…"
       [ngModel]="search()"
       (ngModelChange)="search.set($event)"
     />
+    <select
+      class="clients-page__search"
+      [ngModel]="providerFilter()"
+      (ngModelChange)="providerFilter.set($event)"
+    >
+      <option value="all">Todos los proveedores</option>
+      <option value="none">Sin proveedor</option>
+      @for (provider of providers(); track provider.id) {
+        <option [value]="provider.id">{{ provider.name }}</option>
+      }
+    </select>
     <button type="button" class="btn btn--ghost" (click)="load()" [disabled]="loading()">
       Actualizar
     </button>
@@ -39,6 +50,7 @@
         <thead>
           <tr>
             <th>Nombre</th>
+            <th>Proveedor</th>
             <th>Dominios</th>
             <th>Usuarios</th>
             <th>Creada</th>
@@ -53,6 +65,15 @@
                   c.companyName
                 }}</a>
                 <div class="clients-table__id">{{ c.id }}</div>
+              </td>
+              <td>
+                @if (c.providerId && c.providerName) {
+                  <a [routerLink]="['/proveedores', c.providerId]">{{
+                    c.providerName
+                  }}</a>
+                } @else {
+                  <span class="clients-table__users-empty">—</span>
+                }
               </td>
               <td>
                 <span class="clients-table__domains">{{

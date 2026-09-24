@@ -63,7 +63,7 @@
       <input
         type="search"
         class="filters__search"
-        placeholder="Buscar nombre, email, company, rol…"
+        placeholder="Buscar nombre, email, company, proveedor, rol…"
         [ngModel]="search()"
         (ngModelChange)="search.set($event)"
       />
@@ -75,6 +75,17 @@
         <option value="all">Todas las companies</option>
         @for (c of companies(); track c.id) {
           <option [value]="c.id">{{ c.companyName }}</option>
+        }
+      </select>
+      <select
+        class="filters__select"
+        [ngModel]="providerFilter()"
+        (ngModelChange)="providerFilter.set($event)"
+      >
+        <option value="all">Todos los proveedores</option>
+        <option value="none">Sin proveedor</option>
+        @for (provider of providers(); track provider.id) {
+          <option [value]="provider.id">{{ provider.name }}</option>
         }
       </select>
     </div>
@@ -99,6 +110,7 @@
             <th>Nombre</th>
             <th>Email</th>
             <th>Company</th>
+            <th>Proveedor</th>
             <th>Roles</th>
             <th>Estado</th>
             <th>Alta</th>
@@ -119,6 +131,15 @@
                 <a [routerLink]="['/clients', u.companyId]" class="company-link">{{
                   companyName(u.companyId)
                 }}</a>
+              </td>
+              <td>
+                @if (providerOf(u.companyId); as provider) {
+                  <a [routerLink]="['/proveedores', provider.id]" class="company-link">{{
+                    provider.name
+                  }}</a>
+                } @else {
+                  <span class="muted">—</span>
+                }
               </td>
               <td>
                 <div class="roles">

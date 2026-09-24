@@ -10,6 +10,14 @@
       <div>
         <h1>{{ company()!.companyName }}</h1>
         <p class="muted mono">{{ company()!.id }}</p>
+        @if (company()!.providerId && company()!.providerName) {
+          <p class="muted">
+            Proveedor:
+            <a [routerLink]="['/proveedores', company()!.providerId]">{{
+              company()!.providerName
+            }}</a>
+          </p>
+        }
       </div>
       <button
         type="button"
