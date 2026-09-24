@@ -125,6 +125,9 @@ export class Sidebar {
   );
   private readonly expandedItems = signal<Set<string>>(new Set());
   private readonly popoverItem = signal<SidebarItem | null>(null);
+  readonly navHint = signal<{ label: string; top: number; left: number } | null>(
+    null,
+  );
   private elementPositions = new Map<string, DOMRect>();
   private currentPopoverItem: SidebarItem | null = null;
 
@@ -159,6 +162,7 @@ export class Sidebar {
       const collapsed = this.config().collapsed;
       if (!collapsedSynced) {
         this.isCollapsed.set(collapsed);
+        if (!collapsed) this.navHint.set(null);
         collapsedSynced = true;
       }
     });
@@ -401,9 +405,26 @@ export class Sidebar {
     return currentPopover !== null && currentPopover.id === item.id;
   }
 
+  showNavHint(event: Event, label: string): void {
+    if (!this.isCollapsed()) return;
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLElement)) return;
+    const rect = target.getBoundingClientRect();
+    this.navHint.set({
+      label,
+      top: rect.top + rect.height / 2,
+      left: rect.right + 8,
+    });
+  }
+
+  hideNavHint(): void {
+    this.navHint.set(null);
+  }
+
   onToggleSidebar(): void {
     const newCollapsedState = !this.isCollapsed();
     this.isCollapsed.set(newCollapsedState);
+    this.navHint.set(null);
     if (newCollapsedState) {
       this.closePopover();
       this.closeThemePicker();

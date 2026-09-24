@@ -1,4 +1,5 @@
-export { ThemeService, THEME_OPTIONS } from './lib/theme.service';
+export { ThemeService, THEME_OPTIONS, THEME_DEFAULT } from './lib/theme.service';
+export { ProductBrandService } from './lib/product-brand.service';
 export type {
   SidebarTheme,
   NamedTheme,

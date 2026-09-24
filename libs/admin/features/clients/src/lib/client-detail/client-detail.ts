@@ -16,6 +16,7 @@ import {
   PlatformCompanyDetail,
   PlatformIntegrationApiKey,
 } from '@guiders-frontend/platform-companies-service';
+import { THEME_OPTIONS } from '@guiders-frontend/shared/data-access/theme';
 
 interface SiteForm {
   id?: string;
@@ -59,6 +60,13 @@ export class ClientDetail implements OnInit {
   readonly lastCreatedIntegrationKey = signal<string | null>(null);
   readonly copyFeedback = signal<string | null>(null);
 
+  readonly consoleThemes = THEME_OPTIONS;
+  readonly consoleBrandName = signal('');
+  readonly consoleTheme = signal('grey-dark');
+  readonly savingBrand = signal(false);
+  readonly brandError = signal<string | null>(null);
+  readonly brandOk = signal(false);
+
   private companyId = '';
 
   ngOnInit(): void {
@@ -68,6 +76,7 @@ export class ClientDetail implements OnInit {
       return;
     }
     this.load();
+    this.loadConsoleBrand();
   }
 
   load(): void {
@@ -147,6 +156,45 @@ export class ClientDetail implements OnInit {
           this.saveError.set(this.mapError(err, 'No se pudo actualizar el cliente'));
         },
       });
+  }
+
+  saveConsoleBrand(): void {
+    this.brandError.set(null);
+    this.brandOk.set(false);
+    this.savingBrand.set(true);
+    this.platform
+      .updateConsoleBrand(
+        this.companyId,
+        this.consoleBrandName().trim(),
+        this.consoleTheme(),
+      )
+      .pipe(finalize(() => this.savingBrand.set(false)))
+      .subscribe({
+        next: (brand) => {
+          this.consoleBrandName.set(brand.branding?.brandName ?? '');
+          this.consoleTheme.set(brand.consoleTheme || 'grey-dark');
+          this.brandOk.set(true);
+          setTimeout(() => this.brandOk.set(false), 2000);
+        },
+        error: (err: unknown) => {
+          this.brandError.set(
+            this.mapError(err, 'No se pudo guardar la marca de Console'),
+          );
+        },
+      });
+  }
+
+  private loadConsoleBrand(): void {
+    this.platform.getConsoleBrand(this.companyId).subscribe({
+      next: (brand) => {
+        this.consoleBrandName.set(brand.branding?.brandName ?? '');
+        this.consoleTheme.set(brand.consoleTheme || 'grey-dark');
+      },
+      error: () => {
+        this.consoleBrandName.set('');
+        this.consoleTheme.set('grey-dark');
+      },
+    });
   }
 
   createApiKey(): void {

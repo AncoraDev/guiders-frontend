@@ -74,6 +74,12 @@ export class App {
       icon: 'users',
       route: '/users',
     },
+    {
+      id: 'api-docs',
+      label: 'Documentación API',
+      icon: 'file-text',
+      route: '/api',
+    },
   ]);
 
   onSidebarItemClick(item: SidebarItem): void {

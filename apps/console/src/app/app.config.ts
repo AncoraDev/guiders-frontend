@@ -19,7 +19,7 @@ import {
   guidersAppInterceptor,
   redirectToBffLogin,
 } from '@guiders-frontend/auth/data-access/session';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { SETTINGS_CLOSE_ROUTE } from '@guiders-frontend/auth/data-access/session';
 import { CommercialPresenceService } from '@guiders-frontend/commercial-presence';
 import { WebSocketService } from '@guiders-frontend/chat/data-access/websocket-service';
@@ -32,6 +32,10 @@ import {
   EmbedBootstrapService,
   EmbedModeService,
 } from '@guiders-frontend/embed';
+import {
+  ProductBrandService,
+  ThemeService,
+} from '@guiders-frontend/shared/data-access/theme';
 
 /**
  * Factory para inicializar el usuario y presencia del comercial al arrancar la aplicación.
@@ -47,6 +51,9 @@ function initializeApp() {
   const transferNotifications = inject(TransferNotificationService);
   const embedMode = inject(EmbedModeService);
   const embedBootstrap = inject(EmbedBootstrapService);
+  const http = inject(HttpClient);
+  const productBrand = inject(ProductBrandService);
+  const themeService = inject(ThemeService);
 
   return async () => {
     if (embedMode.isEmbed()) {
@@ -89,6 +96,27 @@ function initializeApp() {
         user.sub,
       );
       unreadMessagesService.setCurrentUser(user.sub);
+
+      if (user.companyId) {
+        try {
+          const brand = await firstValueFrom(
+            http.get<{
+              branding?: { brandName?: string };
+              consoleTheme?: string;
+            }>(
+              `${environmentToken.api.baseUrl}/v2/companies/${user.companyId}/white-label`,
+              { withCredentials: true },
+            ),
+          );
+          productBrand.setName(brand.branding?.brandName);
+          themeService.applyCompanyDefault(brand.consoleTheme);
+        } catch (brandError: unknown) {
+          console.warn(
+            '[AppInitializer] No se pudo cargar la marca de Console',
+            brandError instanceof Error ? brandError.message : brandError,
+          );
+        }
+      }
 
       // 2. Conectar presencia del comercial (solo si hay usuario)
       if (user) {

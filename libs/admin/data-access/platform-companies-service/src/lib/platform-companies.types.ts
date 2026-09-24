@@ -12,6 +12,15 @@ export interface PlatformCompanySite {
   domainAliases: string[];
 }
 
+export interface PlatformConsoleBrand {
+  branding: {
+    brandName: string;
+    logoUrl?: string | null;
+    faviconUrl?: string | null;
+  };
+  consoleTheme?: string;
+}
+
 export interface PlatformCompanyDetail {
   id: string;
   companyName: string;

@@ -12,6 +12,7 @@ import {
   PlatformCreateCompanyRequest,
   PlatformCreateCompanyResponse,
   PlatformUpdateCompanyRequest,
+  PlatformConsoleBrand,
   PlatformCreateUserRequest,
   PlatformSetUserActiveRequest,
   PlatformUpdateUserRequest,
@@ -132,6 +133,25 @@ export class PlatformCompaniesService {
     return this.http.patch<{ ok: true }>(
       `${this.usersUrl}/${userId}/active`,
       body,
+      { withCredentials: true },
+    );
+  }
+
+  getConsoleBrand(companyId: string): Observable<PlatformConsoleBrand> {
+    return this.http.get<PlatformConsoleBrand>(
+      `${this.environment.api.baseUrl}/v2/companies/${companyId}/white-label`,
+      { withCredentials: true },
+    );
+  }
+
+  updateConsoleBrand(
+    companyId: string,
+    brandName: string,
+    consoleTheme: string,
+  ): Observable<PlatformConsoleBrand> {
+    return this.http.patch<PlatformConsoleBrand>(
+      `${this.environment.api.baseUrl}/v2/companies/${companyId}/white-label`,
+      { branding: { brandName }, consoleTheme },
       { withCredentials: true },
     );
   }

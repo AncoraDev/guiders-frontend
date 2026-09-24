@@ -94,6 +94,60 @@
     </section>
 
     <section class="panel">
+      <h2>Marca en Console</h2>
+      <p class="muted">
+        Lo que ven los comerciales. Si el nombre queda vacío, sigue siendo
+        Guiders. El estilo solo aplica a quien no haya elegido uno en su
+        navegador.
+      </p>
+
+      @if (brandError()) {
+        <div class="error" role="alert">{{ brandError() }}</div>
+      }
+      @if (brandOk()) {
+        <p class="ok">Marca actualizada</p>
+      }
+
+      <label class="field">
+        <span class="field__label">Nombre en Console</span>
+        <input
+          class="field__input"
+          type="text"
+          placeholder="Guiders"
+          maxlength="100"
+          [ngModel]="consoleBrandName()"
+          (ngModelChange)="consoleBrandName.set($event)"
+          [disabled]="savingBrand()"
+        />
+      </label>
+
+      <label class="field">
+        <span class="field__label">Estilo por defecto</span>
+        <select
+          class="field__input"
+          [ngModel]="consoleTheme()"
+          (ngModelChange)="consoleTheme.set($event)"
+          [disabled]="savingBrand()"
+        >
+          @for (theme of consoleThemes; track theme.id) {
+            <option [value]="theme.id">{{ theme.label }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="panel__actions">
+        <button
+          type="button"
+          class="btn btn--primary"
+          (click)="saveConsoleBrand()"
+          [disabled]="savingBrand()"
+        >
+          {{ savingBrand() ? 'Guardando…' : 'Guardar marca' }}
+        </button>
+      </div>
+    </section>
+
+    <section class="panel">
       <h2>API keys (widget / plugin)</h2>
       <p class="muted">
         Usa estas keys en el plugin WordPress o SDK del cliente.

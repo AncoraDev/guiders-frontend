@@ -11,6 +11,7 @@ import { UnreadMessagesService } from '@guiders-frontend/unread-messages-service
 import { ToastHostComponent } from '@guiders-frontend/shared/ui/toast';
 import { TransferNotificationService } from './transfer-notification.service';
 import { LeadContactService } from '@guiders-frontend/lead-contact-service';
+import { ProductBrandService } from '@guiders-frontend/shared/data-access/theme';
 
 @Component({
   imports: [RouterModule, Sidebar, ChatWidgetComponent, ToastHostComponent],

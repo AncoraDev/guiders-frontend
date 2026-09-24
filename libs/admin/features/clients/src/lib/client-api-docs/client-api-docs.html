@@ -1,0 +1,261 @@
+<div class="api-docs">
+  <header>
+    <h1>Documentación API</h1>
+    <label class="provider">
+      <span class="provider__label">Nombre del proveedor</span>
+      <input
+        class="provider__input"
+        type="text"
+        [ngModel]="providerName()"
+        (ngModelChange)="providerName.set($event)"
+      />
+    </label>
+  </header>
+
+  <section class="panel">
+    <h2>Cómo se llama</h2>
+    <p>
+      <span class="provider-name">{{ providerLabel() }}</span> llama a Guiders desde su servidor. La clave de
+      integración va en la cabecera <code>x-api-key</code>
+      (<code>gdr_live_…</code> o <code>gdr_test_…</code>). El
+      <code>companyId</code> del cuerpo es el UUID del cliente y tiene que
+      coincidir con esa clave.
+    </p>
+    <p class="muted">
+      El comercial no entra por Keycloak. Entra cuando <span class="provider-name">{{ providerLabel() }}</span>
+      abre Console en un iframe con el token de la segunda llamada.
+    </p>
+  </section>
+
+  <section class="panel">
+    <div class="op">
+      <span class="op__method">POST</span>
+      <code>/api/v2/integration/commercials/sync</code>
+    </div>
+    <h2>Sincronizar un comercial</h2>
+    <p>
+      Alta, cambio o baja. Si el id externo ya existe en esta empresa, Guiders
+      actualiza la cuenta. <code>active: false</code> la deja inactiva y no la
+      borra.
+    </p>
+
+    <h3>Cuerpo</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Campo</th>
+          <th>Obligatorio</th>
+          <th>Qué es</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>companyId</code></td>
+          <td>Sí</td>
+          <td>UUID del cliente de la clave.</td>
+        </tr>
+        <tr>
+          <td><code>externalUserId</code></td>
+          <td>Sí</td>
+          <td>Id del comercial en <span class="provider-name">{{ providerLabel() }}</span>. Máximo 128 caracteres.</td>
+        </tr>
+        <tr>
+          <td><code>email</code></td>
+          <td>Sí</td>
+          <td>Email del comercial.</td>
+        </tr>
+        <tr>
+          <td><code>firstName</code></td>
+          <td>Sí</td>
+          <td>Nombre. Máximo 80 caracteres.</td>
+        </tr>
+        <tr>
+          <td><code>lastName</code></td>
+          <td>No</td>
+          <td>Apellidos. Máximo 80 caracteres.</td>
+        </tr>
+        <tr>
+          <td><code>roles</code></td>
+          <td>No</td>
+          <td>
+            <code>commercial</code>, <code>supervisor</code> o
+            <code>admin</code>. Si no se envía, es comercial.
+          </td>
+        </tr>
+        <tr>
+          <td><code>active</code></td>
+          <td>No</td>
+          <td>
+            Por defecto <code>true</code>. <code>false</code> da de baja al
+            comercial.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Ejemplo</h3>
+    <pre><code>{{ syncExample() }}</code></pre>
+
+    <h3>Respuesta 200</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Campo</th>
+          <th>Qué es</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>userId</code></td>
+          <td>UUID de Guiders. Sirve para el login del iframe.</td>
+        </tr>
+        <tr>
+          <td><code>externalUserId</code></td>
+          <td>El mismo id que envió <span class="provider-name">{{ providerLabel() }}</span>.</td>
+        </tr>
+        <tr>
+          <td><code>active</code></td>
+          <td>Si la cuenta queda activa.</td>
+        </tr>
+        <tr>
+          <td><code>created</code></td>
+          <td><code>true</code> si la cuenta acaba de crearse.</td>
+        </tr>
+      </tbody>
+    </table>
+    <pre><code>{{ syncResponseExample() }}</code></pre>
+  </section>
+
+  <section class="panel">
+    <div class="op">
+      <span class="op__method">POST</span>
+      <code>/api/v2/integration/embed/start</code>
+    </div>
+    <h2>Login del comercial</h2>
+    <p>
+      <span class="provider-name">{{ providerLabel() }}</span> muestra Console en un iframe. Cuando el iframe está
+      listo, pide este token y se lo devuelve. Console abre Atención ya con la
+      sesión. El token dura 8 horas.
+    </p>
+
+    <h3>Iframe</h3>
+    <pre><code>{{ iframeExample() }}</code></pre>
+    <ol>
+      <li>
+        El iframe envía
+        <code>guiders:v1:ready</code> con
+        <code>payload.version</code> <code>1.0.0</code>.
+      </li>
+      <li><span class="provider-name">{{ providerLabel() }}</span> llama a esta ruta y recibe el token.</li>
+      <li>
+        <span class="provider-name">{{ providerLabel() }}</span> responde al iframe con
+        <code>{{ authMessage() }}</code>,
+        <code>payload.token</code> y <code>payload.userId</code>.
+      </li>
+      <li>
+        Para salir, <span class="provider-name">{{ providerLabel() }}</span> envía
+        <code>{{ logoutMessage() }}</code> con <code>payload</code> vacío.
+      </li>
+    </ol>
+    <pre><code>{{ readyExample() }}</code></pre>
+    <pre><code>{{ authExample() }}</code></pre>
+    <pre><code>{{ logoutExample() }}</code></pre>
+    <p class="muted">
+      El origen de la página de <span class="provider-name">{{ providerLabel() }}</span> (esquema y host) tiene que
+      estar permitido en el embed de esta empresa, y tiene que ser el mismo con
+      el que se abre el iframe.
+    </p>
+
+    <h3>Cuerpo</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Campo</th>
+          <th>Obligatorio</th>
+          <th>Qué es</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>companyId</code></td>
+          <td>Sí</td>
+          <td>UUID del cliente de la clave.</td>
+        </tr>
+        <tr>
+          <td><code>externalUserId</code></td>
+          <td>Uno de los dos</td>
+          <td>Id del comercial en <span class="provider-name">{{ providerLabel() }}</span>.</td>
+        </tr>
+        <tr>
+          <td><code>userId</code></td>
+          <td>Uno de los dos</td>
+          <td>UUID de Guiders devuelto al sincronizar.</td>
+        </tr>
+      </tbody>
+    </table>
+    <pre><code>{{ embedExample() }}</code></pre>
+
+    <h3>Respuesta 200</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Campo</th>
+          <th>Qué es</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>token</code></td>
+          <td>Token opaco. Se envía al iframe. Dura 8 horas.</td>
+        </tr>
+        <tr>
+          <td><code>expiresAt</code></td>
+          <td>Fecha ISO 8601 de caducidad.</td>
+        </tr>
+        <tr>
+          <td><code>userId</code></td>
+          <td>UUID de Guiders del comercial autenticado.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2>Errores</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Cuándo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>401</td>
+          <td>
+            La clave no va en <code>x-api-key</code>, no empieza por
+            <code>gdr_live_</code> o <code>gdr_test_</code>, o está revocada.
+          </td>
+        </tr>
+        <tr>
+          <td>403</td>
+          <td>
+            El <code>companyId</code> no es el de la clave, el embed está
+            apagado, o el comercial no existe o está inactivo.
+          </td>
+        </tr>
+        <tr>
+          <td>400</td>
+          <td>
+            Falta el email, el nombre o un id de comercial. En el login hay que
+            enviar <code>externalUserId</code> o <code>userId</code>.
+          </td>
+        </tr>
+        <tr>
+          <td>409</td>
+          <td>Ese email ya pertenece a otra cuenta.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>

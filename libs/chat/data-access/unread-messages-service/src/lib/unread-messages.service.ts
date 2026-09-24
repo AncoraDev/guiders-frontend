@@ -18,6 +18,7 @@ import {
 } from '@guiders-frontend/shared/types';
 import { ENVIRONMENT_TOKEN } from '@guiders-frontend/auth/data-access/session';
 import { WebSocketService } from '@guiders-frontend/chat/data-access/websocket-service';
+import { ProductBrandService } from '@guiders-frontend/shared/data-access/theme';
 
 /**
  * UnreadMessagesService

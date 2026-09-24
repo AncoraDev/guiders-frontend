@@ -1,0 +1,161 @@
+@use '../../../../../../shared/design-tokens/src/lib/tokens-vars' as tokens;
+
+:host {
+  display: block;
+  height: 100%;
+  overflow: auto;
+}
+
+.api-docs {
+  padding: tokens.$spacing-xl;
+  max-width: 960px;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-lg;
+}
+
+.back-link {
+  font-size: tokens.$font-size-sm;
+  color: tokens.$color-text-secondary;
+  text-decoration: none;
+  align-self: flex-start;
+
+  &:hover {
+    color: tokens.$color-text-primary;
+  }
+}
+
+h1 {
+  margin: 0;
+  font-size: tokens.$font-size-2xl;
+}
+
+.provider {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-xs;
+  max-width: 280px;
+}
+
+.provider__label {
+  font-size: tokens.$font-size-sm;
+  color: tokens.$color-text-secondary;
+}
+
+.provider__input {
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  font-size: tokens.$font-size-base;
+  background: tokens.$color-surface-primary;
+  color: tokens.$color-text-primary;
+}
+
+.provider-name {
+  display: inline-block;
+  padding: 0 0.45em;
+  border-radius: 999px;
+  background: tokens.$color-surface-secondary;
+  border: 1px solid tokens.$color-border-subtle;
+  font-weight: tokens.$font-weight-medium;
+  line-height: 1.45;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+h2 {
+  margin: 0;
+  font-size: tokens.$font-size-lg;
+  font-weight: tokens.$font-weight-medium;
+}
+
+h3 {
+  margin: tokens.$spacing-sm 0 0;
+  font-size: tokens.$font-size-sm;
+  font-weight: tokens.$font-weight-medium;
+  color: tokens.$color-text-secondary;
+}
+
+p,
+li {
+  margin: 0;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.5;
+}
+
+ol {
+  margin: 0;
+  padding-left: tokens.$spacing-lg;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-xs;
+}
+
+.muted {
+  color: tokens.$color-text-secondary;
+  font-size: tokens.$font-size-sm;
+}
+
+.mono,
+code,
+pre {
+  font-family: ui-monospace, monospace;
+}
+
+code {
+  font-size: tokens.$font-size-xs;
+}
+
+.panel {
+  border: 1px solid tokens.$color-border-subtle;
+  border-radius: tokens.$border-radius-md;
+  padding: tokens.$spacing-md;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-md;
+}
+
+.op {
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-sm;
+  flex-wrap: wrap;
+}
+
+.op__method {
+  padding: 2px tokens.$spacing-sm;
+  border-radius: tokens.$border-radius-sm;
+  background: tokens.$color-text-primary;
+  color: tokens.$color-surface-primary;
+  font-size: tokens.$font-size-xs;
+  font-weight: tokens.$font-weight-medium;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: tokens.$font-size-sm;
+
+  th,
+  td {
+    text-align: left;
+    vertical-align: top;
+    padding: tokens.$spacing-sm;
+    border-bottom: 1px solid tokens.$color-border-subtle;
+  }
+
+  th {
+    color: tokens.$color-text-secondary;
+    font-weight: tokens.$font-weight-medium;
+  }
+}
+
+pre {
+  margin: 0;
+  padding: tokens.$spacing-md;
+  overflow: auto;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$color-surface-secondary;
+  font-size: tokens.$font-size-xs;
+  line-height: 1.5;
+}

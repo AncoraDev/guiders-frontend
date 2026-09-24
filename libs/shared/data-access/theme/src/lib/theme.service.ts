@@ -1,5 +1,6 @@
 import {
   Injectable,
+  InjectionToken,
   signal,
   computed,
   PLATFORM_ID,
@@ -157,6 +158,11 @@ export const THEME_OPTIONS: ThemeOption[] = [
 const THEME_STORAGE_KEY = 'guiders-sidebar-theme';
 const DEFAULT_THEME: NamedTheme = 'grey-dark';
 
+/** Tema inicial cuando el navegador no tiene uno guardado. Admin lo sustituye por Clean. */
+export const THEME_DEFAULT = new InjectionToken<NamedTheme>('THEME_DEFAULT', {
+  factory: () => DEFAULT_THEME,
+});
+
 const LIGHT_THEMES: NamedTheme[] = [
   'clean-light',
   'daylight',
@@ -172,12 +178,10 @@ const DARK_THEMES: NamedTheme[] = [
   'warm-dark',
 ];
 
-/** Normalise legacy 'dark'/'light' values to a canonical NamedTheme. */
-function normaliseTheme(value: string | null): NamedTheme {
-  if (!value) return DEFAULT_THEME;
-  if (value === 'dark') return 'grey-dark';
-  if (value === 'light') return 'clean-light';
-  if (
+function isThemeChoice(value: string): value is SidebarTheme {
+  return (
+    value === 'dark' ||
+    value === 'light' ||
     value === 'grey-dark' ||
     value === 'carbon' ||
     value === 'midnight' ||
@@ -187,10 +191,18 @@ function normaliseTheme(value: string | null): NamedTheme {
     value === 'fresh-light' ||
     value === 'rose-quartz' ||
     value === 'leadcars'
-  ) {
-    return value as NamedTheme;
-  }
-  return DEFAULT_THEME;
+  );
+}
+
+/** Normalise legacy 'dark'/'light' values to a canonical NamedTheme. */
+function normaliseTheme(
+  value: string | null,
+  fallback: NamedTheme,
+): NamedTheme {
+  if (!value || !isThemeChoice(value)) return fallback;
+  if (value === 'dark') return 'grey-dark';
+  if (value === 'light') return 'clean-light';
+  return value;
 }
 
 /**
@@ -203,6 +215,7 @@ function normaliseTheme(value: string | null): NamedTheme {
 export class ThemeService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
+  private readonly defaultTheme = inject(THEME_DEFAULT);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   // Internal signal for theme state
@@ -223,18 +236,30 @@ export class ThemeService {
     this.applyThemeAttribute(this._theme());
   }
 
+  /** Elección guardada en este navegador. Un valor desconocido no cuenta. */
+  private storedChoice(): NamedTheme | null {
+    if (!this.isBrowser) return null;
+    try {
+      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      if (!stored || !isThemeChoice(stored)) return null;
+      return normaliseTheme(stored, this.defaultTheme);
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Load theme from localStorage synchronously.
    * Called during service construction to ensure theme is available immediately.
    */
   private loadThemeFromStorage(): NamedTheme {
     if (!this.isBrowser) {
-      return DEFAULT_THEME;
+      return this.defaultTheme;
     }
 
     try {
       const stored = localStorage.getItem(THEME_STORAGE_KEY);
-      return normaliseTheme(stored);
+      return normaliseTheme(stored, this.defaultTheme);
     } catch (error) {
       console.warn(
         'ThemeService: Failed to load theme from localStorage',
@@ -242,7 +267,18 @@ export class ThemeService {
       );
     }
 
-    return DEFAULT_THEME;
+    return this.defaultTheme;
+  }
+
+  /**
+   * Aplica el estilo de la empresa solo si este navegador no tiene uno elegido.
+   * No lo guarda: un cambio posterior en Admin sigue aplicando a quien no eligió.
+   */
+  applyCompanyDefault(theme: string | null | undefined): void {
+    if (this.storedChoice() !== null) return;
+    const normalised = normaliseTheme(theme ?? null, this.defaultTheme);
+    this._theme.set(normalised);
+    this.applyThemeAttribute(normalised);
   }
 
   /**
@@ -250,7 +286,7 @@ export class ThemeService {
    * Accepts both NamedTheme and legacy SidebarTheme values.
    */
   setTheme(theme: SidebarTheme): void {
-    const normalised = normaliseTheme(theme);
+    const normalised = normaliseTheme(theme, this.defaultTheme);
     this._theme.set(normalised);
     this.saveThemeToStorage(normalised);
     this.applyThemeAttribute(normalised);

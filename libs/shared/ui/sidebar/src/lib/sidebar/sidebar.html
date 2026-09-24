@@ -102,6 +102,10 @@
           [ariaLabel]="getItemAriaLabel(item)"
           [ariaCurrent]="isItemActive(item) ? 'page' : undefined"
           [ariaExpanded]="item.children && item.children.length > 0 ? isItemExpanded(item.id) : undefined"
+          (mouseenter)="showNavHint($event, item.label)"
+          (mouseleave)="hideNavHint()"
+          (focusin)="showNavHint($event, item.label)"
+          (focusout)="hideNavHint()"
           class="sidebar__nav-link"
           [attr.data-tour]="'nav-' + item.id"
         >
@@ -575,3 +579,14 @@
     }
   </footer>
 </aside>
+
+@if (navHint(); as hint) {
+  <div
+    class="sidebar__hint"
+    role="tooltip"
+    [style.top.px]="hint.top"
+    [style.left.px]="hint.left"
+  >
+    {{ hint.label }}
+  </div>
+}

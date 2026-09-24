@@ -22,6 +22,7 @@ import {
 import { HttpErrorResponse } from '@angular/common/http';
 import { SETTINGS_CLOSE_ROUTE } from '@guiders-frontend/auth/data-access/session';
 import { EmbedBootstrapService, EmbedModeService, BrandingService } from '@guiders-frontend/embed';
+import { THEME_DEFAULT } from '@guiders-frontend/shared/data-access/theme';
 import { firstValueFrom } from 'rxjs';
 
 /**
@@ -138,6 +139,7 @@ export const appConfig: ApplicationConfig = {
       },
     }),
     { provide: ENVIRONMENT_TOKEN, useValue: environment },
+    { provide: THEME_DEFAULT, useValue: 'clean-light' },
     { provide: SETTINGS_CLOSE_ROUTE, useValue: '/dashboard' },
     {
       provide: APP_INITIALIZER,

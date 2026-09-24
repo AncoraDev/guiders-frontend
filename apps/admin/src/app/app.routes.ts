@@ -10,6 +10,12 @@ export const appRoutes: Route[] = [
     canActivate: [adminGuard],
   },
   {
+    path: 'api',
+    loadChildren: () =>
+      import('@guiders-frontend/clients').then((m) => m.apiDocsRoutes),
+    canActivate: [adminGuard],
+  },
+  {
     path: 'users',
     loadChildren: () =>
       import('@guiders-frontend/clients').then((m) => m.platformUsersRoutes),
