@@ -69,6 +69,10 @@ export class CommercialPresenceService {
   /** Chats abandonados al pasar a offline — se re-unen al conectar */
   private leftChatIdsOnDisconnect: string[] = [];
 
+  /** Renueva Redis mientras el interruptor sigue en Conectado. No mira ratón ni foco. */
+  private presenceLeaseTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly PRESENCE_LEASE_MS = 60_000;
+
   constructor() {
     // Manejar cierre de pestaña/navegador
     if (typeof window !== 'undefined') {
@@ -157,6 +161,7 @@ export class CommercialPresenceService {
 
         // Actividad WS (typing/heartbeat) — sin auto-reconnect de presencia
         this.enableActivityListeners();
+        this.startPresenceLease();
 
         // Recuperar salas de chat abandonadas al desconectar
         if (this.leftChatIdsOnDisconnect.length > 0) {
@@ -187,6 +192,7 @@ export class CommercialPresenceService {
       }),
       catchError(error => {
         // Resetear estado de conexión en caso de error
+        this.stopPresenceLease();
         this.isConnectedSubject.next(false);
         this.connectionStatusSubject.next('offline');
         return this.handleError('Error al conectar comercial', error);
@@ -313,6 +319,7 @@ export class CommercialPresenceService {
 
   /** Estado local offline + cleanup de listeners (sin HTTP). */
   private applyOfflineLocally(): void {
+    this.stopPresenceLease();
     this.disableActivityListeners();
     this.isConnectedSubject.next(false);
     this.connectionStatusSubject.next('offline');
@@ -756,9 +763,49 @@ export class CommercialPresenceService {
   }
 
   /**
+   * Mientras Console está abierta y el interruptor en Conectado,
+   * alarga la clave de Redis una vez por minuto.
+   */
+  private startPresenceLease(): void {
+    this.stopPresenceLease();
+    this.presenceLeaseTimer = setInterval(() => {
+      this.renewPresenceLease();
+    }, this.PRESENCE_LEASE_MS);
+  }
+
+  private stopPresenceLease(): void {
+    if (this.presenceLeaseTimer !== null) {
+      clearInterval(this.presenceLeaseTimer);
+      this.presenceLeaseTimer = null;
+    }
+  }
+
+  private renewPresenceLease(): void {
+    if (!this.isConnectedSubject.value) {
+      return;
+    }
+
+    this.http
+      .post<{ renewed: boolean }>(
+        `${this.baseUrl}/presence`,
+        {},
+        this.getHttpOptions(),
+      )
+      .subscribe({
+        error: (error) => {
+          console.warn(
+            '[CommercialPresenceService] No se pudo renovar la presencia:',
+            error,
+          );
+        },
+      });
+  }
+
+  /**
    * Limpiar recursos
    */
   private cleanup(): void {
+    this.stopPresenceLease();
     this.removeUserActivityListeners();
     this.disableActivityListeners();
 
