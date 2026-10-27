@@ -31,7 +31,7 @@
           }
           <div class="guiders-chat-placeholder__profile-stats">
             @if (profile.browser) {
-            <span>{{ profile.browser }}</span>
+            <span [attr.title]="profile.userAgent || null">{{ profile.browser }}</span>
             }
             @if (profile.totalSessions != null) {
             <span>{{ profile.totalSessions }} ses.</span>

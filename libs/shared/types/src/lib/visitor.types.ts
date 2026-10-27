@@ -454,6 +454,10 @@ export interface VisitorPageHistoryItem {
   title?: string;
   occurredAt: string;
   index: number;
+  /** document.referrer. Cadena vacía = entrada directa. Ausente = no se registró. */
+  referrer?: string;
+  /** User agent del navegador en esa visita. */
+  userAgent?: string;
 }
 
 /** Respuesta de historial de páginas del visitante */

@@ -351,9 +351,43 @@
   }
 }
 
+.visitor-detail-panel__history-origin {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .visitor-detail-panel__history-time {
   font-size: 11px;
   color: var(--color-text-tertiary);
+}
+
+.visitor-detail-panel__traffic {
+  margin: tokens.$spacing-sm 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-xs;
+}
+
+.visitor-detail-panel__traffic-row {
+  min-width: 0;
+
+  dt {
+    font-size: 11px;
+    font-weight: tokens.$font-weight-medium;
+    color: var(--color-text-tertiary);
+  }
+
+  dd {
+    margin: 0;
+    font-size: tokens.$font-size-sm;
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .visitor-detail-panel__history-empty,

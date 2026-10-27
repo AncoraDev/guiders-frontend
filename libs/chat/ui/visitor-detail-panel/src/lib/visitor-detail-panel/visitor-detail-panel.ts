@@ -35,6 +35,38 @@ export interface VisitorPanelLeadScore {
   };
 }
 
+/** Nombre legible del navegador. El user agent completo va en el title. */
+export function friendlyBrowserName(userAgent?: string | null): string {
+  const raw = userAgent?.trim();
+  if (!raw) return '';
+
+  const browser = detectBrowser(raw);
+  const device = detectDevice(raw);
+  return device ? `${browser} · ${device}` : browser;
+}
+
+function detectBrowser(ua: string): string {
+  if (/Edg\//i.test(ua) || /Edge\//i.test(ua)) return 'Edge';
+  if (/OPR\//i.test(ua) || /Opera/i.test(ua)) return 'Opera';
+  if (/SamsungBrowser/i.test(ua)) return 'Samsung Internet';
+  if (/CriOS/i.test(ua)) return 'Chrome';
+  if (/FxiOS/i.test(ua) || /Firefox\//i.test(ua)) return 'Firefox';
+  if (/Chrome\//i.test(ua)) return 'Chrome';
+  if (/Safari\//i.test(ua)) return 'Safari';
+  if (/MSIE |Trident\//i.test(ua)) return 'Internet Explorer';
+  return 'Navegador';
+}
+
+function detectDevice(ua: string): string {
+  if (/iPhone/i.test(ua)) return 'iPhone';
+  if (/iPad/i.test(ua)) return 'iPad';
+  if (/Android/i.test(ua)) return 'Android';
+  if (/Windows/i.test(ua)) return 'Windows';
+  if (/Mac OS X/i.test(ua)) return 'Mac';
+  if (/Linux/i.test(ua)) return 'Linux';
+  return '';
+}
+
 @Component({
   selector: 'guiders-visitor-detail-panel',
   standalone: true,
@@ -243,16 +275,49 @@ export class VisitorDetailPanel {
     return this.formatRelativeTime(new Date(iso));
   }
 
-  formatPagePath(item: VisitorPageHistoryItem): string {
-    const raw = item.path || item.url || '/';
-    try {
-      if (raw.startsWith('http')) {
-        return new URL(raw).pathname + new URL(raw).search;
-      }
-    } catch {
-      /* ignore */
-    }
-    return raw.length > 48 ? `${raw.slice(0, 48)}…` : raw;
+  showTraffic(): boolean {
+    const hasHistory = !this.pageHistoryLoading() && this.pageHistory().length > 0;
+    return hasHistory || this.browserLabel().length > 0;
+  }
+
+  /** La última visita solo es «actual» si el visitante sigue en línea. */
+  isLivePage(index: number): boolean {
+    return index === 0 && this.visitor().status === 'online';
+  }
+
+  /** URL completa. El recorte visual lo hace el CSS; el title conserva el href. */
+  formatPageUrl(item: VisitorPageHistoryItem): string {
+    return item.url || item.path || '/';
+  }
+
+  formatReferrer(referrer: string | undefined): string {
+    return referrer?.trim() || 'Directo';
+  }
+
+  /**
+   * Origen de la visita más reciente que lo registró.
+   * Vacío = directo. Sin campo = el evento no guardó referrer.
+   */
+  originLabel(): string {
+    const recorded = this.pageHistory().find((page) => page.referrer !== undefined);
+    const raw = recorded ? recorded.referrer : this.visitor().referrer;
+    if (raw === undefined) return 'No registrado';
+    return raw.trim() || 'Directo';
+  }
+
+  /** User agent tal cual. Se enseña al pasar el ratón. */
+  rawUserAgent(): string {
+    const fromVisitor = this.visitor().userAgent?.trim();
+    if (fromVisitor) return fromVisitor;
+    return (
+      this.pageHistory().find((page) => page.userAgent?.trim())?.userAgent?.trim() ||
+      ''
+    );
+  }
+
+  /** Nombre corto: Edge, Safari, Chrome… */
+  browserLabel(): string {
+    return friendlyBrowserName(this.rawUserAgent());
   }
 
   openHistoryUrl(item: VisitorPageHistoryItem): void {

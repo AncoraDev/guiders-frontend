@@ -39,7 +39,10 @@ import type {
 } from '@guiders-frontend/chat/ui/message-input';
 import type { ContactRequestCardConfirm } from '@guiders-frontend/chat/ui/contact-request-card';
 import { GuidersChatWelcomeStateComponent } from '@guiders-frontend/chat/ui/chat-welcome-state';
-import { VisitorDetailPanel } from '@guiders-frontend/visitor-detail-panel';
+import {
+  VisitorDetailPanel,
+  friendlyBrowserName,
+} from '@guiders-frontend/visitor-detail-panel';
 import { LeadContactService } from '@guiders-frontend/lead-contact-service';
 import {
   getContactDisplayName,
@@ -71,6 +74,24 @@ const DEFAULT_GREETING = '¡Hola! ¿En qué puedo ayudarte?';
 const PREVIEW_MAX_CHARS = 80;
 
 export type AtencionCola = 'pendientes' | 'mios' | 'en-web';
+
+/** Misma página aunque cambie la barra final. */
+function samePageUrl(left?: string, right?: string): boolean {
+  return pageKey(left) === pageKey(right);
+}
+
+function pageKey(url?: string): string {
+  const trimmed = url?.trim() ?? '';
+  if (!trimmed) return '/';
+  try {
+    const parsed = new URL(trimmed);
+    const path =
+      parsed.pathname === '/' ? '/' : parsed.pathname.replace(/\/+$/, '') || '/';
+    return `${parsed.protocol}//${parsed.host.toLowerCase()}${path}${parsed.search}`;
+  } catch {
+    return trimmed.replace(/\/+$/, '').toLowerCase() || '/';
+  }
+}
 
 export interface AtencionListItem {
   id: string;
@@ -220,7 +241,13 @@ export class Atencion implements OnInit, OnDestroy {
       ) {
         return;
       }
-      if (current[0]?.url === url) {
+      const latest = current[0];
+      if (latest && samePageUrl(latest.url, url)) {
+        this.pageHistory.set([{ ...latest, occurredAt }, ...current.slice(1)]);
+        const profile = this.visitorProfile();
+        if (profile) {
+          this.visitorProfile.set({ ...profile, currentUrl: url });
+        }
         return;
       }
 
@@ -412,6 +439,14 @@ export class Atencion implements OnInit, OnDestroy {
     const activity = this.visitorActivity();
     const currentUrl =
       this.visitorProfile()?.currentUrl || activity?.currentUrl || undefined;
+    const listedVisitor = [
+      ...this.pendingItems(),
+      ...this.mineItems(),
+      ...this.webItems(),
+    ].find((item) => item.visitorId === visitorId)?.rawVisitor;
+    const historyAgent = this.pageHistory().find((page) =>
+      page.userAgent?.trim(),
+    )?.userAgent;
     let domain = '';
     if (currentUrl) {
       try {
@@ -448,6 +483,7 @@ export class Atencion implements OnInit, OnDestroy {
       phone: contact?.telefono,
       domain,
       currentUrl,
+      userAgent: listedVisitor?.lastUserAgent || historyAgent,
       status,
       lifecycle: activity?.lifecycle || 'ANON',
       firstVisit: chat.createdAt ? new Date(chat.createdAt) : new Date(),
@@ -1711,7 +1747,8 @@ export class Atencion implements OnInit, OnDestroy {
     if (rawVisitor) {
       this.visitorProfile.set({
         currentUrl: rawVisitor.currentUrl,
-        browser: this.guessBrowser(rawVisitor.lastUserAgent),
+        browser: friendlyBrowserName(rawVisitor.lastUserAgent) || undefined,
+        userAgent: rawVisitor.lastUserAgent,
         totalSessions: rawVisitor.totalSessionsCount,
         lifecycle: rawVisitor.lifecycle,
       });
@@ -1791,7 +1828,8 @@ export class Atencion implements OnInit, OnDestroy {
       totalTimeConnectedMs: activity.totalTimeConnectedMs,
       totalChats: activity.totalChats,
       lifecycle: activity.lifecycle,
-      browser: this.guessBrowser(rawVisitor?.lastUserAgent),
+      browser: friendlyBrowserName(rawVisitor?.lastUserAgent) || undefined,
+      userAgent: rawVisitor?.lastUserAgent,
       lastActivityAt: activity.lastActivityAt,
     };
   }
@@ -2337,12 +2375,4 @@ export class Atencion implements OnInit, OnDestroy {
     }
   }
 
-  private guessBrowser(ua?: string): string {
-    if (!ua) return 'Navegador';
-    if (/Edg\//i.test(ua)) return 'Edge';
-    if (/Chrome\//i.test(ua) && !/Edg\//i.test(ua)) return 'Chrome';
-    if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) return 'Safari';
-    if (/Firefox\//i.test(ua)) return 'Firefox';
-    return 'Navegador';
-  }
 }

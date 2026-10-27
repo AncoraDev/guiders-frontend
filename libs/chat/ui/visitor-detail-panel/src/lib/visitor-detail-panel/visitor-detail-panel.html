@@ -25,6 +25,23 @@
       }
     </h5>
 
+    @if (showTraffic()) {
+      <dl class="visitor-detail-panel__traffic">
+        @if (!pageHistoryLoading() && pageHistory().length > 0) {
+          <div class="visitor-detail-panel__traffic-row">
+            <dt>Origen</dt>
+            <dd [title]="originLabel()">{{ originLabel() }}</dd>
+          </div>
+        }
+        @if (rawUserAgent(); as agent) {
+          <div class="visitor-detail-panel__traffic-row">
+            <dt>Navegador</dt>
+            <dd [title]="agent">{{ browserLabel() }}</dd>
+          </div>
+        }
+      </dl>
+    }
+
     @if (pageHistoryLoading()) {
       <p class="visitor-detail-panel__history-empty">Cargando historial…</p>
     } @else if (pageHistory().length > 0) {
@@ -32,7 +49,7 @@
         @for (page of pageHistory(); track page.occurredAt + page.url + page.index; let i = $index) {
           <li
             class="visitor-detail-panel__history-item"
-            [class.visitor-detail-panel__history-item--current]="i === 0"
+            [class.visitor-detail-panel__history-item--current]="isLivePage(i)"
           >
             <span class="visitor-detail-panel__history-index" [title]="'Visita #' + page.index">
               {{ page.index }}
@@ -44,11 +61,19 @@
                 [title]="page.url"
                 (click)="openHistoryUrl(page)"
               >
-                {{ formatPagePath(page) }}
+                {{ formatPageUrl(page) }}
               </button>
+              @if (page.referrer !== undefined) {
+                <span
+                  class="visitor-detail-panel__history-origin"
+                  [title]="page.referrer || 'Directo'"
+                >
+                  Origen: {{ formatReferrer(page.referrer) }}
+                </span>
+              }
               <span class="visitor-detail-panel__history-time">
                 {{ formatPageTime(page.occurredAt) }}
-                @if (i === 0) {
+                @if (isLivePage(i)) {
                   · actual
                 }
               </span>

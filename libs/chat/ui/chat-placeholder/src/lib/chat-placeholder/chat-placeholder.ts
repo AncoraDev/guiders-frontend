@@ -47,6 +47,8 @@ export interface VisitorChatProfile {
   totalChats?: number;
   lifecycle?: string | null;
   browser?: string | null;
+  /** User agent completo. Se muestra al pasar el ratón sobre el nombre. */
+  userAgent?: string | null;
   lastActivityAt?: string | null;
 }
 
