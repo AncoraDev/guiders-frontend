@@ -86,8 +86,12 @@ function pageKey(url?: string): string {
   try {
     const parsed = new URL(trimmed);
     const path =
-      parsed.pathname === '/' ? '/' : parsed.pathname.replace(/\/+$/, '') || '/';
-    return `${parsed.protocol}//${parsed.host.toLowerCase()}${path}${parsed.search}`;
+      parsed.pathname === '/'
+        ? '/'
+        : parsed.pathname.replace(/\/+$/, '') || '/';
+    return `${parsed.protocol}//${parsed.host.toLowerCase()}${path}${
+      parsed.search
+    }`;
   } catch {
     return trimmed.replace(/\/+$/, '').toLowerCase() || '/';
   }
@@ -202,7 +206,7 @@ export class Atencion implements OnInit, OnDestroy {
       this.ngZone.run(() => {
         this.releaseChatRealtime(payload.chatId!);
         this.mineItems.update((list) =>
-          list.filter((item) => item.chatId !== payload.chatId),
+          list.filter((item) => item.chatId !== payload.chatId)
         );
         if (this.selectedChat()?.chatId === payload.chatId) {
           this.clearSelectedChat();
@@ -236,7 +240,7 @@ export class Atencion implements OnInit, OnDestroy {
       const current = this.pageHistory();
       if (
         current.some(
-          (page) => page.url === url && page.occurredAt === occurredAt,
+          (page) => page.url === url && page.occurredAt === occurredAt
         )
       ) {
         return;
@@ -253,7 +257,9 @@ export class Atencion implements OnInit, OnDestroy {
 
       let path = '/';
       try {
-        path = url.startsWith('http') ? new URL(url).pathname : url.split('?')[0];
+        path = url.startsWith('http')
+          ? new URL(url).pathname
+          : url.split('?')[0];
       } catch {
         path = url;
       }
@@ -341,7 +347,9 @@ export class Atencion implements OnInit, OnDestroy {
   readonly pageHistoryLoading = signal(false);
 
   private compactMql: MediaQueryList | null = null;
-  private readonly onCompactLayoutChange = (event: MediaQueryListEvent): void => {
+  private readonly onCompactLayoutChange = (
+    event: MediaQueryListEvent
+  ): void => {
     this.applyCompactLayout(event.matches);
   };
 
@@ -364,7 +372,9 @@ export class Atencion implements OnInit, OnDestroy {
           ...item,
           presence: p,
           statusLabel: this.presenceLabel(p),
-          unreadCount: chatId ? unread[chatId] ?? item.unreadCount : item.unreadCount,
+          unreadCount: chatId
+            ? unread[chatId] ?? item.unreadCount
+            : item.unreadCount,
         };
       })
       .sort((a, b) => this.compareMineItems(a, b));
@@ -445,7 +455,7 @@ export class Atencion implements OnInit, OnDestroy {
       ...this.webItems(),
     ].find((item) => item.visitorId === visitorId)?.rawVisitor;
     const historyAgent = this.pageHistory().find((page) =>
-      page.userAgent?.trim(),
+      page.userAgent?.trim()
     )?.userAgent;
     let domain = '';
     if (currentUrl) {
@@ -490,8 +500,8 @@ export class Atencion implements OnInit, OnDestroy {
       lastVisit: activity?.lastActivityAt
         ? new Date(activity.lastActivityAt)
         : chat.updatedAt
-          ? new Date(chat.updatedAt)
-          : new Date(),
+        ? new Date(chat.updatedAt)
+        : new Date(),
       totalChats: activity?.totalChats ?? 0,
       totalSessions: activity?.totalSessions ?? 0,
       totalPageViews: activity?.totalPagesVisited ?? 0,
@@ -636,11 +646,11 @@ export class Atencion implements OnInit, OnDestroy {
     this.chatService.webSocketService.off('chat:created', this.onChatCreated);
     this.chatService.webSocketService.off(
       'chat:commercial-assigned',
-      this.onCommercialAssigned,
+      this.onCommercialAssigned
     );
     this.chatService.webSocketService.off(
       'visitor:page-changed',
-      this.onVisitorPageChanged,
+      this.onVisitorPageChanged
     );
     this.unreadMessagesService.setActiveChat(null);
     this.chatService.selectChat(null);
@@ -656,13 +666,15 @@ export class Atencion implements OnInit, OnDestroy {
   }
 
   enableDesktopNotifications(): void {
-    void this.unreadMessagesService.requestDesktopPermission().then((permission) => {
-      this.desktopPermission.set(permission);
-      if (permission === 'granted') {
-        this.toastService.success('Avisos de escritorio activados');
-        this.unreadMessagesService.testNotification();
-      }
-    });
+    void this.unreadMessagesService
+      .requestDesktopPermission()
+      .then((permission) => {
+        this.desktopPermission.set(permission);
+        if (permission === 'granted') {
+          this.toastService.success('Avisos de escritorio activados');
+          this.unreadMessagesService.testNotification();
+        }
+      });
   }
 
   testDesktopNotification(): void {
@@ -687,7 +699,10 @@ export class Atencion implements OnInit, OnDestroy {
   }
 
   private setupCompactLayoutWatcher(): void {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    if (
+      typeof window === 'undefined' ||
+      typeof window.matchMedia !== 'function'
+    ) {
       return;
     }
     this.compactMql = window.matchMedia('(max-width: 1280px)');
@@ -712,7 +727,7 @@ export class Atencion implements OnInit, OnDestroy {
         extractedFromChatId: this.selectedChat()?.chatId,
         attributeCapture: true,
       },
-      event.requestId,
+      event.requestId
     );
   }
 
@@ -721,7 +736,7 @@ export class Atencion implements OnInit, OnDestroy {
    * leen del mensaje de envío para guardarlos junto a los datos del lead.
    */
   private consentFromMessages(
-    requestId: string,
+    requestId: string
   ): Pick<
     SaveContactDataRequest,
     'acceptedPrivacyPolicy' | 'acceptedMarketing'
@@ -748,7 +763,7 @@ export class Atencion implements OnInit, OnDestroy {
 
   private saveVisitorContact(
     request: SaveContactDataRequest,
-    requestId?: string,
+    requestId?: string
   ): void {
     const visitorId =
       this.selectedVisitor()?.id || this.selectedChat()?.visitorId;
@@ -768,7 +783,10 @@ export class Atencion implements OnInit, OnDestroy {
         next: (saved) => {
           const now = new Date().toISOString();
           const updated: LeadContactData = {
-            id: saved?.id || this.visitorContactData()?.id || `temp-${Date.now()}`,
+            id:
+              saved?.id ||
+              this.visitorContactData()?.id ||
+              `temp-${Date.now()}`,
             visitorId,
             companyId:
               saved?.companyId ||
@@ -813,7 +831,9 @@ export class Atencion implements OnInit, OnDestroy {
           this.showVisitorPanel.set(true);
         },
         error: () => {
-          this.toastService.error('No se pudieron guardar los datos de contacto');
+          this.toastService.error(
+            'No se pudieron guardar los datos de contacto'
+          );
         },
       });
   }
@@ -1046,6 +1066,7 @@ export class Atencion implements OnInit, OnDestroy {
    * - no interno (empleado)
    * - no está ya en Míos
    * - no está en Pendientes con mensaje (evitar duplicado)
+   * - no lo atiende ya otro comercial
    * - sigue en el sitio: online / chatting / away (offline = sesión cerrada)
    *
    * No filtramos isMe: en local el demo y Console comparten IP/navegador
@@ -1058,9 +1079,32 @@ export class Atencion implements OnInit, OnDestroy {
   ): boolean {
     if (v.isInternal) return false;
     if (mineVisitorIds.has(v.id) || pendingVisitorIds.has(v.id)) return false;
+    if (this.occupiedByOther(v)) return false;
     if (String(v.connectionStatus ?? '').toLowerCase() === 'offline') {
       return false;
     }
+    return true;
+  }
+
+  /**
+   * Nombre de quien ya atiende al visitante, si no soy yo.
+   * null cuando está libre o el chat es mío.
+   */
+  private occupiedByOther(visitor?: VisitorSearchResult): string | null {
+    const assignee = visitor?.assignedCommercialId;
+    if (!assignee || assignee === this.currentUserId()) return null;
+    const name = visitor?.assignedCommercial?.name?.trim();
+    return name
+      ? `${name} ya está atendiendo a este visitante`
+      : 'Otro comercial ya está atendiendo a este visitante';
+  }
+
+  /** true si hay que parar: el visitante ya está con otro comercial. */
+  private refuseOccupiedVisitor(item: AtencionListItem): boolean {
+    const message = this.occupiedByOther(item.rawVisitor);
+    if (!message) return false;
+    this.toastService.info(message);
+    this.refreshAll(true);
     return true;
   }
 
@@ -1095,6 +1139,7 @@ export class Atencion implements OnInit, OnDestroy {
 
     if (item.kind === 'web') {
       if (!this.requireConnected('iniciar una conversación')) return;
+      if (this.refuseOccupiedVisitor(item)) return;
       if (item.chatId) {
         this.claimAndOpen(item);
         return;
@@ -1115,6 +1160,7 @@ export class Atencion implements OnInit, OnDestroy {
     event.preventDefault();
     if (this.isClaiming() || item.kind !== 'web') return;
     if (!this.requireConnected('saludar a un visitante')) return;
+    if (this.refuseOccupiedVisitor(item)) return;
     if (item.chatId) {
       this.claimAndOpen(item, { withGreeting: true });
       return;
@@ -1123,8 +1169,7 @@ export class Atencion implements OnInit, OnDestroy {
   }
 
   onSendMessage(payload: MessageSendPayload | string): void {
-    const content =
-      typeof payload === 'string' ? payload : payload.content;
+    const content = typeof payload === 'string' ? payload : payload.content;
     const transferToCommercialId =
       typeof payload === 'string' ? undefined : payload.transferToCommercialId;
     const transferToDisplayName =
@@ -1151,7 +1196,7 @@ export class Atencion implements OnInit, OnDestroy {
           this.transferChatAfterMessage(
             chatId,
             transferToCommercialId,
-            transferToDisplayName,
+            transferToDisplayName
           );
         },
         error: () => this.toastService.error('Error al enviar el mensaje'),
@@ -1167,7 +1212,7 @@ export class Atencion implements OnInit, OnDestroy {
     if (!this.requireConnected('solicitar datos')) return;
     if (this.isCurrentVisitorLead()) {
       this.toastService.info(
-        'Este visitante ya es lead. No hace falta volver a pedir los datos.',
+        'Este visitante ya es lead. No hace falta volver a pedir los datos.'
       );
       return;
     }
@@ -1183,7 +1228,7 @@ export class Atencion implements OnInit, OnDestroy {
         finalize(() => {
           this.contactRequestInFlight = false;
         }),
-        takeUntilDestroyed(this.destroyRef),
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
         next: () => {
@@ -1195,14 +1240,14 @@ export class Atencion implements OnInit, OnDestroy {
           // No es un fallo técnico, así que se informa sin alarmar.
           if (error?.status === 400 || error?.status === 409) {
             this.toastService.info(
-              reason || 'Ya hay una solicitud de datos pendiente en este chat',
+              reason || 'Ya hay una solicitud de datos pendiente en este chat'
             );
             return;
           }
           this.toastService.error(
             reason
               ? `No se pudo enviar la solicitud de datos: ${reason}`
-              : 'No se pudo enviar la solicitud de datos',
+              : 'No se pudo enviar la solicitud de datos'
           );
         },
       });
@@ -1211,7 +1256,7 @@ export class Atencion implements OnInit, OnDestroy {
   private transferChatAfterMessage(
     chatId: string,
     commercialId: string,
-    displayName?: string,
+    displayName?: string
   ): void {
     this.visitorsService
       .transferChat(chatId, commercialId)
@@ -1221,13 +1266,11 @@ export class Atencion implements OnInit, OnDestroy {
           // Salir de la sala YA: si no, seguimos recibiendo message:new del visitante
           this.releaseChatRealtime(chatId);
           this.mineItems.update((list) =>
-            list.filter((item) => item.chatId !== chatId),
+            list.filter((item) => item.chatId !== chatId)
           );
           this.clearSelectedChat();
           this.toastService.success(
-            displayName
-              ? `Transferido a ${displayName}`
-              : 'Chat transferido',
+            displayName ? `Transferido a ${displayName}` : 'Chat transferido'
           );
           this.refreshAll(true);
         },
@@ -1259,15 +1302,15 @@ export class Atencion implements OnInit, OnDestroy {
         startWith(0),
         switchMap(() =>
           forkJoin({
-            online: this.commercialPresence.getOnlineCommercials().pipe(
-              catchError(() => of([])),
-            ),
-            users: this.companyUsersService.listCompanyUsers().pipe(
-              catchError(() => of({ users: [] })),
-            ),
-          }),
+            online: this.commercialPresence
+              .getOnlineCommercials()
+              .pipe(catchError(() => of([]))),
+            users: this.companyUsersService
+              .listCompanyUsers()
+              .pipe(catchError(() => of({ users: [] }))),
+          })
         ),
-        takeUntilDestroyed(this.destroyRef),
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(({ online, users }) => {
         const selfId = this.currentUserId();
@@ -1285,7 +1328,7 @@ export class Atencion implements OnInit, OnDestroy {
                   avatarUrl: u.avatarUrl ?? null,
                 },
               ] as const;
-            }),
+            })
         );
 
         const candidates = online
@@ -1373,7 +1416,7 @@ export class Atencion implements OnInit, OnDestroy {
     this.chatService.webSocketService.messageReceived$
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        filter((message): message is Message => !!message),
+        filter((message): message is Message => !!message)
       )
       .subscribe((message) => {
         if (
@@ -1414,12 +1457,12 @@ export class Atencion implements OnInit, OnDestroy {
     // Transferencia recibida (también llega a sala commercial:{id})
     this.chatService.webSocketService.on(
       'chat:commercial-assigned',
-      this.onCommercialAssigned,
+      this.onCommercialAssigned
     );
 
     this.chatService.webSocketService.on(
       'visitor:page-changed',
-      this.onVisitorPageChanged,
+      this.onVisitorPageChanged
     );
   }
 
@@ -1560,6 +1603,7 @@ export class Atencion implements OnInit, OnDestroy {
     const userId = this.currentUserId();
     if (!userId) return;
     if (!this.requireConnected('iniciar una conversación')) return;
+    if (this.refuseOccupiedVisitor(item)) return;
 
     // El visitante suele tener ya un chat de entrada creado por el SDK. Crear
     // otro dejaba al visitante escribiendo en un chat y al comercial en otro,
@@ -1682,7 +1726,18 @@ export class Atencion implements OnInit, OnDestroy {
           this.wireMineRealtime([mineItem]);
           this.refreshAll(true);
         },
-        error: () => this.toastService.error('No se pudo iniciar el chat'),
+        error: (error: { status?: number; error?: { message?: string } }) => {
+          if (error?.status === 409) {
+            const message =
+              typeof error.error?.message === 'string'
+                ? error.error.message
+                : 'Otro comercial ya está atendiendo a este visitante';
+            this.toastService.info(message);
+            this.refreshAll(true);
+            return;
+          }
+          this.toastService.error('No se pudo iniciar el chat');
+        },
       });
   }
 
@@ -1770,7 +1825,9 @@ export class Atencion implements OnInit, OnDestroy {
         // Solo aplicar si seguimos en el mismo visitante
         if (this.selectedChat()?.visitorId !== visitorId) return;
         this.visitorActivity.set(activity);
-        this.visitorProfile.set(this.mapActivityToProfile(activity, rawVisitor));
+        this.visitorProfile.set(
+          this.mapActivityToProfile(activity, rawVisitor)
+        );
       });
 
     this.loadVisitorContactData(visitorId);
@@ -1893,7 +1950,9 @@ export class Atencion implements OnInit, OnDestroy {
   }
 
   private collectVisitorChatIds(
-    res: { chats?: Array<Chat & { id?: string; lastMessageDate?: Date | string }> } | null,
+    res: {
+      chats?: Array<Chat & { id?: string; lastMessageDate?: Date | string }>;
+    } | null,
     currentChatId: string
   ): string[] {
     const chats = [...(res?.chats ?? [])];
@@ -2099,7 +2158,9 @@ export class Atencion implements OnInit, OnDestroy {
     };
   }
 
-  private mapSilentPendingToWeb(row: Record<string, unknown>): AtencionListItem {
+  private mapSilentPendingToWeb(
+    row: Record<string, unknown>
+  ): AtencionListItem {
     const chatId = String(row['id'] ?? row['chatId'] ?? '');
     const visitorInfo = (row['visitorInfo'] ?? {}) as Record<string, unknown>;
     const metadata = (row['metadata'] ?? {}) as Record<string, unknown>;
@@ -2145,9 +2206,10 @@ export class Atencion implements OnInit, OnDestroy {
       byVisitor.set(item.visitorId, {
         ...prev,
         ...item,
-        title: prev.title && !prev.title.startsWith('Visitante')
-          ? prev.title
-          : item.title,
+        title:
+          prev.title && !prev.title.startsWith('Visitante')
+            ? prev.title
+            : item.title,
         pageLabel: item.pageLabel || prev.pageLabel,
         statusLabel: prev.statusLabel,
         presence: prev.presence,
@@ -2185,11 +2247,7 @@ export class Atencion implements OnInit, OnDestroy {
     const sender = String(
       lastMessage?.senderType ?? lastMessage?.sender?.type ?? ''
     ).toUpperCase();
-    if (
-      sender === 'SYSTEM' ||
-      sender === 'COMMERCIAL' ||
-      sender === 'AGENT'
-    ) {
+    if (sender === 'SYSTEM' || sender === 'COMMERCIAL' || sender === 'AGENT') {
       return false;
     }
     return true;
@@ -2199,8 +2257,8 @@ export class Atencion implements OnInit, OnDestroy {
     const updatedAtMs = chat.updatedAt
       ? new Date(chat.updatedAt).getTime()
       : chat.createdAt
-        ? new Date(chat.createdAt).getTime()
-        : 0;
+      ? new Date(chat.createdAt).getTime()
+      : 0;
     const preview = this.previewFromMessage(chat.lastMessage, 'Sin mensajes');
     const meta = (
       chat as Chat & { metadata?: { initialUrl?: string; currentUrl?: string } }
@@ -2330,8 +2388,7 @@ export class Atencion implements OnInit, OnDestroy {
   private contactMeetsLeadCriteria(contact: LeadContactData | null): boolean {
     if (!contact) return false;
     const hasName = !!contact.nombre?.trim();
-    const hasContact =
-      !!contact.email?.trim() || !!contact.telefono?.trim();
+    const hasContact = !!contact.email?.trim() || !!contact.telefono?.trim();
     return hasName && hasContact;
   }
 
@@ -2341,14 +2398,18 @@ export class Atencion implements OnInit, OnDestroy {
   }
 
   private previewFromMessage(
-    message?: Pick<Message, 'content' | 'systemData'> | { content?: string } | null,
+    message?:
+      | Pick<Message, 'content' | 'systemData'>
+      | { content?: string }
+      | null,
     fallback = ''
   ): string {
     const action = (message as Message | undefined)?.systemData?.action;
     if (action === 'contact_request') return 'Solicitud de datos';
     if (action === 'contact_submission') return 'Datos recibidos';
     if (action === 'contact_cancellation') return 'Formulario cancelado';
-    if (action === 'lead_capture_submission') return 'Datos de contacto recibidos';
+    if (action === 'lead_capture_submission')
+      return 'Datos de contacto recibidos';
     const content = String(message?.content ?? '').trim();
     if (/solicitud de datos/i.test(content)) return 'Solicitud de datos';
     if (/datos de contacto enviados/i.test(content)) return 'Datos recibidos';
@@ -2374,5 +2435,4 @@ export class Atencion implements OnInit, OnDestroy {
       return url.length > 40 ? `${url.slice(0, 37)}…` : url;
     }
   }
-
 }
