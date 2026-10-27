@@ -92,223 +92,270 @@
                   (input)="introBody.set($any($event.target).value)"
                 ></textarea>
               </label>
-              <label class="field field--wide">
-                <span>El recorrido empieza en</span>
-                <select (change)="startStepId.set($any($event.target).value)">
-                  <option value="" [selected]="!startStepId()">— Elige el primer paso —</option>
-                  @for (step of steps(); track step.id) {
-                    <option [value]="step.id" [selected]="startStepId() === step.id">
-                      {{ stepLabel(step.id) }} · {{ step.prompt || 'sin texto' }}
-                    </option>
-                  }
-                </select>
-              </label>
             </div>
           </article>
 
-          <ol class="timeline">
-            @for (step of steps(); track step.id; let index = $index) {
-              <li
-                class="timeline__item"
-                [class.timeline__item--focus]="focusedStepId() === step.id"
-                [class.timeline__item--warning]="isUnreachable(step.id)"
-                (click)="focusStep(step.id)"
-              >
-                <div class="timeline__rail" aria-hidden="true">
-                  <span class="timeline__node">{{ index + 1 }}</span>
+          <div class="outline">
+            @if (stepOf(startStepId()); as root) {
+              <ng-container
+                [ngTemplateOutlet]="flowNode"
+                [ngTemplateOutletContext]="{ stepId: root.id, trail: '' }"
+              />
+            } @else {
+              <div class="outline-row outline-row--leaf">
+                <span>El recorrido empieza aquí</span>
+                <div class="outline-add">
+                  <button type="button" title="Añadir el primer paso" (click)="toggleAddMenu(null, null)">+</button>
+                  @if (menuIs(null, null)) {
+                    <div class="outline-menu">
+                      @for (type of stepTypes; track type.id) {
+                        <button type="button" [title]="type.hint" (click)="addStep(type.id, null)">
+                          {{ type.label }}
+                        </button>
+                      }
+                    </div>
+                  }
                 </div>
+              </div>
+            }
+          </div>
 
-                <article class="step-card">
-                  <header class="step-card__header">
-                    <div class="step-card__title">
-                      <h4>Paso {{ index + 1 }}</h4>
-                      @if (startStepId() === step.id) {
-                        <span class="tag">Inicio</span>
-                      }
-                      @if (isUnreachable(step.id)) {
-                        <span class="tag tag--warning">No se alcanza</span>
-                      }
-                    </div>
-                    <div class="step-card__actions">
-                      <button type="button" (click)="moveStep(step.id, -1); $event.stopPropagation()" title="Subir">
-                        ↑
-                      </button>
-                      <button type="button" (click)="moveStep(step.id, 1); $event.stopPropagation()" title="Bajar">
-                        ↓
-                      </button>
-                      <button type="button" (click)="removeStep(step.id); $event.stopPropagation()" title="Eliminar">
-                        ✕
-                      </button>
-                    </div>
-                  </header>
+          @if (focusedStep(); as selected) {
+            <article class="step-form">
+              <header class="step-form__header">
+                <h4>{{ typeLabel(selected.type) }}</h4>
+                <button type="button" class="ghost-btn" (click)="removeStep(selected.id)">
+                  Quitar paso
+                </button>
+              </header>
 
-                  <div class="type-pills" role="group" aria-label="Tipo de paso">
+              <div class="type-pills">
+                @for (type of stepTypes; track type.id) {
+                  <button
+                    type="button"
+                    class="type-pills__chip"
+                    [class.type-pills__chip--active]="selected.type === type.id"
+                    (click)="changeStepType(selected.id, type.id)"
+                  >
+                    {{ type.label }}
+                  </button>
+                }
+              </div>
+              <p class="type-hint">{{ typeHint(selected.type) }}</p>
+
+              <label class="field">
+                <span>Texto que ve el visitante</span>
+                <textarea
+                  rows="2"
+                  [value]="selected.prompt"
+                  (input)="updateStep(selected.id, { prompt: $any($event.target).value })"
+                ></textarea>
+              </label>
+
+              @if (selected.type === 'text') {
+                <div class="step-meta">
+                  <label class="field">
+                    <span>Guardar en</span>
+                    <select (change)="updateStep(selected.id, { field: $any($event.target).value })">
+                      @for (field of leadFields; track field) {
+                        <option [value]="field" [selected]="selected.field === field">
+                          {{ fieldLabel(field) }}
+                        </option>
+                      }
+                      @for (extra of extraFields; track extra) {
+                        <option [value]="extra" [selected]="selected.field === extra">
+                          {{ fieldLabel(extra) }} (extra)
+                        </option>
+                      }
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Validación</span>
+                    <select (change)="updateStep(selected.id, { validation: $any($event.target).value })">
+                      <option value="none" [selected]="(selected.validation ?? 'none') === 'none'">
+                        Sin validar
+                      </option>
+                      <option value="email" [selected]="selected.validation === 'email'">Email</option>
+                      <option value="phone" [selected]="selected.validation === 'phone'">Teléfono</option>
+                    </select>
+                  </label>
+                  <label class="check">
+                    <input
+                      type="checkbox"
+                      [checked]="selected.required !== false"
+                      (change)="updateStep(selected.id, { required: $any($event.target).checked })"
+                    />
+                    <span>Obligatorio</span>
+                  </label>
+                </div>
+              }
+
+              @if (selected.type === 'choice') {
+                <div class="step-form__options">
+                  @for (option of selected.options ?? []; track option.id) {
+                    <div class="step-form__option">
+                      <input
+                        type="text"
+                        placeholder="Texto de la opción"
+                        [value]="option.label"
+                        (input)="updateOption(selected.id, option.id, { label: $any($event.target).value })"
+                      />
+                      @if (!continuesToStep(option.next)) {
+                        <div class="flow-ending">
+                          <button
+                            type="button"
+                            class="flow-ending__btn"
+                            [class.flow-ending__btn--on]="option.next !== endTarget"
+                            (click)="closeBranch(selected.id, option.id, 'contact')"
+                          >
+                            Pedir datos
+                          </button>
+                          <button
+                            type="button"
+                            class="flow-ending__btn"
+                            [class.flow-ending__btn--on]="option.next === endTarget"
+                            (click)="closeBranch(selected.id, option.id, 'end')"
+                          >
+                            Terminar
+                          </button>
+                        </div>
+                      }
+                      <button type="button" title="Quitar opción" (click)="removeOption(selected.id, option.id)">×</button>
+                    </div>
+                  }
+                  <button type="button" class="ghost-btn" (click)="addOption(selected.id)">Añadir opción</button>
+                </div>
+              } @else if (!continuesToStep(selected.next)) {
+                <div class="flow-ending">
+                  <button
+                    type="button"
+                    class="flow-ending__btn"
+                    [class.flow-ending__btn--on]="selected.next !== endTarget"
+                    (click)="closeBranch(selected.id, null, 'contact')"
+                  >
+                    Pedir datos
+                  </button>
+                  <button
+                    type="button"
+                    class="flow-ending__btn"
+                    [class.flow-ending__btn--on]="selected.next === endTarget"
+                    (click)="closeBranch(selected.id, null, 'end')"
+                  >
+                    Terminar
+                  </button>
+                </div>
+              }
+            </article>
+          }
+
+          <ng-template #flowNode let-stepId="stepId" let-trail="trail">
+            @if (stepOf(stepId); as step) {
+              @if (inTrail(trail, stepId)) {
+                <p class="flow-loop">Esta rama vuelve a un paso anterior.</p>
+              } @else {
+                <div class="outline-node">
+                  <div
+                    class="outline-row"
+                    [class.outline-row--on]="focusedStepId() === step.id"
+                    [class.outline-row--over]="dragOverKey() === 'step:' + step.id"
+                    (click)="focusStep(step.id)"
+                    (dragover)="onDragOverStep($event, step.id)"
+                    (drop)="onDropOnStep($event, step.id)"
+                  >
+                    <button
+                      type="button"
+                      class="outline-handle"
+                      draggable="true"
+                      title="Arrastrar"
+                      (click)="$event.stopPropagation()"
+                      (dragstart)="onStepDragStart($event, step.id)"
+                      (dragend)="clearDrag()"
+                    >⠿</button>
+                    <span class="outline-kind">{{ typeLabel(step.type) }}</span>
+                    <span class="outline-text">{{ stepLine(step) }}</span>
+                  </div>
+
+                  <div class="outline-kids">
+                    @if (step.type === 'choice') {
+                      @for (option of step.options ?? []; track option.id) {
+                        <div class="outline-node">
+                          <div
+                            class="outline-row outline-row--option"
+                            [class.outline-row--over]="dragOverKey() === 'option:' + step.id + ':' + option.id"
+                            (click)="focusStep(step.id)"
+                            (dragover)="onDragOverOption($event, step.id, option.id)"
+                            (drop)="onDropOnOption($event, step.id, option.id)"
+                          >
+                            <button
+                              type="button"
+                              class="outline-handle"
+                              draggable="true"
+                              title="Reordenar"
+                              (click)="$event.stopPropagation()"
+                              (dragstart)="onOptionDragStart($event, step.id, option.id)"
+                              (dragend)="clearDrag()"
+                            >⠿</button>
+                            <span class="outline-text">{{ option.label || 'Opción' }}</span>
+                          </div>
+                          <div class="outline-kids">
+                            @if (continuesToStep(option.next)) {
+                              <ng-container
+                                [ngTemplateOutlet]="flowNode"
+                                [ngTemplateOutletContext]="{ stepId: option.next, trail: trail + '/' + stepId }"
+                              />
+                            } @else {
+                              <ng-container
+                                [ngTemplateOutlet]="flowLeaf"
+                                [ngTemplateOutletContext]="{ ownerId: step.id, optionId: option.id, next: option.next }"
+                              />
+                            }
+                          </div>
+                        </div>
+                      }
+                    } @else if (continuesToStep(step.next)) {
+                      <ng-container
+                        [ngTemplateOutlet]="flowNode"
+                        [ngTemplateOutletContext]="{ stepId: step.next, trail: trail + '/' + stepId }"
+                      />
+                    } @else {
+                      <ng-container
+                        [ngTemplateOutlet]="flowLeaf"
+                        [ngTemplateOutletContext]="{ ownerId: step.id, optionId: null, next: step.next }"
+                      />
+                    }
+                  </div>
+                </div>
+              }
+            }
+          </ng-template>
+
+          <ng-template #flowLeaf let-ownerId="ownerId" let-optionId="optionId" let-next="next">
+            <div
+              class="outline-row outline-row--leaf"
+              [class.outline-row--over]="dragOverKey() === (optionId ? 'option:' + ownerId + ':' + optionId : 'step:' + ownerId)"
+              (click)="focusStep(ownerId)"
+              (dragover)="optionId ? onDragOverOption($event, ownerId, optionId) : onDragOverStep($event, ownerId)"
+              (drop)="optionId ? onDropOnOption($event, ownerId, optionId) : onDropOnStep($event, ownerId)"
+            >
+              <span>{{ endingLabel(next) }}</span>
+              <div class="outline-add" (click)="$event.stopPropagation()">
+                <button type="button" title="Añadir un paso" (click)="toggleAddMenu(ownerId, optionId)">+</button>
+                @if (menuIs(ownerId, optionId)) {
+                  <div class="outline-menu">
                     @for (type of stepTypes; track type.id) {
                       <button
                         type="button"
-                        class="type-pills__chip"
-                        [class.type-pills__chip--active]="step.type === type.id"
-                        (click)="changeStepType(step.id, type.id); $event.stopPropagation()"
+                        [title]="type.hint"
+                        (click)="addStep(type.id, { stepId: ownerId, optionId: optionId })"
                       >
                         {{ type.label }}
                       </button>
                     }
                   </div>
-                  <p class="type-hint">{{ typeHint(step.type) }}</p>
-
-                  <label class="field">
-                    <span>Lo que lee el visitante</span>
-                    <textarea
-                      rows="2"
-                      [value]="step.prompt"
-                      (input)="updateStep(step.id, { prompt: $any($event.target).value })"
-                      (click)="$event.stopPropagation()"
-                    ></textarea>
-                  </label>
-
-                  @if (step.type === 'choice') {
-                    <div class="options">
-                      <p class="options__label">Si elige…</p>
-                      @for (option of step.options ?? []; track option.id) {
-                        <div class="options__row">
-                          <input
-                            type="text"
-                            placeholder="Texto de la opción"
-                            [value]="option.label"
-                            (input)="updateOption(step.id, option.id, { label: $any($event.target).value })"
-                            (click)="$event.stopPropagation()"
-                          />
-                          <select
-                            (change)="updateOption(step.id, option.id, { next: parseTarget($any($event.target).value) })"
-                            (click)="$event.stopPropagation()"
-                          >
-                            <option value="" [selected]="!option.next">Pedir datos de contacto</option>
-                            <option
-                              [value]="endTarget"
-                              [selected]="option.next === endTarget"
-                            >
-                              Terminar sin pedir datos
-                            </option>
-                            @for (target of steps(); track target.id) {
-                              @if (target.id !== step.id) {
-                                <option [value]="target.id" [selected]="option.next === target.id">
-                                  Ir a {{ stepLabel(target.id) }}
-                                </option>
-                              }
-                            }
-                          </select>
-                          <button
-                            type="button"
-                            title="Quitar opción"
-                            (click)="removeOption(step.id, option.id); $event.stopPropagation()"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      }
-                      <button
-                        type="button"
-                        class="ghost-btn"
-                        (click)="addOption(step.id); $event.stopPropagation()"
-                      >
-                        Añadir opción
-                      </button>
-                    </div>
-                  } @else {
-                    @if (step.type === 'text') {
-                      <div class="step-meta">
-                        <label class="field">
-                          <span>Guardar en</span>
-                          <select
-                            (change)="updateStep(step.id, { field: $any($event.target).value })"
-                            (click)="$event.stopPropagation()"
-                          >
-                            @for (field of leadFields; track field) {
-                              <option [value]="field" [selected]="step.field === field">
-                                {{ fieldLabel(field) }}
-                              </option>
-                            }
-                            @for (extra of extraFields; track extra) {
-                              <option [value]="extra" [selected]="step.field === extra">
-                                {{ fieldLabel(extra) }} (extra)
-                              </option>
-                            }
-                          </select>
-                        </label>
-                        <label class="field">
-                          <span>Validación</span>
-                          <select
-                            (change)="updateStep(step.id, { validation: $any($event.target).value })"
-                            (click)="$event.stopPropagation()"
-                          >
-                            <option value="none" [selected]="(step.validation ?? 'none') === 'none'">
-                              Sin validar
-                            </option>
-                            <option value="email" [selected]="step.validation === 'email'">
-                              Email
-                            </option>
-                            <option value="phone" [selected]="step.validation === 'phone'">
-                              Teléfono
-                            </option>
-                          </select>
-                        </label>
-                        <label class="check">
-                          <input
-                            type="checkbox"
-                            [checked]="step.required !== false"
-                            (change)="updateStep(step.id, { required: $any($event.target).checked })"
-                            (click)="$event.stopPropagation()"
-                          />
-                          <span>Obligatorio</span>
-                        </label>
-                      </div>
-                    }
-
-                    <label class="field">
-                      <span>Después de este paso</span>
-                      <select
-                        (change)="updateStep(step.id, { next: parseTarget($any($event.target).value) })"
-                        (click)="$event.stopPropagation()"
-                      >
-                        <option value="" [selected]="!step.next">Pedir datos de contacto</option>
-                        <option
-                          [value]="endTarget"
-                          [selected]="step.next === endTarget"
-                        >
-                          Terminar sin pedir datos
-                        </option>
-                        @for (target of steps(); track target.id) {
-                          @if (target.id !== step.id) {
-                            <option [value]="target.id" [selected]="step.next === target.id">
-                              Ir a {{ stepLabel(target.id) }}
-                            </option>
-                          }
-                        }
-                      </select>
-                    </label>
-                  }
-                </article>
-              </li>
-            }
-          </ol>
-
-          <div class="add-steps">
-            <p class="add-steps__title">
-              @if (steps().length === 0) {
-                Añade el primer paso del recorrido
-              } @else {
-                Añadir otro paso
-              }
-            </p>
-            <div class="add-steps__list">
-              @for (type of stepTypes; track type.id) {
-                <button type="button" class="add-steps__card" (click)="addStep(type.id)">
-                  <strong>{{ type.label }}</strong>
-                  <span>{{ type.hint }}</span>
-                </button>
-              }
+                }
+              </div>
             </div>
-          </div>
+          </ng-template>
         }
       </div>
     </div>

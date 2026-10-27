@@ -20,10 +20,10 @@ import {
   LeadCaptureValidation,
   MAX_LEAD_CAPTURE_OPTIONS,
   MAX_LEAD_CAPTURE_STEPS,
+  isLeadCaptureStepRef,
 } from '@guiders-frontend/lead-capture-flow-service';
 import {
   LeadCaptureFlowDraft,
-  findUnreachableSteps,
   previewPath,
   validateLeadCaptureFlow,
 } from './flow-validation';
@@ -88,6 +88,13 @@ export class Captacion implements OnInit {
   readonly startStepId = signal('');
   readonly steps = signal<LeadCaptureStep[]>([]);
   readonly focusedStepId = signal<string | null>(null);
+  /** `root` abre el menú del primer paso. Si no, el de esa rama. */
+  readonly addMenu = signal<{ stepId: string; optionId: string | null } | 'root' | null>(null);
+  readonly dragOverKey = signal<string | null>(null);
+  private dragItem:
+    | { kind: 'step'; stepId: string }
+    | { kind: 'option'; stepId: string; optionId: string }
+    | null = null;
   /** -1 = tarjeta de inicio, luego índice del camino, al final datos de contacto. */
   readonly previewIndex = signal(-1);
   readonly previewChoices = signal<Record<string, string>>({});
@@ -104,9 +111,6 @@ export class Captacion implements OnInit {
   }));
 
   readonly errors = computed(() => validateLeadCaptureFlow(this.draft()));
-  readonly unreachableStepIds = computed(() =>
-    findUnreachableSteps(this.draft()),
-  );
   readonly preview = computed(() =>
     previewPath(this.draft(), this.previewChoices()),
   );
@@ -159,6 +163,7 @@ export class Captacion implements OnInit {
     };
   });
   readonly endTarget = LEAD_CAPTURE_END;
+  readonly focusedStep = computed(() => this.stepOf(this.focusedStepId()));
   readonly canSave = computed(
     () => this.errors().length === 0 && !this.saving() && !this.loading(),
   );
@@ -184,24 +189,12 @@ export class Captacion implements OnInit {
           this.introCtaLabel.set(flow.intro.ctaLabel);
           this.startStepId.set(flow.startStepId);
           this.steps.set(flow.steps);
+          this.keepReachable();
         },
         error: () => {
           this.toast.error('No se pudo cargar el guion de captación');
         },
       });
-  }
-
-  stepIndex(stepId: string): number {
-    return this.steps().findIndex((step) => step.id === stepId);
-  }
-
-  stepLabel(stepId: string): string {
-    const index = this.stepIndex(stepId);
-    return index >= 0 ? `Paso ${index + 1}` : stepId;
-  }
-
-  isUnreachable(stepId: string): boolean {
-    return this.unreachableStepIds().includes(stepId);
   }
 
   fieldLabel(field: string | undefined): string {
@@ -254,11 +247,61 @@ export class Captacion implements OnInit {
     this.previewIndex.update((index) => Math.max(index - 1, -1));
   }
 
-  addStep(type: LeadCaptureStepType): void {
+  stepOf(stepId: string | null | undefined): LeadCaptureStep | null {
+    if (!stepId) return null;
+    return this.steps().find((step) => step.id === stepId) ?? null;
+  }
+
+  continuesToStep(next: string | null | undefined): boolean {
+    return isLeadCaptureStepRef(next) && !!this.stepOf(next);
+  }
+
+  /** El rastro evita pintar un bucle como un árbol infinito. */
+  inTrail(trail: string, stepId: string): boolean {
+    return trail.split('/').includes(stepId);
+  }
+
+  stepLine(step: LeadCaptureStep): string {
+    const line = step.prompt.trim().split('\n')[0];
+    return line || 'Sin texto';
+  }
+
+  endingLabel(next: string | null | undefined): string {
+    return next === LEAD_CAPTURE_END ? 'Terminar' : 'Pedir datos';
+  }
+
+  menuIs(stepId: string | null, optionId: string | null): boolean {
+    const menu = this.addMenu();
+    if (stepId === null) return menu === 'root';
+    return (
+      !!menu &&
+      menu !== 'root' &&
+      menu.stepId === stepId &&
+      menu.optionId === optionId
+    );
+  }
+
+  toggleAddMenu(stepId: string | null, optionId: string | null): void {
+    if (this.menuIs(stepId, optionId)) {
+      this.addMenu.set(null);
+      return;
+    }
+    this.addMenu.set(stepId === null ? 'root' : { stepId, optionId });
+  }
+
+  /**
+   * `anchor` vacío crea el primer bloque. Si no, el paso cuelga de ese
+   * mensaje, pregunta u opción.
+   */
+  addStep(
+    type: LeadCaptureStepType,
+    anchor: { stepId: string; optionId: string | null } | null,
+  ): void {
     if (this.steps().length >= this.maxSteps) {
       this.toast.info(`El guion admite como máximo ${this.maxSteps} pasos`);
       return;
     }
+    if (!anchor && this.startStepId()) return;
 
     const id = this.nextId('paso');
     const step: LeadCaptureStep = {
@@ -274,19 +317,32 @@ export class Captacion implements OnInit {
         : {}),
     };
 
-    // El último paso del guion encadena con el nuevo para no dejarlo huérfano.
-    const current = this.steps();
-    const previous = current[current.length - 1];
-    const linked =
-      previous && previous.type !== 'choice' && !previous.next
-        ? current.map((candidate) =>
-            candidate.id === previous.id ? { ...candidate, next: id } : candidate,
-          )
-        : current;
-
-    this.steps.set([...linked, step]);
-    if (!this.startStepId()) this.startStepId.set(id);
+    this.steps.set([...this.steps(), step]);
+    if (!anchor) {
+      this.startStepId.set(id);
+    } else if (anchor.optionId) {
+      this.updateOption(anchor.stepId, anchor.optionId, { next: id });
+    } else {
+      this.updateStep(anchor.stepId, { next: id });
+    }
     this.focusedStepId.set(id);
+    this.addMenu.set(null);
+    this.resetPreview();
+  }
+
+  /** Cierra la rama: vacío pide datos, `__end__` termina sin formulario. */
+  closeBranch(
+    stepId: string,
+    optionId: string | null,
+    ending: 'contact' | 'end',
+  ): void {
+    const next = ending === 'end' ? LEAD_CAPTURE_END : null;
+    if (optionId) {
+      this.updateOption(stepId, optionId, { next });
+    } else {
+      this.updateStep(stepId, { next });
+    }
+    this.keepReachable();
     this.resetPreview();
   }
 
@@ -303,25 +359,86 @@ export class Captacion implements OnInit {
         })),
       }));
 
-    this.steps.set(remaining);
     if (this.startStepId() === stepId) {
-      this.startStepId.set(remaining[0]?.id ?? '');
+      this.startStepId.set('');
     }
-    if (this.focusedStepId() === stepId) {
-      this.focusedStepId.set(remaining[0]?.id ?? null);
-    }
+    this.steps.set(remaining);
+    this.keepReachable();
     this.resetPreview();
   }
 
-  moveStep(stepId: string, offset: number): void {
-    const steps = [...this.steps()];
-    const index = steps.findIndex((step) => step.id === stepId);
-    const target = index + offset;
-    if (index < 0 || target < 0 || target >= steps.length) return;
-    const [moved] = steps.splice(index, 1);
-    steps.splice(target, 0, moved);
-    this.steps.set(steps);
-    this.resetPreview();
+  onStepDragStart(event: DragEvent, stepId: string): void {
+    this.dragItem = { kind: 'step', stepId };
+    event.dataTransfer?.setData('text/plain', stepId);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    event.stopPropagation();
+  }
+
+  onOptionDragStart(event: DragEvent, stepId: string, optionId: string): void {
+    this.dragItem = { kind: 'option', stepId, optionId };
+    event.dataTransfer?.setData('text/plain', optionId);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    event.stopPropagation();
+  }
+
+  onDragOverStep(event: DragEvent, stepId: string): void {
+    const source = this.dragItem;
+    const target = this.stepOf(stepId);
+    if (!source || source.kind !== 'step' || !target || target.type === 'choice') return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    if (this.dropOnStepAllowed(stepId)) this.dragOverKey.set(`step:${stepId}`);
+  }
+
+  onDragOverOption(event: DragEvent, stepId: string, optionId: string): void {
+    if (!this.dragItem) return;
+    if (this.dragItem.kind === 'option' && this.dragItem.stepId !== stepId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    if (this.dropOnOptionAllowed(stepId, optionId)) {
+      this.dragOverKey.set(`option:${stepId}:${optionId}`);
+    }
+  }
+
+  onDropOnStep(event: DragEvent, stepId: string): void {
+    const source = this.dragItem;
+    const target = this.stepOf(stepId);
+    if (!source || source.kind !== 'step' || !target || target.type === 'choice') return;
+    event.preventDefault();
+    event.stopPropagation();
+    const allowed = this.dropOnStepAllowed(stepId);
+    this.clearDrag();
+    if (!allowed) {
+      this.explainRejectedDrop(source.stepId, stepId);
+      return;
+    }
+    this.placeStep(source.stepId, { stepId, optionId: null });
+  }
+
+  onDropOnOption(event: DragEvent, stepId: string, optionId: string): void {
+    const source = this.dragItem;
+    if (!source) return;
+    if (source.kind === 'option' && source.stepId !== stepId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const allowed = source.kind === 'step' && this.dropOnOptionAllowed(stepId, optionId);
+    this.clearDrag();
+    if (source.kind === 'option') {
+      if (source.optionId !== optionId) this.reorderOption(stepId, source.optionId, optionId);
+      return;
+    }
+    if (!allowed) {
+      this.explainRejectedDrop(source.stepId, stepId);
+      return;
+    }
+    this.placeStep(source.stepId, { stepId, optionId });
+  }
+
+  clearDrag(): void {
+    this.dragItem = null;
+    this.dragOverKey.set(null);
   }
 
   updateStep(stepId: string, patch: Partial<LeadCaptureStep>): void {
@@ -336,17 +453,23 @@ export class Captacion implements OnInit {
     const step = this.steps().find((candidate) => candidate.id === stepId);
     if (!step || step.type === type) return;
 
+    const carriedNext =
+      step.type === 'choice' ? (step.options?.[0]?.next ?? null) : (step.next ?? null);
+
     this.updateStep(stepId, {
       type,
       options:
         type === 'choice'
-          ? (step.options ?? [{ id: this.nextId('opcion'), label: '', next: null }])
+          ? (step.options ?? [
+              { id: this.nextId('opcion'), label: '', next: carriedNext },
+            ])
           : undefined,
       field: type === 'text' ? (step.field ?? 'nombre') : undefined,
       validation: type === 'text' ? (step.validation ?? 'none') : undefined,
       required: type === 'text' ? (step.required ?? true) : undefined,
-      next: type === 'choice' ? null : (step.next ?? null),
+      next: type === 'choice' ? null : carriedNext,
     });
+    this.keepReachable();
     this.resetPreview();
   }
 
@@ -383,6 +506,7 @@ export class Captacion implements OnInit {
     this.updateStep(stepId, {
       options: (step.options ?? []).filter((option) => option.id !== optionId),
     });
+    this.keepReachable();
   }
 
   /** Vacío = pedir contacto. `__end__` = cerrar sin formulario. */
@@ -435,6 +559,155 @@ export class Captacion implements OnInit {
       return this.fieldLabel(step.field);
     }
     return 'Visto';
+  }
+
+  private explainRejectedDrop(draggedId: string, targetStepId: string): void {
+    if (draggedId === targetStepId || this.hangsFrom(draggedId, targetStepId)) {
+      this.toast.info('No se puede soltar un paso dentro de su propia rama');
+      return;
+    }
+    this.toast.info('Esa rama ya tiene un paso. Muévelo antes de soltar otro.');
+  }
+
+  private dropOnStepAllowed(stepId: string): boolean {
+    const source = this.dragItem;
+    const target = this.stepOf(stepId);
+    if (!source || source.kind !== 'step' || !target || target.type === 'choice') {
+      return false;
+    }
+    if (source.stepId === stepId || this.hangsFrom(source.stepId, stepId)) return false;
+    const previous = this.continuesToStep(target.next) ? target.next : null;
+    if (previous === source.stepId) return false;
+    return !previous || this.canInsertBefore(source.stepId, previous);
+  }
+
+  private dropOnOptionAllowed(stepId: string, optionId: string): boolean {
+    const source = this.dragItem;
+    if (!source) return false;
+    if (source.kind === 'option') {
+      return source.stepId === stepId && source.optionId !== optionId;
+    }
+    if (source.stepId === stepId || this.hangsFrom(source.stepId, stepId)) return false;
+    const option = this.stepOf(stepId)?.options?.find((item) => item.id === optionId);
+    if (!option) return false;
+    const previous = this.continuesToStep(option.next) ? option.next : null;
+    if (previous === source.stepId) return false;
+    return !previous || this.canInsertBefore(source.stepId, previous);
+  }
+
+  /** Cuelga el paso de esa rama. Si ya había uno, lo deja justo detrás. */
+  private placeStep(
+    draggedId: string,
+    anchor: { stepId: string; optionId: string | null },
+  ): void {
+    const previous = this.previousChild(anchor);
+    this.detach(draggedId);
+    if (anchor.optionId) {
+      this.updateOption(anchor.stepId, anchor.optionId, { next: draggedId });
+    } else {
+      this.updateStep(anchor.stepId, { next: draggedId });
+    }
+    if (previous) this.chainAfter(draggedId, previous);
+    this.keepReachable();
+    this.resetPreview();
+  }
+
+  private previousChild(anchor: {
+    stepId: string;
+    optionId: string | null;
+  }): string | null {
+    const next = anchor.optionId
+      ? this.stepOf(anchor.stepId)?.options?.find((item) => item.id === anchor.optionId)
+          ?.next
+      : this.stepOf(anchor.stepId)?.next;
+    return this.continuesToStep(next) ? (next ?? null) : null;
+  }
+
+  private canInsertBefore(draggedId: string, previousId: string): boolean {
+    const dragged = this.stepOf(draggedId);
+    if (!dragged || dragged.type === 'choice') return false;
+    if (this.continuesToStep(dragged.next)) return false;
+    return !this.hangsFrom(draggedId, previousId);
+  }
+
+  private chainAfter(draggedId: string, previousId: string): void {
+    const dragged = this.stepOf(draggedId);
+    if (!dragged || dragged.type === 'choice') return;
+    this.updateStep(draggedId, { next: previousId });
+  }
+
+  /** La rama de la que salía el paso queda en pedir datos. */
+  private detach(stepId: string): void {
+    this.steps.set(
+      this.steps().map((step) => ({
+        ...step,
+        next: step.next === stepId ? null : step.next,
+        options: step.options?.map((option) => ({
+          ...option,
+          next: option.next === stepId ? null : option.next,
+        })),
+      })),
+    );
+  }
+
+  private hangsFrom(ancestorId: string, stepId: string): boolean {
+    const seen = new Set<string>();
+    const queue = [ancestorId];
+    while (queue.length > 0) {
+      const current = queue.shift() as string;
+      if (seen.has(current)) continue;
+      seen.add(current);
+      if (current === stepId && current !== ancestorId) return true;
+      const step = this.stepOf(current);
+      if (!step) continue;
+      const targets =
+        step.type === 'choice'
+          ? (step.options ?? []).map((option) => option.next)
+          : [step.next];
+      for (const target of targets) {
+        if (isLeadCaptureStepRef(target)) queue.push(target);
+      }
+    }
+    return false;
+  }
+
+  private reorderOption(stepId: string, fromId: string, toId: string): void {
+    const step = this.stepOf(stepId);
+    if (!step?.options || fromId === toId) return;
+    const options = [...step.options];
+    const from = options.findIndex((option) => option.id === fromId);
+    const to = options.findIndex((option) => option.id === toId);
+    if (from < 0 || to < 0) return;
+    const [moved] = options.splice(from, 1);
+    options.splice(to, 0, moved);
+    this.updateStep(stepId, { options });
+  }
+
+  /** Quita los pasos que ya no cuelgan del inicio. */
+  private keepReachable(): void {
+    const byId = new Map(this.steps().map((step) => [step.id, step]));
+    const reachable = new Set<string>();
+    const queue = byId.has(this.startStepId()) ? [this.startStepId()] : [];
+
+    while (queue.length > 0) {
+      const current = queue.shift() as string;
+      if (reachable.has(current)) continue;
+      const step = byId.get(current);
+      if (!step) continue;
+      reachable.add(current);
+      const targets =
+        step.type === 'choice'
+          ? (step.options ?? []).map((option) => option.next)
+          : [step.next];
+      for (const target of targets) {
+        if (isLeadCaptureStepRef(target)) queue.push(target);
+      }
+    }
+
+    const next = this.steps().filter((step) => reachable.has(step.id));
+    if (next.length !== this.steps().length) this.steps.set(next);
+    const focused = this.focusedStepId();
+    if (focused && !reachable.has(focused)) this.focusedStepId.set(null);
   }
 
   private nextId(prefix: string): string {
