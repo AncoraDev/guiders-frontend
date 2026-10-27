@@ -1,7 +1,9 @@
 import {
   Component,
   computed,
+  effect,
   input,
+  signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -49,6 +51,16 @@ export class Avatar {
    */
   readonly size = input<AvatarSize>('medium');
 
+  /** La foto no cargó: se enseña la inicial en vez del texto alternativo. */
+  private readonly imageFailed = signal(false);
+
+  constructor() {
+    effect(() => {
+      this.imageUrl();
+      this.imageFailed.set(false);
+    });
+  }
+
   // === COMPUTED VALUES ===
   /**
    * Generate unique color based on user ID
@@ -59,8 +71,12 @@ export class Avatar {
 
   readonly hasImage = computed(() => {
     const url = this.imageUrl()?.trim();
-    return !!url;
+    return !!url && !this.imageFailed();
   });
+
+  onImageError(): void {
+    this.imageFailed.set(true);
+  }
 
   /**
    * Get initial from name or email.

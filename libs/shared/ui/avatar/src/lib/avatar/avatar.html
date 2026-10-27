@@ -4,15 +4,18 @@
   [style.background-color]="hasImage() ? 'transparent' : avatarColor()"
   [attr.aria-label]="'Avatar for ' + (name() || email() || 'visitor')"
 >
-  @if (hasImage()) {
-    <img
-      class="guiders-avatar__image"
-      [src]="imageUrl()!"
-      [alt]="name() || email() || 'Avatar'"
-    />
-  } @else {
-    <span class="guiders-avatar__text">{{ initial() }}</span>
-  }
+  <span class="guiders-avatar__face">
+    @if (hasImage()) {
+      <img
+        class="guiders-avatar__image"
+        [src]="imageUrl()!"
+        alt=""
+        (error)="onImageError()"
+      />
+    } @else {
+      <span class="guiders-avatar__text">{{ initial() }}</span>
+    }
+  </span>
   @if (showPresenceBadge()) {
     <span
       class="guiders-avatar__presence-indicator"

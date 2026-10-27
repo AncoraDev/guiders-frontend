@@ -4,7 +4,9 @@
 // Estilo minimalista: fondo plano, sin gradientes ni sombras decorativas
 
 :host {
-  display: inline-block;
+  display: inline-flex;
+  flex-shrink: 0;
+  line-height: 0;
   --avatar-presence-border: var(--color-surface-primary);
 }
 
@@ -72,8 +74,17 @@
   user-select: none;
 }
 
-.guiders-avatar--image {
+.guiders-avatar__face {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guiders-avatar--image {
   background: var(--color-surface-secondary, #e5e7eb);
 }
 
@@ -83,6 +94,8 @@
   object-fit: cover;
   border-radius: inherit;
   display: block;
+  /* Una foto rota no debe pintar el nombre entero fuera del círculo. */
+  font-size: 0;
 }
 
 // === PRESENCE INDICATOR ===
