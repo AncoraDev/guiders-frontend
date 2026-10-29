@@ -118,6 +118,27 @@ export function getVisitorDisplayName(visitor: VisitorInfo): string {
   return 'Visitante anónimo';
 }
 
+/** Últimos 8 caracteres del id, con #. Null si no hay id. */
+export function visitorShortId(id?: string | null): string | null {
+  const trimmed = id?.trim();
+  if (!trimmed) return null;
+  return `#${trimmed.slice(-8)}`;
+}
+
+/**
+ * El id corto que debe verse junto al nombre.
+ * Si el nombre ya es "Visitante #xxxxxxxx", no se repite.
+ */
+export function visitorShortIdBesideName(
+  name: string,
+  id?: string | null
+): string | null {
+  const shortId = visitorShortId(id);
+  if (!shortId) return null;
+  if (name.includes(shortId)) return null;
+  return shortId;
+}
+
 /**
  * Obtiene el nombre de visualización a partir de un participante de chat.
  */

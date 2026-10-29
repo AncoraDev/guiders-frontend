@@ -14,6 +14,9 @@
       <div class="guiders-chat-placeholder__info">
         <div class="guiders-chat-placeholder__title-row">
           <h3 class="guiders-chat-placeholder__name">{{ getChatDisplayName() }}</h3>
+          @if (visitorShortIdLabel(); as shortId) {
+          <span class="guiders-chat-placeholder__visitor-id" [title]="visitorId()">{{ shortId }}</span>
+          }
           @if (getParticipantPresenceStatus(); as presenceStatus) {
           <span
             class="guiders-chat-placeholder__status-text"
@@ -242,7 +245,7 @@
       <guiders-icon name="message-square" size="xl" class="guiders-chat-placeholder__empty-icon" />
 
       <h3 class="guiders-chat-placeholder__empty-title">
-        Chat con {{ getChatDisplayName() }}
+        Chat con {{ getChatDisplayName() }}@if (visitorShortIdLabel(); as shortId) {&nbsp;{{ shortId }} }
       </h3>
 
       <p class="guiders-chat-placeholder__empty-text">

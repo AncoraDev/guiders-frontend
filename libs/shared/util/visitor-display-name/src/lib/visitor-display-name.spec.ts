@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getContactDisplayName,
   getVisitorDisplayName,
+  visitorShortIdBesideName,
 } from './get-visitor-display-name';
 
 describe('getContactDisplayName', () => {
@@ -47,6 +48,12 @@ describe('getVisitorDisplayName', () => {
     expect(getVisitorDisplayName({ name: 'Sergio Garcia' })).toBe(
       'Sergio Garcia'
     );
+  });
+
+  it('mantiene el id corto junto al nombre cuando ya no es anónimo', () => {
+    const id = '11111111-2222-4333-8444-55555555abcd';
+    expect(visitorShortIdBesideName('Sergio Garcia', id)).toBe('#5555abcd');
+    expect(visitorShortIdBesideName(`Visitante #5555abcd`, id)).toBeNull();
   });
 
   it('no duplica formato si name ya incluye alias', () => {

@@ -718,7 +718,7 @@ export class UnreadMessagesService {
     chatId: string,
     queue?: Message['queue']
   ): boolean {
-    if (queue === 'pendientes') return true;
+    if (queue === 'pendientes' || queue === 'ausente') return true;
     if (!this.notifyChatIds) return true;
     return this.notifyChatIds.has(chatId);
   }
@@ -1154,7 +1154,10 @@ export class UnreadMessagesService {
     const rawBody = message.content || 'El visitante ha escrito';
     const body =
       rawBody.length > 100 ? `${rawBody.substring(0, 100)}...` : rawBody;
-    const cola = message.queue === 'pendientes' ? 'pendientes' : 'mios';
+    const cola =
+      message.queue === 'pendientes' || message.queue === 'ausente'
+        ? 'pendientes'
+        : 'mios';
 
     try {
       const notification = new Notification(title, {

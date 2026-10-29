@@ -74,12 +74,12 @@
           <span class="atencion__queue-name">Pendientes</span>
           <span
             class="atencion__help"
-            aria-label="Han hablado y nadie los tiene. Al abrir, quedan tuyos."
+            aria-label="Han hablado y nadie los tiene, o su comercial no está. Abrir uno sin dueño te lo queda. Si el comercial no está, contestarlo te lo pasa."
             (click)="$event.stopPropagation()"
           >
             ?
             <span class="atencion__tooltip" role="tooltip">
-              Han hablado y nadie los tiene. Al abrir, quedan tuyos.
+              Han hablado y nadie los tiene, o su comercial no está. Abrir uno sin dueño te lo queda. Si el comercial no está, contestarlo te lo pasa.
             </span>
           </span>
           <span class="atencion__badge" [class.atencion__badge--urgent]="pendingCount() > 0">
@@ -198,11 +198,21 @@
                     [attr.data-status]="item.presence || 'unknown'"
                     aria-hidden="true"
                   ></span>
-                  {{ item.title }}
+                  <span class="atencion__item-name">{{ item.title }}</span>
+                  @if (shortIdBeside(item); as shortId) {
+                    <span class="atencion__item-id" [title]="item.visitorId">{{ shortId }}</span>
+                  }
                 </span>
+                @if (item.kind === 'coverage' && item.subtitle) {
+                  <span class="atencion__item-preview">{{ item.subtitle }}</span>
+                }
                 @if (item.preview) {
                   <span class="atencion__item-preview">{{ item.preview }}</span>
-                } @else if (item.subtitle && item.kind !== 'web') {
+                } @else if (
+                  item.subtitle &&
+                  item.kind !== 'web' &&
+                  item.kind !== 'coverage'
+                ) {
                   <span class="atencion__item-preview">{{ item.subtitle }}</span>
                 }
                 @if (item.isLead || item.pageLabel) {

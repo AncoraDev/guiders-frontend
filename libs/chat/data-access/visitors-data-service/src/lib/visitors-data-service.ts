@@ -274,6 +274,18 @@ export class VisitorsDataService {
       );
   }
 
+  /**
+   * Chats ASSIGNED/ACTIVE cuyo comercial no está conectado.
+   * Vacío si quien pregunta tampoco está conectado.
+   */
+  getAbsentAssigneeChats(limit = 50): Observable<Record<string, unknown>[]> {
+    const params = new HttpParams().set('limit', limit.toString());
+    return this.http.get<Record<string, unknown>[]>(
+      `${this.baseUrl}/v2/chats/queue/absent-assignee`,
+      { params, withCredentials: true }
+    );
+  }
+
   // Asignar chat a comercial
   assignChatToCommercial(
     chatId: string,

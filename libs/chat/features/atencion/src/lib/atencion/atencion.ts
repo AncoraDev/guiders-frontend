@@ -18,6 +18,7 @@ import {
   filter,
   finalize,
   map,
+  skip,
   startWith,
   switchMap,
 } from 'rxjs/operators';
@@ -47,6 +48,7 @@ import { LeadContactService } from '@guiders-frontend/lead-contact-service';
 import {
   getContactDisplayName,
   getVisitorDisplayName,
+  visitorShortIdBesideName,
 } from '@guiders-frontend/visitor-display-name';
 import { ToastService } from '@guiders-frontend/shared/ui/toast';
 import { StatusSelector } from '@guiders-frontend/status-selector';
@@ -111,7 +113,7 @@ function pageKey(url?: string): string {
 
 export interface AtencionListItem {
   id: string;
-  kind: 'pending' | 'mine' | 'web' | 'blocked';
+  kind: 'pending' | 'mine' | 'web' | 'blocked' | 'coverage';
   title: string;
   subtitle: string;
   /** Preview truncado del último mensaje (Pendientes / Míos). */
@@ -326,6 +328,8 @@ export class Atencion implements OnInit, OnDestroy {
   readonly showInactiveMios = signal(false);
 
   readonly pendingItems = signal<AtencionListItem[]>([]);
+  /** Asignados a un comercial que no está. Abrir no reclama. */
+  readonly coverageItems = signal<AtencionListItem[]>([]);
   readonly mineItems = signal<AtencionListItem[]>([]);
   readonly webItems = signal<AtencionListItem[]>([]);
   readonly blockedItems = signal<AtencionListItem[]>([]);
@@ -434,17 +438,21 @@ export class Atencion implements OnInit, OnDestroy {
       case 'bloqueados':
         return this.blockedItems();
       default:
-        return this.pendingItems().map((item) => ({
-          ...item,
-          unreadCount: item.chatId
-            ? this.unreadMessagesService.unreadCountMap()[item.chatId] ??
-              item.unreadCount
-            : item.unreadCount,
-        }));
+        return [...this.coverageItems(), ...this.pendingItems()].map(
+          (item) => ({
+            ...item,
+            unreadCount: item.chatId
+              ? this.unreadMessagesService.unreadCountMap()[item.chatId] ??
+                item.unreadCount
+              : item.unreadCount,
+          })
+        );
     }
   });
 
-  readonly pendingCount = computed(() => this.pendingItems().length);
+  readonly pendingCount = computed(
+    () => this.pendingItems().length + this.coverageItems().length
+  );
   readonly mineCount = computed(() => this.activeMineItems().length);
   readonly inactiveMineCount = computed(() => this.inactiveMineItems().length);
   readonly mineUnreadCount = computed(() =>
@@ -467,6 +475,7 @@ export class Atencion implements OnInit, OnDestroy {
     if (!id) return null;
     return (
       this.listItems().find((i) => i.id === id) ??
+      this.coverageItems().find((i) => i.id === id) ??
       this.pendingItems().find((i) => i.id === id) ??
       this.enrichedMineItems().find((i) => i.id === id) ??
       this.webItems().find((i) => i.id === id) ??
@@ -624,6 +633,25 @@ export class Atencion implements OnInit, OnDestroy {
     ) {
       this.activeCola.set(colaParam);
     }
+
+    this.route.queryParamMap
+      .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const cola = this.route.snapshot.queryParamMap.get('cola');
+        if (
+          cola === 'mios' ||
+          cola === 'en-web' ||
+          cola === 'pendientes' ||
+          cola === 'bloqueados'
+        ) {
+          this.activeCola.set(cola);
+        }
+        this.openChatFromQuery(
+          this.mineItems(),
+          this.pendingItems(),
+          this.coverageItems()
+        );
+      });
 
     this.commercialPresence.isConnected$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -952,6 +980,7 @@ export class Atencion implements OnInit, OnDestroy {
       );
 
     this.pendingItems.update(rename);
+    this.coverageItems.update(rename);
     this.mineItems.update(rename);
     this.webItems.update(rename);
   }
@@ -988,6 +1017,13 @@ export class Atencion implements OnInit, OnDestroy {
     this.error.set(null);
 
     forkJoin({
+      coverage: this.visitorsService.getAbsentAssigneeChats(50).pipe(
+        map((rows) => rows.map((row) => this.mapCoverageRow(row))),
+        catchError((err) => {
+          console.error('[Atencion] coverage queue error', err);
+          return of([] as AtencionListItem[]);
+        })
+      ),
       pending: this.visitorsService.getPendingChats(undefined, 50).pipe(
         map((res) => this.splitPendingQueue(res.queue)),
         catchError((err) => {
@@ -1063,11 +1099,13 @@ export class Atencion implements OnInit, OnDestroy {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
-        next: ({ pending, mine, web, blocked }) => {
+        next: ({ coverage, pending, mine, web, blocked }) => {
           const pendingItems = pending.withMessage;
+          this.syncCoverageNotices(coverage);
           this.notifyPendingDeltas(pendingItems);
 
           this.pendingItems.set(pendingItems);
+          this.coverageItems.set(coverage);
           this.mineItems.set(mine);
           const mineVisitorIds = new Set(mine.map((m) => m.visitorId));
           const pendingVisitorIds = new Set(
@@ -1091,9 +1129,11 @@ export class Atencion implements OnInit, OnDestroy {
           this.blockedItems.set(blocked);
 
           this.wireMineRealtime(mine);
-          this.preserveSelection(pendingItems, mine);
+          this.preserveSelection(pendingItems, mine, coverage);
           this.enrichRowsWithContacts(
-            [...pendingItems, ...mine, ...webItems].map((i) => i.visitorId)
+            [...coverage, ...pendingItems, ...mine, ...webItems].map(
+              (i) => i.visitorId
+            )
           );
 
           const visitorId = this.selectedChat()?.visitorId;
@@ -1115,16 +1155,9 @@ export class Atencion implements OnInit, OnDestroy {
           // Deep-link ?chat=… (notificación, o un lead captado desde /captacion).
           // También busca en Pendientes: el chat de una captación sin agente no
           // está asignado a nadie, así que abrirlo implica reclamarlo.
-          const chatParam = this.route.snapshot.queryParamMap.get('chat');
-          if (chatParam && !this.selectedChat()) {
-            const mineItem = mine.find((i) => i.chatId === chatParam);
-            const item =
-              mineItem ?? pendingItems.find((i) => i.chatId === chatParam);
-            if (item) {
-              this.activeCola.set(mineItem ? 'mios' : 'pendientes');
-              this.openChat(item, item.rawChat ?? null);
-            }
-          }
+          this.openChatFromQuery(mine, pendingItems, coverage, {
+            onlyIfEmpty: true,
+          });
         },
         error: () => {
           if (!silent) this.error.set('No se pudieron cargar las colas');
@@ -1203,6 +1236,12 @@ export class Atencion implements OnInit, OnDestroy {
       return;
     }
 
+    if (item.kind === 'coverage' && item.chatId) {
+      if (!this.requireConnected('ver esta conversación')) return;
+      this.openChat(item, item.rawChat ?? null);
+      return;
+    }
+
     if (item.kind === 'pending' && item.chatId) {
       if (!this.requireConnected('atender conversaciones')) return;
       this.claimAndOpen(item);
@@ -1269,6 +1308,9 @@ export class Atencion implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
+          if (this.selectedItem()?.kind === 'coverage') {
+            this.refreshAll(true);
+          }
           if (!transferToCommercialId) return;
           this.transferChatAfterMessage(
             chatId,
@@ -1276,7 +1318,14 @@ export class Atencion implements OnInit, OnDestroy {
             transferToDisplayName
           );
         },
-        error: () => this.toastService.error('Error al enviar el mensaje'),
+        error: (err: { error?: { message?: string | string[] } }) => {
+          const raw = err?.error?.message;
+          const message = Array.isArray(raw) ? raw[0] : raw;
+          this.toastService.error(message || 'Error al enviar el mensaje');
+          if (this.selectedItem()?.kind === 'coverage') {
+            this.refreshAll(true);
+          }
+        },
       });
   }
 
@@ -1456,6 +1505,10 @@ export class Atencion implements OnInit, OnDestroy {
     this.presenceService.presenceChanged$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((event) => {
+        if (event.userType === 'commercial') {
+          this.refreshAll(true);
+          return;
+        }
         if (event.userType !== 'visitor') return;
         this.mineItems().forEach((item) => {
           if (item.visitorId === event.userId && item.chatId) {
@@ -1496,8 +1549,12 @@ export class Atencion implements OnInit, OnDestroy {
         filter((message): message is Message => !!message)
       )
       .subscribe((message) => {
+        if (message.queue === 'ausente') {
+          this.refreshAll(true);
+        }
         if (
           message.queue === 'pendientes' ||
+          message.queue === 'ausente' ||
           this.pendingItems().some((item) => item.chatId === message.chatId)
         ) {
           this.notifiedPendingChatIds.add(message.chatId);
@@ -2092,13 +2149,15 @@ export class Atencion implements OnInit, OnDestroy {
 
   private preserveSelection(
     pending: AtencionListItem[],
-    mine: AtencionListItem[]
+    mine: AtencionListItem[],
+    coverage: AtencionListItem[] = []
   ): void {
     const selectedId = this.selectedItemId();
     if (!selectedId) return;
 
     const stillThere =
       pending.some((i) => i.id === selectedId) ||
+      coverage.some((i) => i.id === selectedId) ||
       mine.some((i) => i.id === selectedId) ||
       this.webItems().some((i) => i.id === selectedId) ||
       this.blockedItems().some((i) => i.id === selectedId);
@@ -2108,11 +2167,36 @@ export class Atencion implements OnInit, OnDestroy {
       const byChat =
         openChatId &&
         (mine.find((i) => i.chatId === openChatId) ||
+          coverage.find((i) => i.chatId === openChatId) ||
           pending.find((i) => i.chatId === openChatId));
       if (byChat) {
         this.selectedItemId.set(byChat.id);
       }
     }
+  }
+
+  /**
+   * ?chat= de una notificación. La cobertura se abre sin reclamar.
+   * Solo actúa si ese chat aún no está abierto.
+   */
+  private openChatFromQuery(
+    mine: AtencionListItem[],
+    pending: AtencionListItem[],
+    coverage: AtencionListItem[],
+    options?: { onlyIfEmpty?: boolean }
+  ): void {
+    const chatParam = this.route.snapshot.queryParamMap.get('chat');
+    if (!chatParam || this.selectedChat()?.chatId === chatParam) return;
+    if (options?.onlyIfEmpty && this.selectedChat()) return;
+
+    const mineItem = mine.find((i) => i.chatId === chatParam);
+    const coverageItem = coverage.find((i) => i.chatId === chatParam);
+    const pendingItem = pending.find((i) => i.chatId === chatParam);
+    const item = mineItem ?? coverageItem ?? pendingItem;
+    if (!item) return;
+
+    this.activeCola.set(mineItem ? 'mios' : 'pendientes');
+    this.openChat(item, item.rawChat ?? null);
   }
 
   private isMineActive(item: AtencionListItem): boolean {
@@ -2147,6 +2231,11 @@ export class Atencion implements OnInit, OnDestroy {
     const presenceDiff = rank(b.presence) - rank(a.presence);
     if (presenceDiff !== 0) return presenceDiff;
     return (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0);
+  }
+
+  /** Id corto junto al nombre. No se repite si el título ya es Visitante #id. */
+  shortIdBeside(item: AtencionListItem): string | null {
+    return visitorShortIdBesideName(item.title, item.visitorId);
   }
 
   private presenceLabel(status?: PresenceStatus): string {
@@ -2238,6 +2327,18 @@ export class Atencion implements OnInit, OnDestroy {
       ),
       statusLabel: 'Pendiente',
       rawChat: undefined,
+    };
+  }
+
+  private mapCoverageRow(row: Record<string, unknown>): AtencionListItem {
+    const item = this.mapPendingRow(row);
+    const name = String(row['assignedCommercialName'] ?? 'un comercial');
+    return {
+      ...item,
+      id: `coverage-${item.chatId}`,
+      kind: 'coverage',
+      subtitle: `Asignado a ${name}, que no está`,
+      statusLabel: 'Ausente',
     };
   }
 
@@ -2512,6 +2613,16 @@ export class Atencion implements OnInit, OnDestroy {
     };
   }
 
+  /**
+   * El aviso de escritorio llega por el WS (queue ausente). Aquí solo
+   * evitamos que el mismo chat vuelva a avisarse como pendiente.
+   */
+  private syncCoverageNotices(coverage: AtencionListItem[]): void {
+    coverage.forEach((item) => {
+      if (item.chatId) this.notifiedPendingChatIds.add(item.chatId);
+    });
+  }
+
   private notifyPendingDeltas(pending: AtencionListItem[]): void {
     if (!this.pendingToastBaselineReady) {
       pending.forEach((item) => {
@@ -2564,6 +2675,7 @@ export class Atencion implements OnInit, OnDestroy {
             });
 
           this.pendingItems.update(patch);
+          this.coverageItems.update(patch);
           this.mineItems.update(patch);
           this.webItems.update(patch);
         },

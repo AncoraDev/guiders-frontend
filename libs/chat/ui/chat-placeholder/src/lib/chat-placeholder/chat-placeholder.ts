@@ -36,7 +36,10 @@ import {
 } from '@guiders-frontend/chat/ui/contact-request-card';
 import { PresenceService } from '@guiders-frontend/presence-service';
 import { Avatar } from '@guiders-frontend/avatar';
-import { getVisitorDisplayName } from '@guiders-frontend/visitor-display-name';
+import {
+  getVisitorDisplayName,
+  visitorShortIdBesideName,
+} from '@guiders-frontend/visitor-display-name';
 
 /** Datos de contexto del visitante para la cabecera del chat. */
 export interface VisitorChatProfile {
@@ -145,6 +148,11 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
       name: visitor?.name,
       email: visitor?.email,
     });
+  }
+
+  /** Id corto junto al nombre. Sigue visible cuando el visitante ya es lead. */
+  visitorShortIdLabel(): string | null {
+    return visitorShortIdBesideName(this.getChatDisplayName(), this.visitorId());
   }
 
   /**
