@@ -131,6 +131,25 @@
             {{ webCount() }}
           </span>
         </button>
+        <button
+          type="button"
+          class="atencion__queue-btn"
+          [class.atencion__queue-btn--active]="activeCola() === 'bloqueados'"
+          (click)="selectCola('bloqueados')"
+        >
+          <span class="atencion__queue-name">Bloqueados</span>
+          <span
+            class="atencion__help"
+            aria-label="Visitantes bloqueados de la empresa. Se puede abrir el historial y desbloquear."
+            (click)="$event.stopPropagation()"
+          >
+            ?
+            <span class="atencion__tooltip" role="tooltip">
+              Visitantes bloqueados de la empresa. Se puede abrir el historial y desbloquear.
+            </span>
+          </span>
+          <span class="atencion__badge">{{ blockedCount() }}</span>
+        </button>
       </nav>
 
       @if (error()) {
@@ -269,6 +288,10 @@
         (confirmContactData)="onConfirmContactData($event)"
         (loadMoreMessages)="onLoadMoreMessages()"
         (closeChat)="onCloseChat()"
+        [showBlockAction]="activeCola() !== 'bloqueados'"
+        [showUnblockAction]="activeCola() === 'bloqueados' && canUnblockSelected()"
+        (blockVisitor)="openBlockDialog()"
+        (unblockVisitor)="onUnblock()"
         (settingsClicked)="toggleVisitorPanel()"
       />
     } @else {
@@ -298,4 +321,46 @@
     </aside>
   }
   </div>
+
+  @if (blockDialogOpen()) {
+    <div class="atencion__block-backdrop" (click)="closeBlockDialog()">
+      <form
+        class="atencion__block-dialog"
+        role="dialog"
+        aria-labelledby="block-dialog-title"
+        (click)="$event.stopPropagation()"
+        (submit)="$event.preventDefault(); confirmBlock()"
+      >
+        <h2 id="block-dialog-title">Bloquear visitante</h2>
+        <p>Deja de entrar en Atención y el chat de la web se oculta. El historial se conserva.</p>
+        <fieldset>
+          <legend>Motivo</legend>
+          @for (reason of blockReasons; track reason.id) {
+            <label>
+              <input
+                type="radio"
+                name="block-reason"
+                [checked]="blockReason() === reason.id"
+                (change)="blockReason.set(reason.id)"
+              />
+              {{ reason.label }}
+            </label>
+          }
+        </fieldset>
+        <label class="atencion__block-note">
+          Nota
+          <textarea
+            rows="3"
+            [value]="blockNote()"
+            (input)="blockNote.set($any($event.target).value)"
+            [placeholder]="blockReason() === 'other' ? 'Obligatoria' : 'Opcional'"
+          ></textarea>
+        </label>
+        <div class="atencion__block-actions">
+          <button type="button" (click)="closeBlockDialog()">Cancelar</button>
+          <button type="submit" [disabled]="blockSaving()">Bloquear</button>
+        </div>
+      </form>
+    </div>
+  }
 </div>

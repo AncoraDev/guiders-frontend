@@ -73,7 +73,19 @@ const VISITOR_HISTORY_MSG_LIMIT = 50;
 const DEFAULT_GREETING = '¡Hola! ¿En qué puedo ayudarte?';
 const PREVIEW_MAX_CHARS = 80;
 
-export type AtencionCola = 'pendientes' | 'mios' | 'en-web';
+export type AtencionCola = 'pendientes' | 'mios' | 'en-web' | 'bloqueados';
+
+const BLOCK_REASONS: { id: string; label: string }[] = [
+  { id: 'spam', label: 'Spam' },
+  { id: 'abuse', label: 'Abuso' },
+  { id: 'competitor', label: 'Competencia' },
+  { id: 'test', label: 'Prueba' },
+  { id: 'other', label: 'Otro' },
+];
+
+function blockReasonLabel(reason: string | undefined): string {
+  return BLOCK_REASONS.find((item) => item.id === reason)?.label ?? reason ?? '';
+}
 
 /** Misma página aunque cambie la barra final. */
 function samePageUrl(left?: string, right?: string): boolean {
@@ -99,7 +111,7 @@ function pageKey(url?: string): string {
 
 export interface AtencionListItem {
   id: string;
-  kind: 'pending' | 'mine' | 'web';
+  kind: 'pending' | 'mine' | 'web' | 'blocked';
   title: string;
   subtitle: string;
   /** Preview truncado del último mensaje (Pendientes / Míos). */
@@ -224,6 +236,20 @@ export class Atencion implements OnInit, OnDestroy {
     });
   };
 
+  private readonly onVisitorBlocked = (data: unknown): void => {
+    const visitorId = (data as { visitorId?: string }).visitorId;
+    this.ngZone.run(() => {
+      if (
+        visitorId &&
+        this.selectedChat()?.visitorId === visitorId &&
+        this.activeCola() !== 'bloqueados'
+      ) {
+        this.clearSelectedChat();
+      }
+      this.refreshAll(true);
+    });
+  };
+
   private readonly onVisitorPageChanged = (data: unknown): void => {
     const event = data as {
       visitorId?: string;
@@ -302,6 +328,12 @@ export class Atencion implements OnInit, OnDestroy {
   readonly pendingItems = signal<AtencionListItem[]>([]);
   readonly mineItems = signal<AtencionListItem[]>([]);
   readonly webItems = signal<AtencionListItem[]>([]);
+  readonly blockedItems = signal<AtencionListItem[]>([]);
+  readonly blockDialogOpen = signal(false);
+  readonly blockReason = signal('spam');
+  readonly blockNote = signal('');
+  readonly blockSaving = signal(false);
+  readonly blockReasons = BLOCK_REASONS;
   /** Presencia del visitante por chatId (Míos / chat abierto). */
   readonly presenceByChat = signal<Record<string, PresenceStatus | undefined>>(
     {}
@@ -399,6 +431,8 @@ export class Atencion implements OnInit, OnDestroy {
       }
       case 'en-web':
         return this.webItems();
+      case 'bloqueados':
+        return this.blockedItems();
       default:
         return this.pendingItems().map((item) => ({
           ...item,
@@ -417,6 +451,16 @@ export class Atencion implements OnInit, OnDestroy {
     this.enrichedMineItems().reduce((sum, i) => sum + (i.unreadCount || 0), 0)
   );
   readonly webCount = computed(() => this.webItems().length);
+  readonly blockedCount = computed(() => this.blockedItems().length);
+  readonly canUnblockSelected = computed(() => {
+    const selectedId = this.selectedItemId();
+    const item = this.blockedItems().find((entry) => entry.id === selectedId);
+    const block = item?.rawVisitor?.block;
+    if (!block) return false;
+    const roles = this.sessionService.getCurrentUser()?.roles ?? [];
+    if (roles.includes('admin') || roles.includes('supervisor')) return true;
+    return block.blockedBy === this.currentUserId();
+  });
 
   readonly selectedItem = computed(() => {
     const id = this.selectedItemId();
@@ -575,7 +619,8 @@ export class Atencion implements OnInit, OnDestroy {
     if (
       colaParam === 'mios' ||
       colaParam === 'en-web' ||
-      colaParam === 'pendientes'
+      colaParam === 'pendientes' ||
+      colaParam === 'bloqueados'
     ) {
       this.activeCola.set(colaParam);
     }
@@ -651,6 +696,14 @@ export class Atencion implements OnInit, OnDestroy {
     this.chatService.webSocketService.off(
       'visitor:page-changed',
       this.onVisitorPageChanged
+    );
+    this.chatService.webSocketService.off(
+      'visitor:blocked',
+      this.onVisitorBlocked
+    );
+    this.chatService.webSocketService.off(
+      'visitor:unblocked',
+      this.onVisitorBlocked
     );
     this.unreadMessagesService.setActiveChat(null);
     this.chatService.selectChat(null);
@@ -975,6 +1028,7 @@ export class Atencion implements OnInit, OnDestroy {
             // abierta. Sin 'away' el visitante que solo lee desaparecía de
             // Atención y solo se veía en Visitantes.
             connectionStatus: ['online', 'chatting', 'away'],
+            blocked: false,
           },
           limit: 50,
         })
@@ -985,6 +1039,22 @@ export class Atencion implements OnInit, OnDestroy {
             return of([] as VisitorSearchResult[]);
           })
         ),
+      blocked: this.visitorsService
+        .searchVisitors(companyId, {
+          filters: { blocked: true, isInternal: false },
+          limit: 50,
+        })
+        .pipe(
+          map((res) =>
+            (res.visitors ?? [])
+              .filter((visitor) => visitor.block?.blockedAt)
+              .map((visitor) => this.mapBlockedVisitor(visitor))
+          ),
+          catchError((err) => {
+            console.error('[Atencion] blocked visitors error', err);
+            return of([] as AtencionListItem[]);
+          })
+        ),
     })
       .pipe(
         finalize(() => {
@@ -993,7 +1063,7 @@ export class Atencion implements OnInit, OnDestroy {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
-        next: ({ pending, mine, web }) => {
+        next: ({ pending, mine, web, blocked }) => {
           const pendingItems = pending.withMessage;
           this.notifyPendingDeltas(pendingItems);
 
@@ -1018,6 +1088,7 @@ export class Atencion implements OnInit, OnDestroy {
             webFromSearch
           );
           this.webItems.set(webItems);
+          this.blockedItems.set(blocked);
 
           this.wireMineRealtime(mine);
           this.preserveSelection(pendingItems, mine);
@@ -1078,6 +1149,7 @@ export class Atencion implements OnInit, OnDestroy {
     pendingVisitorIds: Set<string>
   ): boolean {
     if (v.isInternal) return false;
+    if (v.block?.blockedAt) return false;
     if (mineVisitorIds.has(v.id) || pendingVisitorIds.has(v.id)) return false;
     if (this.occupiedByOther(v)) return false;
     if (String(v.connectionStatus ?? '').toLowerCase() === 'offline') {
@@ -1134,6 +1206,11 @@ export class Atencion implements OnInit, OnDestroy {
     if (item.kind === 'pending' && item.chatId) {
       if (!this.requireConnected('atender conversaciones')) return;
       this.claimAndOpen(item);
+      return;
+    }
+
+    if (item.kind === 'blocked') {
+      this.openBlockedHistory(item);
       return;
     }
 
@@ -1453,6 +1530,11 @@ export class Atencion implements OnInit, OnDestroy {
 
     // Nuevo chat PENDING en el tenant → toast + refresh Pendientes
     this.chatService.webSocketService.on('chat:created', this.onChatCreated);
+    this.chatService.webSocketService.on('visitor:blocked', this.onVisitorBlocked);
+    this.chatService.webSocketService.on(
+      'visitor:unblocked',
+      this.onVisitorBlocked
+    );
 
     // Transferencia recibida (también llega a sala commercial:{id})
     this.chatService.webSocketService.on(
@@ -2018,7 +2100,8 @@ export class Atencion implements OnInit, OnDestroy {
     const stillThere =
       pending.some((i) => i.id === selectedId) ||
       mine.some((i) => i.id === selectedId) ||
-      this.webItems().some((i) => i.id === selectedId);
+      this.webItems().some((i) => i.id === selectedId) ||
+      this.blockedItems().some((i) => i.id === selectedId);
 
     if (!stillThere && !this.isClaiming()) {
       const openChatId = this.selectedChat()?.chatId;
@@ -2287,6 +2370,117 @@ export class Atencion implements OnInit, OnDestroy {
       updatedAtMs,
       rawChat: chat,
     };
+  }
+
+  private mapBlockedVisitor(v: VisitorSearchResult): AtencionListItem {
+    const cached = this.leadContactService.peekCache(v.id);
+    const title =
+      getContactDisplayName(cached) ||
+      getVisitorDisplayName({
+        id: v.id,
+        name: v.name,
+        email: v.email,
+      });
+    const block = v.block;
+    const when = block?.blockedAt
+      ? new Date(block.blockedAt).toLocaleString('es-ES', {
+          dateStyle: 'short',
+          timeStyle: 'short',
+        })
+      : '';
+    const subtitle = [blockReasonLabel(block?.reason), block?.blockedByName, when]
+      .filter(Boolean)
+      .join(' · ');
+    return {
+      id: `blocked-${v.id}`,
+      kind: 'blocked',
+      title,
+      subtitle,
+      preview: block?.note,
+      isLead: this.isLeadLifecycle(v.lifecycle),
+      visitorId: v.id,
+      unreadCount: 0,
+      statusLabel: 'Bloqueado',
+      rawVisitor: v,
+    };
+  }
+
+  openBlockDialog(): void {
+    if (!this.selectedChat()) return;
+    this.blockReason.set('spam');
+    this.blockNote.set('');
+    this.blockDialogOpen.set(true);
+  }
+
+  closeBlockDialog(): void {
+    this.blockDialogOpen.set(false);
+  }
+
+  confirmBlock(): void {
+    const visitorId = this.selectedChat()?.visitorId;
+    if (!visitorId || this.blockSaving()) return;
+    const reason = this.blockReason();
+    const note = this.blockNote().trim();
+    if (reason === 'other' && !note) {
+      this.toastService.info('El motivo «Otro» necesita una nota');
+      return;
+    }
+    this.blockSaving.set(true);
+    this.visitorsService
+      .blockVisitor(visitorId, { reason, note: note || undefined })
+      .pipe(
+        finalize(() => this.blockSaving.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: () => {
+          this.blockDialogOpen.set(false);
+          this.clearSelectedChat();
+          this.toastService.info('Visitante bloqueado');
+          this.refreshAll(true);
+        },
+        error: () => this.toastService.info('No se pudo bloquear al visitante'),
+      });
+  }
+
+  onUnblock(): void {
+    const visitorId = this.selectedChat()?.visitorId;
+    if (!visitorId || !this.canUnblockSelected()) return;
+    this.visitorsService
+      .unblockVisitor(visitorId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.clearSelectedChat();
+          this.toastService.info('Visitante desbloqueado');
+          this.refreshAll(true);
+        },
+        error: () => this.toastService.info('No se pudo desbloquear'),
+      });
+  }
+
+  private openBlockedHistory(item: AtencionListItem): void {
+    this.selectedItemId.set(item.id);
+    this.chatService
+      .getVisitorChatHistory(item.visitorId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (history) => {
+          const chat = history.chats[0];
+          if (!chat) {
+            this.clearSelectedChat();
+            this.selectedItemId.set(item.id);
+            this.toastService.info('No hay historial de chat');
+            return;
+          }
+          this.openChat(
+            { ...item, chatId: chat.id },
+            null
+          );
+          this.selectedItemId.set(item.id);
+        },
+        error: () => this.toastService.info('No se pudo abrir el historial'),
+      });
   }
 
   private mapWebVisitor(v: VisitorSearchResult): AtencionListItem {

@@ -82,6 +82,8 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
   @Input() slashCommands: SlashCommand[] | null = null;
   @Input() savingContactData = false;
   @Input() confirmedContactRequestIds: string[] = [];
+  @Input() showBlockAction = false;
+  @Input() showUnblockAction = false;
 
   /**
    * Mensajes que se pintan en el hilo. Cancelación y confirmación de datos solo
@@ -91,6 +93,8 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
 
   @Output() settingsClicked = new EventEmitter<void>();
   @Output() closeChat = new EventEmitter<void>();
+  @Output() blockVisitor = new EventEmitter<void>();
+  @Output() unblockVisitor = new EventEmitter<void>();
   @Output() messageSent = new EventEmitter<MessageSendPayload>();
   @Output() slashCommand = new EventEmitter<SlashCommand>();
   @Output() confirmContactData = new EventEmitter<ContactRequestCardConfirm>();
@@ -248,6 +252,14 @@ export class GuidersChatPlaceholderComponent implements OnChanges, AfterViewInit
    */
   onCloseChat(): void {
     this.closeChat.emit();
+  }
+
+  onBlockVisitor(): void {
+    this.blockVisitor.emit();
+  }
+
+  onUnblockVisitor(): void {
+    this.unblockVisitor.emit();
   }
 
   ngOnChanges(changes: SimpleChanges): void {

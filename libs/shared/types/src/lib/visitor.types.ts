@@ -327,6 +327,8 @@ export interface VisitorSearchFilters {
   maxTotalSessionsCount?: number; // Filtrar por número máximo de sesiones
   ipAddress?: string; // Filtrar por dirección IP exacta
   isInternal?: boolean; // Filtrar por visitantes internos
+  /** true = solo bloqueados; false = excluir bloqueados */
+  blocked?: boolean;
 }
 
 // Ordenamiento para búsqueda
@@ -364,6 +366,13 @@ export interface VisitorSearchResult {
   lastUserAgent?: string; // Último user agent del visitante
   isMe?: boolean; // Indica si este visitante es el propio usuario
   isInternal?: boolean; // Indica si este visitante es un usuario interno (empleado, admin, etc.)
+  block?: {
+    blockedAt: string;
+    blockedBy: string;
+    blockedByName: string;
+    reason: string;
+    note?: string;
+  };
   assignedCommercialId?: string;
   assignedCommercial?: {
     id: string;

@@ -53,6 +53,18 @@
 
     @if (showActions) {
     <div class="guiders-chat-placeholder__actions">
+      @if (showBlockAction) {
+      <button class="guiders-chat-placeholder__action-btn guiders-chat-placeholder__action-btn--text"
+        (click)="onBlockVisitor()" type="button">
+        Bloquear
+      </button>
+      }
+      @if (showUnblockAction) {
+      <button class="guiders-chat-placeholder__action-btn guiders-chat-placeholder__action-btn--text"
+        (click)="onUnblockVisitor()" type="button">
+        Desbloquear
+      </button>
+      }
       <button class="guiders-chat-placeholder__action-btn guiders-chat-placeholder__action-btn--close"
         (click)="onCloseChat()" type="button" aria-label="Cerrar chat">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"

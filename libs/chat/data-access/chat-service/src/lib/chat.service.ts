@@ -395,6 +395,14 @@ export class ChatService {
    * @param visitorId - ID del visitante
    * @returns Observable con los chats asignados al comercial actual para ese visitante
    */
+  getVisitorChatHistory(visitorId: string): Observable<{
+    chats: { id: string; status: string; updatedAt: string }[];
+  }> {
+    return this.http.get<{
+      chats: { id: string; status: string; updatedAt: string }[];
+    }>(`${this.baseUrl}/chats/visitor/${visitorId}/history`, this.getHttpOptions());
+  }
+
   getVisitorMyChats(visitorId: string): Observable<{
     chats: Chat[];
     total: number;

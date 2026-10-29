@@ -472,6 +472,25 @@ export class VisitorsDataService {
    * Buscar visitantes con filtros complejos
    * POST /tenant-visitors/:tenantId/visitors/search
    */
+  blockVisitor(
+    visitorId: string,
+    body: { reason: string; note?: string }
+  ): Observable<{ ok: true }> {
+    return this.http.post<{ ok: true }>(
+      `${this.baseUrl}/visitors/${visitorId}/block`,
+      body,
+      { withCredentials: true }
+    );
+  }
+
+  unblockVisitor(visitorId: string): Observable<{ ok: true }> {
+    return this.http.post<{ ok: true }>(
+      `${this.baseUrl}/visitors/${visitorId}/unblock`,
+      {},
+      { withCredentials: true }
+    );
+  }
+
   searchVisitors(
     tenantId: string,
     request: VisitorSearchRequest = {}

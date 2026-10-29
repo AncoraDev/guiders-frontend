@@ -178,6 +178,13 @@
     transition: all 0.15s ease;
     flex-shrink: 0;
 
+    &--text {
+      width: auto;
+      padding: 0 tokens.$spacing-sm;
+      font-size: tokens.$font-size-base;
+      font-weight: tokens.$font-weight-medium;
+    }
+
     // Aplicar mismo stroke-width que los iconos del sidebar
     svg {
       stroke-width: 2;
